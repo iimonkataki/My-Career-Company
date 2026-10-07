@@ -3,8 +3,12 @@ $ErrorActionPreference = "Stop"
 
 $firebaseExe = "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\Google.FirebaseCLI_Microsoft.Winget.Source_8wekyb3d8bbwe\firebase.exe"
 if (-not (Test-Path $firebaseExe)) {
-    Write-Host "Firebase CLI not found at $firebaseExe" -ForegroundColor Red
-    exit 1
+    if (Test-Path ".\firebase.cmd") {
+        $firebaseExe = ".\firebase.cmd"
+    } else {
+        Write-Host "Firebase CLI not found." -ForegroundColor Red
+        exit 1
+    }
 }
 
 Write-Host "==================================================" -ForegroundColor Cyan
