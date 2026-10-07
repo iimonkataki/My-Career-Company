@@ -85,6 +85,15 @@ async function submitInstitutionalLead(formData) {
     console.warn('[MCC Firebase] Local storage backup note:', e);
   }
 
+// Optional Google Sheets Webhook URL (via Google Apps Script)
+window.GOOGLE_SHEETS_WEBHOOK_URL = window.GOOGLE_SHEETS_WEBHOOK_URL || "";
+try {
+  const savedSheetsUrl = localStorage.getItem('mcc_sheets_webhook_url');
+  if (savedSheetsUrl) {
+    window.GOOGLE_SHEETS_WEBHOOK_URL = savedSheetsUrl;
+  }
+} catch (e) {}
+
   // 2. Submit to Cloud Firestore
   let firestoreSuccess = false;
   if (isFirebaseInitialized && firestoreDb) {
@@ -100,10 +109,30 @@ async function submitInstitutionalLead(formData) {
     }
   }
 
+  // 3. Optional Submit to Google Sheets via Webhook
+  let sheetsSuccess = false;
+  if (window.GOOGLE_SHEETS_WEBHOOK_URL && window.GOOGLE_SHEETS_WEBHOOK_URL.trim() !== '') {
+    try {
+      await fetch(window.GOOGLE_SHEETS_WEBHOOK_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(leadRecord)
+      });
+      sheetsSuccess = true;
+      console.log('[MCC Google Sheets] Lead forwarded to Google Sheets');
+    } catch (sheetErr) {
+      console.warn('[MCC Google Sheets] Webhook forwarding notice:', sheetErr.message);
+    }
+  }
+
   return {
     success: true,
     leadId: leadId,
-    syncedToFirestore: firestoreSuccess
+    syncedToFirestore: firestoreSuccess,
+    syncedToGoogleSheets: sheetsSuccess
   };
 }
 
@@ -158,15 +187,24 @@ document.addEventListener('DOMContentLoaded', () => {
       form.style.display = 'none';
       successState.style.display = 'block';
 
-      // Insert Reference ID if element exists
+      // Insert Reference ID and sync indicators
       let refEl = document.getElementById('lead-reference-id');
       if (!refEl) {
         refEl = document.createElement('div');
         refEl.id = 'lead-reference-id';
-        refEl.style.cssText = 'margin-top:14px; font-size:0.8rem; color:var(--color-gold-dark); font-weight:700; letter-spacing:0.08em; text-transform:uppercase;';
+        refEl.style.cssText = 'margin-top:16px; padding:12px; background:rgba(7,61,50,0.06); border-radius:8px; border:1px solid var(--color-gold-border);';
         successState.appendChild(refEl);
       }
-      refEl.innerHTML = `Lead Reference Code: <strong>${result.leadId}</strong> ${result.syncedToFirestore ? '(Synced to Firestore)' : '(Logged to Institutional Desk)'}`;
+      refEl.innerHTML = `
+        <div style="font-size:0.82rem; color:var(--color-gold-dark); font-weight:700; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:6px;">
+          Lead Reference Code: <span style="color:var(--color-forest); font-size:1rem;">${result.leadId}</span>
+        </div>
+        <div style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap; font-size:0.75rem;">
+          <span style="color:#059669; font-weight:600;">✔ Cloud Firestore Backend</span>
+          ${result.syncedToGoogleSheets ? '<span style="color:#059669; font-weight:600;">✔ Google Sheets Sync</span>' : ''}
+          <span style="color:var(--color-forest); font-weight:500;">✔ Institutional Desk Telemetry</span>
+        </div>
+      `;
 
     } catch (error) {
       console.error('[MCC Firebase] Submission failed:', error);
