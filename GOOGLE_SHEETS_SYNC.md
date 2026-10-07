@@ -88,7 +88,8 @@ function doGet(e) {
 // 3. Direct Firebase Database Sync: Pulls all documents from Cloud Firestore
 function syncLeadsFromFirebase() {
   var projectId = "my-career-company";
-  var firestoreUrl = "https://firestore.googleapis.com/v1/projects/" + projectId + "/databases/(default)/documents/institutional_leads?pageSize=100";
+  var apiKey = "AIzaSyC6DQ6wzXjRywCMhTBUXTiuIsRF-QWpLIg";
+  var firestoreUrl = "https://firestore.googleapis.com/v1/projects/" + projectId + "/databases/(default)/documents/institutional_leads?pageSize=100&key=" + apiKey;
 
   try {
     var response = UrlFetchApp.fetch(firestoreUrl, { muteHttpExceptions: true });
