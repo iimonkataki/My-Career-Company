@@ -1,0 +1,17 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Institutional lead submissions from "Book an Institutional Pilot" form
+    match /institutional_leads/{leadId} {
+      allow create: if request.resource.data.name is string
+                    && request.resource.data.email is string
+                    && request.resource.data.institution is string;
+      allow read, update, delete: if false; // protect executive lead data from public reads
+    }
+
+    // Default deny for other paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
