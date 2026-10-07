@@ -15,6 +15,9 @@ window.FIREBASE_CONFIG = {
   measurementId: "G-6GK1XN2NKZ"
 };
 
+// Google Sheets Real-Time Sync Webhook (Google Apps Script Web App)
+window.GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxMf42J-80-fM7qbDmsmuwgIKHq-L4_TFCULj1PAkSjoChVrRpCAjWiAcWLF2smkSvB/exec";
+
 // Check if user has stored custom Firebase config in localStorage
 try {
   const savedConfig = localStorage.getItem('mcc_firebase_config');
@@ -84,15 +87,6 @@ async function submitInstitutionalLead(formData) {
   } catch (e) {
     console.warn('[MCC Firebase] Local storage backup note:', e);
   }
-
-// Optional Google Sheets Webhook URL (via Google Apps Script)
-window.GOOGLE_SHEETS_WEBHOOK_URL = window.GOOGLE_SHEETS_WEBHOOK_URL || "";
-try {
-  const savedSheetsUrl = localStorage.getItem('mcc_sheets_webhook_url');
-  if (savedSheetsUrl) {
-    window.GOOGLE_SHEETS_WEBHOOK_URL = savedSheetsUrl;
-  }
-} catch (e) {}
 
   // 2. Submit to Cloud Firestore
   let firestoreSuccess = false;
