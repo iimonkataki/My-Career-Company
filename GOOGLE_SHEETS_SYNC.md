@@ -72,7 +72,7 @@ function doPost(e) {
 In [`js/firebase-leads.js`](file:///c:/Users/IIMON%20TARUN%20KATAKI/Downloads/mycareercompany/js/firebase-leads.js), set:
 
 ```javascript
-window.GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec";
+window.GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxv6ryxLa_M1zZNh-cUmkTZ7e8FybdVgPWtFYHY185zzkluzNox4vE3L9TQ9sTh6nLV/exec";
 ```
 
 Now, every time a Dean, Placement Chair, or Institutional Lead submits the form, it simultaneously saves to:
