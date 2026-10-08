@@ -73,6 +73,7 @@ async function submitInstitutionalLead(formData) {
     phone: formData.phone || '',
     programme: formData.programme || '',
     cohortSize: formData.size || '',
+    size: formData.size || '',
     message: formData.message || '',
     sourcePage: window.location.pathname,
     status: 'new',
