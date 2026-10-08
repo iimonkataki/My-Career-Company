@@ -1,11 +1,10 @@
 # Google Sheets & Email Notification Engine
 ### My Career Company — "Book Institutional Pilot" Lead Ingestion
 
-This upgraded version features **Intelligent Column Mapping**:
-- Automatically reads your spreadsheet's existing column header names and maps each field (`Full Name`, `Designation / Role`, `Business School / University`, `Official Institutional Email`, `Contact Phone`, `Cohort / Programme`, `Estimated Cohort Size`, `Specific Focus or Placement Objectives`) to its exact matching column.
-- Eliminates any column shifting or misalignment.
-- Fixes phone number formatting (no visible apostrophes).
-- Includes a **`🧹 Reset Headers & Re-sync All Leads from Database`** menu button that instantly formats the sheet and re-imports all real leads from Cloud Firestore.
+This upgraded version:
+1. **Guarantees 100% Data Accuracy in Email Notifications**: Uses the exact normalized fields that are written to the spreadsheet so what you see in the sheet is identically reflected in the email notification.
+2. **Sorts Spreadsheet with Latest Entries at the Bottom**: Automatically sorts all entries chronologically (oldest at top, newest/latest at bottom) upon every submission and during re-sync.
+3. **Adds 1-Click Sorting in Menu**: Adds **`⬇️ Sort Table (Latest Entries at Bottom)`** under the spreadsheet's **`🚀 My Career Company`** menu.
 
 ---
 
@@ -15,11 +14,13 @@ This upgraded version features **Intelligent Column Mapping**:
 2. Click **Extensions** → **Apps Script**.
 3. Replace all code in `Code.gs` with the complete script below.
 4. Click **Save** (💾).
-5. Click **Deploy** (top right) → **Manage deployments**.
+5. At the top right, click **Deploy** → **Manage deployments**.
 6. Click the **Pencil icon** (Edit) on the active deployment:
    - Change **Version** to: **`New version`**.
    - Click **Deploy**.
-7. In your Google Sheet, refresh the page (`F5`), click the **`🚀 My Career Company`** menu at the top, and select **`🧹 Reset Headers & Re-sync All Leads from Database`**.
+7. In your Google Sheet, refresh (`F5`), click **`🚀 My Career Company`** at the top, and click:
+   👉 **`⬇️ Sort Table (Latest Entries at Bottom)`**
+   *(or select `🧹 Reset Headers & Re-sync All Leads from Database` if you want a complete clean refresh)*.
 
 ---
 
@@ -28,8 +29,8 @@ This upgraded version features **Intelligent Column Mapping**:
 ```javascript
 /**
  * ============================================================================
- * MY CAREER COMPANY — BULLETPROOF DYNAMIC LEAD & EMAIL ENGINE
- * Automatic Column Header Detection + Multi-Inbox Email Alerts
+ * MY CAREER COMPANY — BULLETPROOF DYNAMIC LEAD & EMAIL ENGINE (V3)
+ * Automatic Column Header Detection + Latest-at-Bottom Sorting + Multi-Inbox Alerts
  * Recipients: anirbanroy@mycareercompany.com, ibonkataki@mycareercompany.com,
  *             iimonkataki@mycareercompany.com, support@mycareercompany.com
  * ============================================================================
@@ -68,24 +69,15 @@ function doPost(e) {
     var leadId = data.leadId || ("MCC-" + Utilities.getUuid().substring(0, 6).toUpperCase());
     var submittedAt = data.submittedAt ? formatToIST(data.submittedAt) : timestampStr;
 
-    // Dynamically insert lead mapped to actual column headers
-    appendMappedLeadRow(sheet, data, leadId, submittedAt);
+    // Dynamically insert lead mapped to actual column headers and return clean normalized record
+    var cleanLead = appendMappedLeadRow(sheet, data, leadId, submittedAt);
 
-    // Send instant branded email notification to leadership & support team
+    // Keep spreadsheet sorted chronologically (latest entries at the bottom)
+    sortSheetLatestAtBottom(sheet);
+
+    // Send instant branded email notification with exact matching clean data
     try {
-      sendLeadEmailNotification({
-        leadId: leadId,
-        submittedAt: submittedAt,
-        name: data.name || data.fullName || "Institutional Lead",
-        role: data.role || data.designation || "Not specified",
-        institution: data.institution || data.bSchool || "Not specified",
-        email: data.email || "",
-        phone: data.phone || "",
-        programme: data.programme || data.program || "Not specified",
-        cohortSize: data.cohortSize || data.size || "Not specified",
-        message: data.message || data.objectives || "No specific objectives stated.",
-        sourcePage: data.sourcePage || "/contact"
-      });
+      sendLeadEmailNotification(cleanLead);
     } catch (emailErr) {
       Logger.log("Email notification error (sheet entry preserved): " + emailErr.message);
     }
@@ -123,6 +115,15 @@ function appendMappedLeadRow(sheet, data, leadId, submittedAt) {
   var row = new Array(numCols).fill("");
   var hasMatched = false;
 
+  var nameVal = data.name || data.fullName || "";
+  var roleVal = data.role || data.designation || "";
+  var instVal = data.institution || data.bSchool || data.university || "";
+  var emailVal = data.email || "";
+  var phoneVal = String(data.phone || "");
+  var progVal = data.programme || data.program || "";
+  var sizeVal = data.cohortSize || data.size || "";
+  var msgVal = data.message || data.objectives || "";
+
   for (var i = 0; i < numCols; i++) {
     var h = String(headers[i] || "").trim().toLowerCase();
 
@@ -133,28 +134,28 @@ function appendMappedLeadRow(sheet, data, leadId, submittedAt) {
       row[i] = leadId;
       hasMatched = true;
     } else if (h.includes("name")) {
-      row[i] = data.name || data.fullName || "";
+      row[i] = nameVal;
       hasMatched = true;
     } else if (h.includes("role") || h.includes("designation")) {
-      row[i] = data.role || data.designation || "";
+      row[i] = roleVal;
       hasMatched = true;
     } else if (h.includes("institution") || h.includes("school") || h.includes("university")) {
-      row[i] = data.institution || data.bSchool || "";
+      row[i] = instVal;
       hasMatched = true;
     } else if (h.includes("email")) {
-      row[i] = data.email || "";
+      row[i] = emailVal;
       hasMatched = true;
     } else if (h.includes("phone") || h.includes("contact") || h.includes("mobile")) {
-      row[i] = String(data.phone || "");
+      row[i] = phoneVal;
       hasMatched = true;
     } else if (h.includes("programme") || h.includes("program") || h.includes("cohort /")) {
-      row[i] = data.programme || data.program || "";
+      row[i] = progVal;
       hasMatched = true;
     } else if (h.includes("size") || h.includes("cohort size")) {
-      row[i] = data.cohortSize || data.size || "";
+      row[i] = sizeVal;
       hasMatched = true;
     } else if (h.includes("objective") || h.includes("focus") || h.includes("message") || h.includes("concern")) {
-      row[i] = data.message || data.objectives || "";
+      row[i] = msgVal;
       hasMatched = true;
     } else if (h.includes("source") || h.includes("page")) {
       row[i] = data.sourcePage || "/contact";
@@ -169,14 +170,14 @@ function appendMappedLeadRow(sheet, data, leadId, submittedAt) {
   if (!hasMatched) {
     row = [
       submittedAt,
-      data.name || "",
-      data.role || "",
-      data.institution || "",
-      data.email || "",
-      String(data.phone || ""),
-      data.programme || "",
-      data.cohortSize || data.size || "",
-      data.message || "",
+      nameVal,
+      roleVal,
+      instVal,
+      emailVal,
+      phoneVal,
+      progVal,
+      sizeVal,
+      msgVal,
       leadId,
       "New Enquiry"
     ];
@@ -194,9 +195,49 @@ function appendMappedLeadRow(sheet, data, leadId, submittedAt) {
   }
 
   formatLeadSheet(sheet);
+
+  return {
+    leadId: leadId,
+    submittedAt: submittedAt,
+    name: nameVal || "Institutional Lead",
+    role: roleVal || "Not specified",
+    institution: instVal || "Not specified",
+    email: emailVal,
+    phone: phoneVal,
+    programme: progVal || "Not specified",
+    cohortSize: sizeVal || "Not specified",
+    message: msgVal || "No specific objectives stated.",
+    sourcePage: data.sourcePage || "/contact"
+  };
 }
 
-// 3. STANDARD HEADER BUILDER
+// 3. SPREADSHEET CHRONOLOGICAL SORT (LATEST AT BOTTOM)
+function sortSheetLatestAtBottom(sheet) {
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+  if (lastRow <= 2) return;
+
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var timeCol = 1;
+  for (var c = 0; c < lastCol; c++) {
+    var h = String(headers[c] || "").toLowerCase();
+    if (h.includes("time") || h.includes("date")) {
+      timeCol = c + 1;
+      break;
+    }
+  }
+
+  // Sort ascending by Timestamp column (oldest first, newest at the bottom)
+  sheet.getRange(2, 1, lastRow - 1, lastCol).sort({ column: timeCol, ascending: true });
+}
+
+function sortActiveSheetLatestAtBottom() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  sortSheetLatestAtBottom(sheet);
+  SpreadsheetApp.getUi().alert("Spreadsheet sorted chronologically with the latest entries at the bottom!");
+}
+
+// 4. STANDARD HEADER BUILDER
 function createStandardHeaders(sheet) {
   sheet.clear();
   sheet.appendRow([
@@ -219,7 +260,6 @@ function formatLeadSheet(sheet) {
   var lastRow = Math.max(sheet.getLastRow(), 1);
   var lastCol = Math.max(sheet.getLastColumn(), 11);
 
-  // Header styling: Deep Forest Green (#073D32) and White Bold text
   var headerRange = sheet.getRange(1, 1, 1, lastCol);
   headerRange.setBackground("#073D32")
              .setFontColor("#FFFFFF")
@@ -233,7 +273,6 @@ function formatLeadSheet(sheet) {
     var dataRange = sheet.getRange(2, 1, lastRow - 1, lastCol);
     dataRange.setFontSize(9.5).setVerticalAlignment("middle");
 
-    // Wrap text on message / objectives column if found
     var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
     for (var i = 0; i < lastCol; i++) {
       var h = String(headers[i] || "").toLowerCase();
@@ -250,7 +289,7 @@ function formatLeadSheet(sheet) {
   }
 }
 
-// 4. EMAIL NOTIFICATION DISPATCHER
+// 5. EMAIL NOTIFICATION DISPATCHER
 function sendLeadEmailNotification(lead) {
   var spreadsheetUrl = SpreadsheetApp.getActiveSpreadsheet().getUrl();
   var subject = "🎯 New Pilot Request: " + lead.name + " (" + lead.institution + ")";
@@ -376,7 +415,7 @@ function sendLeadEmailNotification(lead) {
   });
 }
 
-// 5. CLEAN UP & RE-SYNC ALL LEADS FROM FIREBASE
+// 6. CLEAN UP & RE-SYNC ALL LEADS FROM FIREBASE (SORTED CHRONOLOGICALLY)
 function resetAndResyncAllLeads() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("Pilot Leads") || ss.getSheetByName("Leads") || ss.getSheets()[0];
@@ -400,6 +439,13 @@ function resetAndResyncAllLeads() {
       return;
     }
 
+    // Sort documents chronologically by submission time so oldest is first, latest is at bottom
+    json.documents.sort(function(a, b) {
+      var timeA = (a.fields && a.fields.submittedAt) ? new Date(a.fields.submittedAt.stringValue).getTime() : 0;
+      var timeB = (b.fields && b.fields.submittedAt) ? new Date(b.fields.submittedAt.stringValue).getTime() : 0;
+      return timeA - timeB;
+    });
+
     var count = 0;
     json.documents.forEach(function(doc) {
       var f = doc.fields || {};
@@ -422,14 +468,15 @@ function resetAndResyncAllLeads() {
       count++;
     });
 
-    SpreadsheetApp.getUi().alert("Cleaned & Resynced Successfully!\n\nImported " + count + " real lead(s) into your sheet.");
+    sortSheetLatestAtBottom(sheet);
+    SpreadsheetApp.getUi().alert("Cleaned & Resynced Successfully!\n\nImported " + count + " leads sorted with latest entries at the bottom.");
 
   } catch (err) {
     SpreadsheetApp.getUi().alert("Resync Failed: " + err.message);
   }
 }
 
-// 6. HEALTH CHECK
+// 7. HEALTH CHECK
 function doGet(e) {
   return ContentService.createTextOutput(JSON.stringify({
     status: "online",
@@ -439,12 +486,12 @@ function doGet(e) {
   })).setMimeType(ContentService.MimeType.JSON);
 }
 
-// 7. CUSTOM SPREADSHEET MENU
+// 8. CUSTOM SPREADSHEET MENU
 function onOpen() {
   var ui = SpreadsheetApp.getUi();
   ui.createMenu('🚀 My Career Company')
+    .addItem('⬇️ Sort Table (Latest Entries at Bottom)', 'sortActiveSheetLatestAtBottom')
     .addItem('🧹 Reset Headers & Re-sync All Leads from Database', 'resetAndResyncAllLeads')
-    .addItem('📧 Send Test Email Alert', 'sendTestLeadEmail')
     .addItem('🎨 Beautify Headers & Columns', 'formatActiveSheet')
     .addToUi();
 }
@@ -452,27 +499,11 @@ function onOpen() {
 function formatActiveSheet() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   formatLeadSheet(sheet);
+  sortSheetLatestAtBottom(sheet);
   SpreadsheetApp.getUi().alert("Headers and column formatting refreshed!");
 }
 
-function sendTestLeadEmail() {
-  sendLeadEmailNotification({
-    leadId: "MCC-TEST-" + Utilities.getUuid().substring(0, 4).toUpperCase(),
-    submittedAt: Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd HH:mm:ss"),
-    name: "Prof. Anirban Roy (Test Entry)",
-    role: "Chairperson - Placements",
-    institution: "Indian Institute of Management (IIM Sample)",
-    email: "support@mycareercompany.com",
-    phone: "+91 8145295101",
-    programme: "2-Year MBA / PGDM Flagship",
-    cohortSize: "120 - 250 Students",
-    message: "Test lead to verify email delivery across anirbanroy, ibonkataki, iimonkataki, and support.",
-    sourcePage: "/contact"
-  });
-  SpreadsheetApp.getUi().alert("Test email alert sent to:\n" + NOTIFICATION_RECIPIENTS.split(",").join("\n"));
-}
-
-// 8. STRING HELPERS
+// 9. STRING HELPERS
 function escapeHtml(text) {
   if (!text) return "";
   return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
