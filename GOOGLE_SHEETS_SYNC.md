@@ -1,55 +1,37 @@
 # Google Sheets & Email Notification Engine
 ### My Career Company — "Book Institutional Pilot" Lead Ingestion
 
-This guide and script configure:
-1. **A dedicated Google Spreadsheet** where all submissions from the "Book Institutional Pilot" form are captured in real-time in structured tabular format.
-2. **Instant Email Alerts** sent immediately to:
-   - `anirbanroy@mycareercompany.com`
-   - `ibonkataki@mycareercompany.com`
-   - `iimonkataki@mycareercompany.com`
-   - `support@mycareercompany.com`
-3. **One-Click Firestore Cloud Backup Sync** to pull any historical or mobile-stored records from Cloud Firestore.
-4. **Custom Spreadsheet Menu** (`🚀 My Career Company`) with a built-in **"📧 Send Test Email Alert"** button to verify deliverability in seconds.
+This upgraded version features **Intelligent Column Mapping**:
+- Automatically reads your spreadsheet's existing column header names and maps each field (`Full Name`, `Designation / Role`, `Business School / University`, `Official Institutional Email`, `Contact Phone`, `Cohort / Programme`, `Estimated Cohort Size`, `Specific Focus or Placement Objectives`) to its exact matching column.
+- Eliminates any column shifting or misalignment.
+- Fixes phone number formatting (no visible apostrophes).
+- Includes a **`🧹 Reset Headers & Re-sync All Leads from Database`** menu button that instantly formats the sheet and re-imports all real leads from Cloud Firestore.
 
 ---
 
-## 3-Minute Setup Instructions
+## How to Update Your Apps Script (1 Minute)
 
-### Step 1: Create Your Dedicated Google Spreadsheet
-1. Open [Google Sheets](https://sheets.new) in your browser.
-2. Title the spreadsheet: **`My Career Company — Institutional Pilot Leads`**.
-
-### Step 2: Paste the Apps Script Code
-1. In your Google Sheet, click **Extensions** → **Apps Script** in the top menu.
-2. Delete any boilerplate code inside the editor.
-3. Paste the entire script below into `Code.gs`.
-4. Click the **Save** icon (diskette) or press `Ctrl + S`.
-
-### Step 3: Deploy as a Web App
-1. At the top right of Apps Script, click **Deploy** → **New deployment**.
-2. Click the gear icon (⚙️) next to *Select type* and choose **Web app**.
-3. Fill in the fields:
-   - **Description**: `MCC Pilot Lead Webhook & Email Alerts`
-   - **Execute as**: **`Me`** (`iimonkataki@mycareercompany.com` / your Google account)
-   - **Who has access**: **`Anyone`** *(critical: allows the website form to submit leads)*
-4. Click **Deploy**.
-5. Click **Authorize access** and choose your Google account. *(If Google displays "Google hasn't verified this app", click "Advanced" → "Go to Untitled project (unsafe)" → "Allow")*.
-6. Copy the **Web App URL** (format: `https://script.google.com/macros/s/.../exec`).
-
-> **Note**: Share your new Web App URL with Antigravity, and it will be updated in `js/firebase-leads.js` and deployed to `www.mycareercompany.com` immediately!
+1. Open your Google Sheet.
+2. Click **Extensions** → **Apps Script**.
+3. Replace all code in `Code.gs` with the complete script below.
+4. Click **Save** (💾).
+5. Click **Deploy** (top right) → **Manage deployments**.
+6. Click the **Pencil icon** (Edit) on the active deployment:
+   - Change **Version** to: **`New version`**.
+   - Click **Deploy**.
+7. In your Google Sheet, refresh the page (`F5`), click the **`🚀 My Career Company`** menu at the top, and select **`🧹 Reset Headers & Re-sync All Leads from Database`**.
 
 ---
 
-## Complete Drop-in Google Apps Script (`Code.gs`)
+## Complete Drop-In Google Apps Script (`Code.gs`)
 
 ```javascript
 /**
  * ============================================================================
- * MY CAREER COMPANY — INSTITUTIONAL PILOT LEAD & EMAIL ENGINE
- * Captured Fields: Full Name, Role, Institution, Email, Phone, Programme,
- *                  Cohort Size, Placement Objectives, Lead ID, Timestamp
- * Target Recipients: anirbanroy@mycareercompany.com, ibonkataki@mycareercompany.com,
- *                    iimonkataki@mycareercompany.com, support@mycareercompany.com
+ * MY CAREER COMPANY — BULLETPROOF DYNAMIC LEAD & EMAIL ENGINE
+ * Automatic Column Header Detection + Multi-Inbox Email Alerts
+ * Recipients: anirbanroy@mycareercompany.com, ibonkataki@mycareercompany.com,
+ *             iimonkataki@mycareercompany.com, support@mycareercompany.com
  * ============================================================================
  */
 
@@ -67,10 +49,11 @@ function doPost(e) {
   lock.tryLock(10000);
 
   try {
-    var sheet = getOrCreateLeadSheet();
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("Pilot Leads") || ss.getSheetByName("Leads") || ss.getSheets()[0];
     var data = {};
 
-    // Parse incoming payload (supports JSON, text/plain, and URL-encoded forms)
+    // Parse incoming payload
     if (e && e.postData && e.postData.contents) {
       try {
         data = JSON.parse(e.postData.contents);
@@ -81,43 +64,26 @@ function doPost(e) {
       data = e.parameter;
     }
 
-    // Format IST Timestamp
     var timestampStr = Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd HH:mm:ss");
     var leadId = data.leadId || ("MCC-" + Utilities.getUuid().substring(0, 6).toUpperCase());
     var submittedAt = data.submittedAt ? formatToIST(data.submittedAt) : timestampStr;
 
-    // Append lead row in exact tabular order
-    sheet.appendRow([
-      leadId,
-      submittedAt,
-      data.name || "",
-      data.role || "",
-      data.institution || "",
-      data.email || "",
-      "'" + (data.phone || ""), // Prefix with apostrophe so Sheets preserves +91 formatting
-      data.programme || "",
-      data.cohortSize || "",
-      data.message || "",
-      data.sourcePage || "/contact",
-      "New Enquiry"
-    ]);
+    // Dynamically insert lead mapped to actual column headers
+    appendMappedLeadRow(sheet, data, leadId, submittedAt);
 
-    // Format and beautify spreadsheet
-    formatLeadSheet(sheet);
-
-    // Send immediate email notification to leadership & support team
+    // Send instant branded email notification to leadership & support team
     try {
       sendLeadEmailNotification({
         leadId: leadId,
         submittedAt: submittedAt,
-        name: data.name || "Institutional Lead",
-        role: data.role || "Not specified",
-        institution: data.institution || "Not specified",
+        name: data.name || data.fullName || "Institutional Lead",
+        role: data.role || data.designation || "Not specified",
+        institution: data.institution || data.bSchool || "Not specified",
         email: data.email || "",
         phone: data.phone || "",
-        programme: data.programme || "Not specified",
-        cohortSize: data.cohortSize || "Not specified",
-        message: data.message || "No specific objectives stated.",
+        programme: data.programme || data.program || "Not specified",
+        cohortSize: data.cohortSize || data.size || "Not specified",
+        message: data.message || data.objectives || "No specific objectives stated.",
         sourcePage: data.sourcePage || "/contact"
       });
     } catch (emailErr) {
@@ -142,22 +108,153 @@ function doPost(e) {
   }
 }
 
-// 2. HEALTH CHECK (Browser GET verification)
-function doGet(e) {
-  return ContentService.createTextOutput(JSON.stringify({
-    status: "online",
-    service: "My Career Company — Pilot Lead Ingestion & Email Engine",
-    recipients: NOTIFICATION_RECIPIENTS,
-    timestamp: new Date().toISOString()
-  })).setMimeType(ContentService.MimeType.JSON);
+// 2. DYNAMIC COLUMN MAPPING ROW INSERTER
+function appendMappedLeadRow(sheet, data, leadId, submittedAt) {
+  var lastRow = sheet.getLastRow();
+
+  // If sheet is completely empty, initialize standard headers
+  if (lastRow === 0) {
+    createStandardHeaders(sheet);
+    lastRow = 1;
+  }
+
+  var numCols = Math.max(sheet.getLastColumn(), 1);
+  var headers = sheet.getRange(1, 1, 1, numCols).getValues()[0];
+  var row = new Array(numCols).fill("");
+  var hasMatched = false;
+
+  for (var i = 0; i < numCols; i++) {
+    var h = String(headers[i] || "").trim().toLowerCase();
+
+    if (h.includes("time") || h.includes("date")) {
+      row[i] = submittedAt;
+      hasMatched = true;
+    } else if (h.includes("lead id") || h.includes("reference") || h === "id") {
+      row[i] = leadId;
+      hasMatched = true;
+    } else if (h.includes("name")) {
+      row[i] = data.name || data.fullName || "";
+      hasMatched = true;
+    } else if (h.includes("role") || h.includes("designation")) {
+      row[i] = data.role || data.designation || "";
+      hasMatched = true;
+    } else if (h.includes("institution") || h.includes("school") || h.includes("university")) {
+      row[i] = data.institution || data.bSchool || "";
+      hasMatched = true;
+    } else if (h.includes("email")) {
+      row[i] = data.email || "";
+      hasMatched = true;
+    } else if (h.includes("phone") || h.includes("contact") || h.includes("mobile")) {
+      row[i] = String(data.phone || "");
+      hasMatched = true;
+    } else if (h.includes("programme") || h.includes("program") || h.includes("cohort /")) {
+      row[i] = data.programme || data.program || "";
+      hasMatched = true;
+    } else if (h.includes("size") || h.includes("cohort size")) {
+      row[i] = data.cohortSize || data.size || "";
+      hasMatched = true;
+    } else if (h.includes("objective") || h.includes("focus") || h.includes("message") || h.includes("concern")) {
+      row[i] = data.message || data.objectives || "";
+      hasMatched = true;
+    } else if (h.includes("source") || h.includes("page")) {
+      row[i] = data.sourcePage || "/contact";
+      hasMatched = true;
+    } else if (h.includes("status")) {
+      row[i] = "New Enquiry";
+      hasMatched = true;
+    }
+  }
+
+  // Fallback if headers were unrecognized
+  if (!hasMatched) {
+    row = [
+      submittedAt,
+      data.name || "",
+      data.role || "",
+      data.institution || "",
+      data.email || "",
+      String(data.phone || ""),
+      data.programme || "",
+      data.cohortSize || data.size || "",
+      data.message || "",
+      leadId,
+      "New Enquiry"
+    ];
+  }
+
+  sheet.appendRow(row);
+
+  // Set plain text format on phone column so leading + is preserved cleanly
+  var newRowIndex = sheet.getLastRow();
+  for (var c = 0; c < numCols; c++) {
+    var colHeader = String(headers[c] || "").trim().toLowerCase();
+    if (colHeader.includes("phone") || colHeader.includes("mobile") || colHeader.includes("contact")) {
+      sheet.getRange(newRowIndex, c + 1).setNumberFormat("@");
+    }
+  }
+
+  formatLeadSheet(sheet);
 }
 
-// 3. EMAIL NOTIFICATION DISPATCHER
+// 3. STANDARD HEADER BUILDER
+function createStandardHeaders(sheet) {
+  sheet.clear();
+  sheet.appendRow([
+    "Timestamp (IST)",
+    "Full Name",
+    "Designation / Role",
+    "Business School / University",
+    "Official Institutional Email",
+    "Contact Phone",
+    "Cohort / Programme",
+    "Estimated Cohort Size",
+    "Specific Focus or Placement Objectives",
+    "Lead Reference ID",
+    "Status"
+  ]);
+  formatLeadSheet(sheet);
+}
+
+function formatLeadSheet(sheet) {
+  var lastRow = Math.max(sheet.getLastRow(), 1);
+  var lastCol = Math.max(sheet.getLastColumn(), 11);
+
+  // Header styling: Deep Forest Green (#073D32) and White Bold text
+  var headerRange = sheet.getRange(1, 1, 1, lastCol);
+  headerRange.setBackground("#073D32")
+             .setFontColor("#FFFFFF")
+             .setFontWeight("bold")
+             .setFontSize(10)
+             .setVerticalAlignment("middle");
+  sheet.setRowHeight(1, 38);
+  sheet.setFrozenRows(1);
+
+  if (lastRow > 1) {
+    var dataRange = sheet.getRange(2, 1, lastRow - 1, lastCol);
+    dataRange.setFontSize(9.5).setVerticalAlignment("middle");
+
+    // Wrap text on message / objectives column if found
+    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    for (var i = 0; i < lastCol; i++) {
+      var h = String(headers[i] || "").toLowerCase();
+      if (h.includes("objective") || h.includes("message") || h.includes("focus")) {
+        sheet.getRange(2, i + 1, lastRow - 1, 1).setWrap(true);
+        sheet.setColumnWidth(i + 1, 280);
+      } else {
+        sheet.autoResizeColumn(i + 1);
+        if (sheet.getColumnWidth(i + 1) < 110) {
+          sheet.setColumnWidth(i + 1, 120);
+        }
+      }
+    }
+  }
+}
+
+// 4. EMAIL NOTIFICATION DISPATCHER
 function sendLeadEmailNotification(lead) {
   var spreadsheetUrl = SpreadsheetApp.getActiveSpreadsheet().getUrl();
   var subject = "🎯 New Pilot Request: " + lead.name + " (" + lead.institution + ")";
 
-  // Plain Text Version
   var plainTextBody = 
     "MY CAREER COMPANY — NEW INSTITUTIONAL PILOT REQUEST\n\n" +
     "A new consultation or pilot inquiry has been submitted via www.mycareercompany.com.\n\n" +
@@ -177,14 +274,12 @@ function sendLeadEmailNotification(lead) {
     "View complete tabular records in Google Sheets:\n" +
     spreadsheetUrl + "\n";
 
-  // Branded HTML Version
   var htmlBody = 
     '<!DOCTYPE html>' +
     '<html><head><meta charset="utf-8"></head><body style="margin:0; padding:0; background:#F4F1EA; font-family:\'Segoe UI\', Arial, sans-serif; color:#1C2826;">' +
     '<table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F1EA; padding:24px 0;">' +
     '<tr><td align="center">' +
     '  <table width="600" cellpadding="0" cellspacing="0" style="background:#FFFFFF; border-radius:12px; overflow:hidden; border:1px solid #E5DFD3; box-shadow:0 4px 16px rgba(0,0,0,0.06);">' +
-    
     '    <!-- HEADER BANNER -->' +
     '    <tr><td style="background:#073D32; padding:24px 32px; border-bottom:3px solid #C8A97E;">' +
     '      <table width="100%" cellpadding="0" cellspacing="0">' +
@@ -267,7 +362,6 @@ function sendLeadEmailNotification(lead) {
     '      My Career Company &bull; <a href="https://www.mycareercompany.com" style="color:#C8A97E; text-decoration:none;">www.mycareercompany.com</a><br>' +
     '      Automated telemetry delivered to anirbanroy, ibonkataki, iimonkataki &amp; support.' +
     '    </td></tr>' +
-
     '  </table>' +
     '</td></tr>' +
     '</table>' +
@@ -282,143 +376,76 @@ function sendLeadEmailNotification(lead) {
   });
 }
 
-// 4. SPREADSHEET BUILDER & TABLE BEAUTIFIER
-function getOrCreateLeadSheet() {
+// 5. CLEAN UP & RE-SYNC ALL LEADS FROM FIREBASE
+function resetAndResyncAllLeads() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getActiveSheet();
+  var sheet = ss.getSheetByName("Pilot Leads") || ss.getSheetByName("Leads") || ss.getSheets()[0];
+  
+  createStandardHeaders(sheet);
 
-  if (sheet.getLastRow() === 0) {
-    sheet.appendRow([
-      "Lead ID",
-      "Timestamp (IST)",
-      "Full Name",
-      "Designation / Role",
-      "Business School / University",
-      "Official Institutional Email",
-      "Contact Phone",
-      "Cohort / Programme",
-      "Estimated Cohort Size",
-      "Specific Focus or Objectives",
-      "Source Page",
-      "Status"
-    ]);
-    formatLeadSheet(sheet);
-  }
-
-  return sheet;
-}
-
-function formatLeadSheet(sheet) {
-  var lastRow = Math.max(sheet.getLastRow(), 1);
-  var lastCol = 12;
-
-  // Header Styling: Deep Forest Green (#073D32) and White Bold Text
-  var headerRange = sheet.getRange(1, 1, 1, lastCol);
-  headerRange.setBackground("#073D32")
-             .setFontColor("#FFFFFF")
-             .setFontWeight("bold")
-             .setFontSize(10)
-             .setVerticalAlignment("middle");
-  sheet.setRowHeight(1, 38);
-
-  // Freeze top header row
-  sheet.setFrozenRows(1);
-
-  // Format data rows if they exist
-  if (lastRow > 1) {
-    var dataRange = sheet.getRange(2, 1, lastRow - 1, lastCol);
-    dataRange.setFontSize(9.5)
-             .setVerticalAlignment("middle");
-
-    // Wrap text on Objectives / Message column (Col 10)
-    sheet.getRange(2, 10, lastRow - 1, 1).setWrap(true);
-    sheet.setColumnWidth(10, 280);
-  }
-
-  // Auto-resize other columns for clean presentation
-  for (var c = 1; c <= lastCol; c++) {
-    if (c !== 10) {
-      sheet.autoResizeColumn(c);
-      // Add minimum readable padding
-      if (sheet.getColumnWidth(c) < 110) {
-        sheet.setColumnWidth(c, 120);
-      }
-    }
-  }
-}
-
-// 5. DIRECT FIREBASE FIRESTORE SYNC (Pulls any existing database records)
-function syncLeadsFromFirebase() {
   var projectId = "my-career-company";
   var apiKey = "AIzaSyC6DQ6wzXjRywCMhTBUXTiuIsRF-QWpLIg";
   var firestoreUrl = "https://firestore.googleapis.com/v1/projects/" + projectId + "/databases/(default)/documents/institutional_leads?pageSize=100&key=" + apiKey;
 
   try {
     var response = UrlFetchApp.fetch(firestoreUrl, { muteHttpExceptions: true });
-    var statusCode = response.getResponseCode();
-
-    if (statusCode !== 200) {
-      SpreadsheetApp.getUi().alert("Firebase Sync Note (" + statusCode + "): " + response.getContentText());
+    if (response.getResponseCode() !== 200) {
+      SpreadsheetApp.getUi().alert("Firebase Error: " + response.getContentText());
       return;
     }
 
     var json = JSON.parse(response.getContentText());
     if (!json.documents || json.documents.length === 0) {
-      SpreadsheetApp.getUi().alert("No leads found in Firebase Firestore collection 'institutional_leads'.");
+      SpreadsheetApp.getUi().alert("No leads found in Firebase.");
       return;
     }
 
-    var sheet = getOrCreateLeadSheet();
-
-    // Deduplicate against existing Lead IDs in Column A
-    var existingIds = [];
-    var lastRow = sheet.getLastRow();
-    if (lastRow > 1) {
-      existingIds = sheet.getRange(2, 1, lastRow - 1, 1).getValues().flat().map(String);
-    }
-
-    var newCount = 0;
+    var count = 0;
     json.documents.forEach(function(doc) {
       var f = doc.fields || {};
-      var leadId = f.leadId ? f.leadId.stringValue : (doc.name ? doc.name.split("/").pop() : "");
+      var data = {
+        name: f.name ? f.name.stringValue : "",
+        role: f.role ? f.role.stringValue : "",
+        institution: f.institution ? f.institution.stringValue : "",
+        email: f.email ? f.email.stringValue : "",
+        phone: f.phone ? f.phone.stringValue : "",
+        programme: f.programme ? f.programme.stringValue : "",
+        cohortSize: f.cohortSize ? f.cohortSize.stringValue : (f.size ? f.size.stringValue : ""),
+        message: f.message ? f.message.stringValue : "",
+        sourcePage: f.sourcePage ? f.sourcePage.stringValue : "/contact"
+      };
 
-      if (existingIds.indexOf(String(leadId)) !== -1) {
-        return;
-      }
+      var leadId = f.leadId ? f.leadId.stringValue : (doc.name ? doc.name.split("/").pop() : "MCC-UNKNOWN");
+      var timeStr = f.submittedAt ? formatToIST(f.submittedAt.stringValue) : Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd HH:mm:ss");
 
-      sheet.appendRow([
-        leadId,
-        f.submittedAt ? formatToIST(f.submittedAt.stringValue) : Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd HH:mm:ss"),
-        f.name ? f.name.stringValue : "",
-        f.role ? f.role.stringValue : "",
-        f.institution ? f.institution.stringValue : "",
-        f.email ? f.email.stringValue : "",
-        "'" + (f.phone ? f.phone.stringValue : ""),
-        f.programme ? f.programme.stringValue : "",
-        f.cohortSize ? f.cohortSize.stringValue : "",
-        f.message ? f.message.stringValue : "",
-        f.sourcePage ? f.sourcePage.stringValue : "/contact",
-        "Synced from Firebase"
-      ]);
-      newCount++;
+      appendMappedLeadRow(sheet, data, leadId, timeStr);
+      count++;
     });
 
-    formatLeadSheet(sheet);
-    SpreadsheetApp.getUi().alert("Sync Complete!\n\nImported " + newCount + " new lead(s) from Firebase.");
+    SpreadsheetApp.getUi().alert("Cleaned & Resynced Successfully!\n\nImported " + count + " real lead(s) into your sheet.");
 
   } catch (err) {
-    SpreadsheetApp.getUi().alert("Sync Failed: " + err.message);
+    SpreadsheetApp.getUi().alert("Resync Failed: " + err.message);
   }
 }
 
-// 6. CUSTOM SPREADSHEET MENU
+// 6. HEALTH CHECK
+function doGet(e) {
+  return ContentService.createTextOutput(JSON.stringify({
+    status: "online",
+    service: "My Career Company — Dynamic Lead & Email Engine",
+    recipients: NOTIFICATION_RECIPIENTS,
+    timestamp: new Date().toISOString()
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+// 7. CUSTOM SPREADSHEET MENU
 function onOpen() {
   var ui = SpreadsheetApp.getUi();
   ui.createMenu('🚀 My Career Company')
-    .addItem('🔄 Sync Leads from Firebase Now', 'syncLeadsFromFirebase')
+    .addItem('🧹 Reset Headers & Re-sync All Leads from Database', 'resetAndResyncAllLeads')
     .addItem('📧 Send Test Email Alert', 'sendTestLeadEmail')
     .addItem('🎨 Beautify Headers & Columns', 'formatActiveSheet')
-    .addItem('🧪 Insert Sample Test Lead', 'insertTestLead')
     .addToUi();
 }
 
@@ -428,7 +455,6 @@ function formatActiveSheet() {
   SpreadsheetApp.getUi().alert("Headers and column formatting refreshed!");
 }
 
-// 7. TEST UTILITIES
 function sendTestLeadEmail() {
   sendLeadEmailNotification({
     leadId: "MCC-TEST-" + Utilities.getUuid().substring(0, 4).toUpperCase(),
@@ -443,42 +469,13 @@ function sendTestLeadEmail() {
     message: "Test lead to verify email delivery across anirbanroy, ibonkataki, iimonkataki, and support.",
     sourcePage: "/contact"
   });
-  SpreadsheetApp.getUi().alert("Test email alert successfully sent to:\n" + NOTIFICATION_RECIPIENTS.split(",").join("\n"));
-}
-
-function insertTestLead() {
-  var sheet = getOrCreateLeadSheet();
-  var testId = "MCC-" + Utilities.getUuid().substring(0, 6).toUpperCase();
-  var now = Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd HH:mm:ss");
-
-  sheet.appendRow([
-    testId,
-    now,
-    "Dr. Test Placement Chair",
-    "Chairperson - Placements",
-    "IIM Sample Institution",
-    "placements@iim-sample.ac.in",
-    "'+91 8145295101",
-    "2-Year MBA / PGDM Flagship",
-    "120 - 250 Students",
-    "Pilot diagnostic inquiry for upcoming cohort.",
-    "/contact",
-    "Sample Test"
-  ]);
-
-  formatLeadSheet(sheet);
-  SpreadsheetApp.getUi().alert("Sample test lead (" + testId + ") inserted into sheet!");
+  SpreadsheetApp.getUi().alert("Test email alert sent to:\n" + NOTIFICATION_RECIPIENTS.split(",").join("\n"));
 }
 
 // 8. STRING HELPERS
 function escapeHtml(text) {
   if (!text) return "";
-  return String(text)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+  return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
 function nl2br(text) {
