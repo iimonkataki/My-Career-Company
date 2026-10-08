@@ -16,7 +16,7 @@ window.FIREBASE_CONFIG = {
 };
 
 // Google Sheets Real-Time Sync Webhook (Google Apps Script Web App)
-window.GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxv6ryxLa_M1zZNh-cUmkTZ7e8FybdVgPWtFYHY185zzkluzNox4vE3L9TQ9sTh6nLV/exec";
+window.GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxH9SO8xJ7jym99FZwHL9WkB2j1KDWbzppSrlCzD9UOqAEYxgS-aWiY-DF2dud7sG1k/exec";
 
 // Check if user has stored custom Firebase config in localStorage
 try {
