@@ -2163,3 +2163,99 @@ h1, h2, h3, h4, h5, h6 {
     text-align: center;
   }
 }
+
+/* ==========================================================================
+   ALUMNI NETWORK MARQUEE
+   ========================================================================== */
+.alumni-network-section {
+  margin-top: 52px;
+  position: relative;
+}
+
+.alumni-marquee-container {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  padding: 8px 0;
+  mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+}
+
+.alumni-marquee-row {
+  display: flex;
+  overflow: hidden;
+  user-select: none;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.alumni-marquee-track {
+  display: flex;
+  flex-shrink: 0;
+  gap: 16px;
+  align-items: center;
+  min-width: 100%;
+  animation: alumniScrollLeft 50s linear infinite;
+}
+
+.alumni-marquee-track.reverse {
+  animation: alumniScrollRight 54s linear infinite;
+}
+
+.alumni-marquee-row:hover .alumni-marquee-track {
+  animation-play-state: paused;
+}
+
+@keyframes alumniScrollLeft {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-100% - 16px));
+  }
+}
+
+@keyframes alumniScrollRight {
+  from {
+    transform: translateX(calc(-100% - 16px));
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.alumni-company-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: #FFFFFF;
+  border: 1px solid var(--color-gold-border);
+  padding: 8px 18px;
+  border-radius: 999px;
+  box-shadow: 0 2px 6px rgba(7, 61, 50, 0.04);
+  white-space: nowrap;
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+}
+
+.alumni-company-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-gold);
+  box-shadow: 0 6px 16px rgba(7, 61, 50, 0.08);
+}
+
+.alumni-logo-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.alumni-company-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-forest);
+  letter-spacing: -0.01em;
+}
+
