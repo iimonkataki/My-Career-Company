@@ -1,7 +1,7 @@
 /**
  * Career Clinic — Firebase Access Guard
  * Enforces strict email whitelist authentication for www.mycareercompany.com/ResumeFitScore
- * Optimized for cross-device persistence (Desktop, iOS Safari, Android, iPadOS)
+ * Features full Google Account Chooser with multi-account selection and "Add account" support
  */
 
 (function () {
@@ -16,8 +16,8 @@
   ].map(e => e.toLowerCase().trim());
 
   // 2. Dynamic Same-Origin authDomain
-  // Using window.location.hostname on mycareercompany.com eliminates cross-site storage
-  // partitioning (ITP) issues on iPhone/Safari/mobile Chrome so login journeys always complete!
+  // Using window.location.hostname on mycareercompany.com ensures OAuth runs 100% same-origin,
+  // preventing third-party cookie blocking while enabling full Google account picker functionality.
   const currentHost = (typeof window !== 'undefined' && window.location && window.location.hostname) ? window.location.hostname : '';
   const isCustomDomain = currentHost.includes('mycareercompany.com');
   const authDomain = isCustomDomain ? currentHost : "my-career-company.firebaseapp.com";
@@ -43,7 +43,7 @@
         firebase.initializeApp(FIREBASE_CONFIG);
       }
       auth = firebase.auth();
-      // Enforce persistent session in localStorage across reloads, restarts, and tabs
+      // Ensure persistent login across browser tabs, reloads, and devices
       auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(err => {
         console.warn("[AuthGuard] Persistence setup note:", err);
       });
@@ -77,9 +77,11 @@
   }
 
   /**
-   * Universal Cross-Device Google Sign-In
-   * Attempts instant popup first; seamlessly falls back to same-origin redirect
-   * if popups are blocked by mobile browser privacy settings.
+   * Google Sign-In with Full Account Chooser
+   * Navigates directly to Google's official "Choose an account" page via signInWithRedirect.
+   * Forces prompt=select_account so Google ALWAYS displays:
+   * 1. All currently logged-in Google accounts
+   * 2. The option to "Use another account" / "Add account"
    */
   async function signInWithGoogle() {
     if (!auth) {
@@ -93,45 +95,29 @@
     if (els.gateLoading) {
       els.gateLoading.style.display = 'flex';
       if (els.gateLoadingText) {
-        els.gateLoadingText.textContent = 'Connecting to Google Sign-In...';
+        els.gateLoadingText.textContent = 'Redirecting to Google Account Chooser...';
       }
     }
 
     const provider = new firebase.auth.GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
+    // Forces Google to render the complete multi-account selector screen with "Use another account"
+    provider.setCustomParameters({
+      prompt: 'select_account'
+    });
+    provider.addScope('email');
+    provider.addScope('profile');
 
     try {
-      // 1. Try popup first (fastest, keeps user on the page across desktop & modern mobile)
-      const result = await auth.signInWithPopup(provider);
-      if (result && result.user) {
-        handleAuthStateChanged(result.user);
-        return;
+      // Full-page navigation to Google's OAuth 2.0 Account Chooser
+      await auth.signInWithRedirect(provider);
+    } catch (error) {
+      console.error("[AuthGuard] Google sign-in redirect error:", error);
+      if (error.code === 'auth/unauthorized-domain') {
+        alert("Domain Authorization Required: Please verify that " + window.location.hostname + " is listed in Firebase Console > Authentication > Settings > Authorized Domains.");
+      } else {
+        alert("Google sign-in could not be completed: " + error.message);
       }
-    } catch (popupErr) {
-      console.warn("[AuthGuard] Popup sign-in note:", popupErr.code, popupErr.message);
-
-      // If user voluntarily closed the popup, return to login state gracefully
-      if (popupErr.code === 'auth/popup-closed-by-user') {
-        showLockedState();
-        return;
-      }
-
-      // 2. If popup was blocked or unsupported, seamlessly fall back to full redirect
-      if (els.gateLoadingText) {
-        els.gateLoadingText.textContent = 'Redirecting to Google Sign-In...';
-      }
-
-      try {
-        await auth.signInWithRedirect(provider);
-      } catch (redirectErr) {
-        console.error("[AuthGuard] Redirect error:", redirectErr);
-        if (redirectErr.code === 'auth/unauthorized-domain') {
-          alert("Domain Authorization Required: Please verify that " + window.location.hostname + " is listed in Firebase Console > Authentication > Settings > Authorized Domains.");
-        } else {
-          alert("Google sign-in could not be completed: " + (redirectErr.message || popupErr.message));
-        }
-        showLockedState();
-      }
+      showLockedState();
     }
   }
 
@@ -139,8 +125,12 @@
    * Sign Out
    */
   async function signOut() {
-    if (auth) {
-      await auth.signOut();
+    try {
+      if (auth) {
+        await auth.signOut();
+      }
+    } catch (err) {
+      console.warn("[AuthGuard] Sign out error:", err);
     }
     currentUser = null;
     isAuthorized = false;
@@ -232,7 +222,7 @@
       els.siteHeader.style.opacity = '1';
     }
 
-    // 4. Update Header with Authorized Administrator Badge
+    // 4. Update Header with Authorized Administrator Badge & Switch Account button
     if (els.headerUserWidget) {
       const initials = (user.displayName || user.email || 'CC')
         .split(' ')
@@ -252,7 +242,7 @@
             <span class="auth-admin-name">${escapeHtml(user.displayName || 'Administrator')}</span>
             <span class="auth-admin-tag">🛡️ Authorized Admin</span>
           </div>
-          <button type="button" class="btn-admin-signout" id="adminSignOutBtn" title="Sign Out">Sign Out</button>
+          <button type="button" class="btn-admin-signout" id="adminSignOutBtn" title="Switch account / Sign Out">Sign Out</button>
         </div>
       `;
 
