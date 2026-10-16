@@ -1,0 +1,5 @@
+# Binary tools & runtime artifacts
+cloudflared.exe
+*.log
+node_modules/
+.DS_Store

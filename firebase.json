@@ -8,7 +8,11 @@
       "firestore.indexes.json",
       "server.ps1",
       "**/.*",
-      "**/*.log"
+      "**/*.log",
+      "**/*.exe",
+      "**/node_modules/**",
+      "**/functions/**",
+      "**/*.md"
     ],
     "cleanUrls": true,
     "trailingSlash": false,
@@ -20,6 +24,46 @@
       {
         "source": "/career-clinic/placement-plan",
         "destination": "/placement-plan.html"
+      },
+      {
+        "source": "/ResumeFitScore/style.css",
+        "destination": "/career-clinic-resume-checker/style.css"
+      },
+      {
+        "source": "/ResumeFitScore/script.js",
+        "destination": "/career-clinic-resume-checker/script.js"
+      },
+      {
+        "source": "/ResumeFitScore/jd-database.js",
+        "destination": "/career-clinic-resume-checker/jd-database.js"
+      },
+      {
+        "source": "/ResumeFitScore/logo.png",
+        "destination": "/career-clinic-resume-checker/logo.png"
+      },
+      {
+        "source": "/ResumeFitScore/auth-guard.js",
+        "destination": "/career-clinic-resume-checker/auth-guard.js"
+      },
+      {
+        "source": "/ResumeFitScore/brand-logo.png",
+        "destination": "/career-clinic-resume-checker/brand-logo.png"
+      },
+      {
+        "source": "/ResumeFitScore/brand-emblem.png",
+        "destination": "/career-clinic-resume-checker/brand-emblem.png"
+      },
+      {
+        "source": "/ResumeFitScore/favicon.png",
+        "destination": "/career-clinic-resume-checker/favicon.png"
+      },
+      {
+        "source": "/ResumeFitScore",
+        "destination": "/career-clinic-resume-checker/index.html"
+      },
+      {
+        "source": "/ResumeFitScore/**",
+        "destination": "/career-clinic-resume-checker/index.html"
       }
     ],
     "headers": [
@@ -48,6 +92,18 @@
             "value": "1; mode=block"
           }
         ]
+      }
+    ],
+    "redirects": [
+      {
+        "source": "/resumefitscore",
+        "destination": "/ResumeFitScore",
+        "type": 301
+      },
+      {
+        "source": "/resumefitscore/**",
+        "destination": "/ResumeFitScore",
+        "type": 301
       }
     ]
   },

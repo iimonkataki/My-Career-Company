@@ -1,0 +1,30 @@
+{
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "functions/**",
+      "cloudflared.exe",
+      "*.md"
+    ],
+    "redirects": [
+      {
+        "source": "/",
+        "destination": "/ResumeFitScore",
+        "type": 302
+      }
+    ],
+    "rewrites": [
+      {
+        "source": "/ResumeFitScore",
+        "destination": "/index.html"
+      },
+      {
+        "source": "/ResumeFitScore/**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

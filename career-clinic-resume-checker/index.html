@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resume Fit Score™ Checker | Career Clinic by My Career Company</title>
+  <meta name="description"
+    content="Institutional Resume Fit Score™ Diagnostic for MBA and PGDM candidates in India. Rule-based ATS, impact, and job-description benchmarked evaluation.">
+
+  <!-- Google Fonts: Montserrat -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap"
+    rel="stylesheet">
+
+  <!-- Mammoth DOCX parser -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.12.1/mammoth.browser.min.js"></script>
+
+  <!-- Firebase App & Auth SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png">
+
+  <!-- Base URL for /ResumeFitScore hosting -->
+  <base href="/ResumeFitScore/">
+
+  <!-- Application Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <!-- Header / Institutional Brand Bar -->
+  <header class="site-header" id="siteHeader">
+    <div class="header-container">
+      <div class="brand-block">
+        <a href="https://www.mycareercompany.com" target="_blank" rel="noopener" class="logo-anchor"
+          title="My Career Company">
+          <img src="brand-logo.png" alt="My Career Company" id="headerLogo" class="brand-logo"
+            onerror="this.src='logo.png';">
+        </a>
+      </div>
+
+      <div class="header-center">
+        <span class="program-title">CAREER CLINIC</span>
+        <span class="program-sep">&bull;</span>
+        <span class="program-tagline">RESUME FIT SCORE&trade;</span>
+      </div>
+
+      <div class="header-badge">
+        <span class="badge-pill">DIAGNOSTIC ENGINE</span>
+      </div>
+
+      <!-- Authorized Administrator Profile Widget -->
+      <div class="header-user-widget" id="headerUserWidget"></div>
+    </div>
+  </header>
+
+  <!-- Institutional Authentication Gate (Restricted Access) -->
+  <div id="authGateOverlay" class="auth-gate-overlay" role="dialog" aria-modal="true" style="display: flex;">
+    <div class="auth-gate-container">
+      
+      <!-- Loading State (verifying Firebase session) -->
+      <div id="authGateLoading" class="auth-gate-card auth-gate-loading-card">
+        <div class="spinner"></div>
+        <div class="auth-loading-text" id="authGateLoadingText">Verifying Institutional Access...</div>
+      </div>
+
+      <!-- Login Card (shown when unauthenticated) -->
+      <div id="authGateLoginCard" class="auth-gate-card" style="display: none;">
+        <div class="auth-gate-brand">
+          <img src="brand-logo.png" alt="My Career Company" class="auth-gate-logo-img" onerror="this.src='logo.png';">
+          <div class="auth-gate-brand-meta">
+            <span class="auth-gate-org">MY CAREER COMPANY</span>
+            <span class="auth-gate-tagline">Career Clinic &bull; Institutional Portal</span>
+          </div>
+        </div>
+
+        <div class="auth-gate-content">
+          <div class="auth-gate-lock-icon" aria-hidden="true">🔒</div>
+          <h2 class="auth-gate-title">Restricted Access</h2>
+          <p class="auth-gate-desc">
+            The <strong>Resume Fit Score™ Diagnostic Engine</strong> is restricted to authorized faculty, institutional coordinators, and verified administrators.
+          </p>
+        </div>
+
+        <div class="auth-gate-action">
+          <button type="button" class="btn-auth-google" id="gateGoogleSignInBtn">
+            <svg class="google-icon" width="20" height="20" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+            </svg>
+            <span>Sign In with Google</span>
+          </button>
+        </div>
+
+        <div class="auth-gate-footer">
+          <span>Protected institutional domain &bull; Single Sign-On</span>
+        </div>
+      </div>
+
+      <!-- Access Denied Card (shown when an unauthorized email signs in) -->
+      <div id="authGateErrorCard" class="auth-gate-card auth-gate-error-card" style="display: none;">
+        <div class="auth-gate-brand">
+          <img src="brand-logo.png" alt="My Career Company" class="auth-gate-logo-img" onerror="this.src='/assets/brand-logo.png';">
+          <div class="auth-gate-brand-meta">
+            <span class="auth-gate-org">MY CAREER COMPANY</span>
+            <span class="auth-gate-tagline">Career Clinic &bull; Institutional Portal</span>
+          </div>
+        </div>
+        <div class="auth-error-icon" aria-hidden="true">⛔</div>
+        <h2 class="auth-error-title">Access Denied</h2>
+        <p class="auth-error-desc">
+          The account <strong id="authDeniedEmailText" class="denied-email-highlight">user@domain.com</strong> is not on the authorized institutional access list.
+        </p>
+        <p class="auth-error-note">
+          Only permitted administrators can access this portal. If you have an approved administrative account, please sign in below.
+        </p>
+
+        <div class="auth-gate-action">
+          <button type="button" class="btn-auth-google" id="gateTryAgainBtn">
+            <svg class="google-icon" width="20" height="20" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+            </svg>
+            <span>Sign In with an Approved Account</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Main Content Container -->
+  <main class="main-content" id="mainApp">
+
+    <!-- Hero / Diagnostic Intro -->
+    <section class="hero-section" id="heroSection">
+      <div class="hero-content">
+        <div class="hero-eyebrow">CAREER CLINIC &bull; RESUME FIT DIAGNOSTIC</div>
+        <h1 class="hero-title">Resume Fit Score&trade; Checker</h1>
+        <p class="hero-subtitle">
+          Data-driven, recruiter-calibrated evaluation tailored for top Indian management candidates. Benchmark your CV
+          against your target Job Description across 8 structural dimensions, quantified impact, ATS compliance, and
+          role competencies before corporate shortlisting.
+        </p>
+      </div>
+
+      <!-- Institutional Highlights -->
+      <div class="hero-stats">
+        <div class="stat-card">
+          <div class="stat-num">100</div>
+          <div class="stat-label">Fit Score Index</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">8</div>
+          <div class="stat-label">Evaluation Vectors</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">JD</div>
+          <div class="stat-label">Target Role Match</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">100%</div>
+          <div class="stat-label">Client-Side Privacy</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Error Alert Banner -->
+    <div id="errorAlert" class="error-banner" style="display: none;" role="alert">
+      <div class="error-icon" aria-hidden="true">&#9888;</div>
+      <div class="error-content">
+        <div class="error-title" id="errorTitle">Parsing Notice</div>
+        <div class="error-message" id="errorMessage">Unable to process document.</div>
+      </div>
+      <button type="button" class="error-close-btn" id="errorCloseBtn" aria-label="Close message">&times;</button>
+    </div>
+
+    <!-- Input Section: Upload Resume & Share Job Description -->
+    <section class="diagnostic-input-panel" id="diagnosticInputPanel">
+      <div class="panel-header">
+        <h2 class="panel-title">Upload Resume &amp; Share Job Description</h2>
+        <p class="panel-subtext">Upload your resume and share the target job description (upload document, provide job
+          link, or paste text) to calculate your Resume Fit Score&trade;.</p>
+      </div>
+
+      <div class="privacy-box-top" id="privacyBox">
+        <div class="privacy-icon" aria-hidden="true">&#128274;</div>
+        <div class="privacy-text">
+          <strong>100% Client-Side Privacy:</strong> Your resume and job description are parsed and benchmarked strictly
+          inside this browser. Zero files or data are uploaded to external servers.
+        </div>
+      </div>
+
+      <!-- Dual Intake Grid (Resume on Left, Job Description on Right) -->
+      <div class="dual-intake-grid">
+
+        <!-- COLUMN 1: RESUME INTAKE -->
+        <div class="intake-card" id="resumeIntakeCard">
+          <div class="intake-header">
+            <span class="intake-badge">INPUT A</span>
+            <h3 class="intake-title">Candidate Resume <span class="required-star">*</span></h3>
+            <p class="intake-desc">Upload your latest CV in digital format or paste text</p>
+          </div>
+
+          <!-- Resume Tabs -->
+          <div class="mini-tabs" role="tablist">
+            <button type="button" class="mini-tab active" id="tabResumeUpload" role="tab" aria-selected="true">
+              &#128196; Upload PDF / DOCX
+            </button>
+            <button type="button" class="mini-tab" id="tabResumePaste" role="tab" aria-selected="false">
+              &#9997; Paste Text
+            </button>
+          </div>
+
+          <!-- Resume Tab 1: Upload PDF/DOCX -->
+          <div class="intake-tab-body active" id="resumeUploadSection">
+            <div class="dropzone" id="dropZone" tabindex="0" role="button"
+              aria-label="Upload resume by dragging and dropping or clicking to browse">
+              <input type="file" id="fileInput" class="file-input-hidden" accept=".pdf,.docx,.doc">
+              <div class="dropzone-inner">
+                <div class="upload-icon-circle">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                </div>
+                <div class="dropzone-prompt">
+                  <strong>Drop resume here</strong> or <span class="browse-link">browse</span>
+                </div>
+                <div class="dropzone-specs">Supports .PDF and .DOCX (single or 2-page format)</div>
+              </div>
+            </div>
+
+            <!-- Selected File Indicator -->
+            <div id="fileInfoBox" class="file-info-box" style="display:none;">
+              <div class="file-info-left">
+                <span class="file-badge-icon" id="fileTypeIcon">&#128196;</span>
+                <div class="file-details">
+                  <span class="file-name" id="fileNameDisplay">resume.pdf</span>
+                  <span class="file-size" id="fileSizeDisplay">128 KB</span>
+                </div>
+              </div>
+              <button type="button" class="file-remove-btn" id="fileRemoveBtn" title="Remove file">&times;</button>
+            </div>
+          </div>
+
+          <!-- Resume Tab 2: Direct Textarea Paste -->
+          <div class="intake-tab-body" id="resumePasteSection" style="display:none;">
+            <div class="paste-container">
+              <textarea id="resumeTextInput" class="resume-textarea" rows="8"
+                placeholder="Paste your complete resume text including Education, Work Experience, Projects, PORs, and Skills..."></textarea>
+              <div class="textarea-footer">
+                <span class="word-counter" id="wordCounter">0 words</span>
+                <button type="button" class="sample-load-btn" id="loadSampleResumeBtn">
+                  &#10024; Load Sample IIM Resume
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- COLUMN 2: JOB DESCRIPTION INTAKE -->
+        <div class="intake-card" id="jdIntakeCard">
+          <div class="intake-header">
+            <span class="intake-badge badge-jd">INPUT B</span>
+            <h3 class="intake-title">Target Job Description (JD)</h3>
+            <p class="intake-desc">Upload JD document, provide job link, or choose domain benchmark</p>
+          </div>
+
+          <!-- JD Tabs -->
+          <div class="mini-tabs" role="tablist">
+            <button type="button" class="mini-tab" id="tabJdUpload" role="tab" aria-selected="false">
+              &#128196; Upload JD (.pdf/.docx)
+            </button>
+            <button type="button" class="mini-tab" id="tabJdLink" role="tab" aria-selected="false">
+              &#128279; JD Link (URL)
+            </button>
+            <button type="button" class="mini-tab active" id="tabJdDomain" role="tab" aria-selected="true">
+              &#127919; Domain Selection
+            </button>
+            <button type="button" class="mini-tab" id="tabJdPaste" role="tab" aria-selected="false">
+              &#9997; Paste Custom JD
+            </button>
+          </div>
+
+          <!-- JD Tab 1: Upload JD Document -->
+          <div class="intake-tab-body" id="jdUploadSection" style="display:none;">
+            <div class="dropzone dropzone-jd" id="jdDropZone" tabindex="0" role="button"
+              aria-label="Upload job description by dragging and dropping or clicking to browse">
+              <input type="file" id="jdFileInput" class="file-input-hidden" accept=".pdf,.docx,.doc">
+              <div class="dropzone-inner">
+                <div class="upload-icon-circle circle-jd">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                  </svg>
+                </div>
+                <div class="dropzone-prompt">
+                  <strong>Drop Job Description here</strong> or <span class="browse-link">browse</span>
+                </div>
+                <div class="dropzone-specs">Supports .PDF and .DOCX job descriptions</div>
+              </div>
+            </div>
+
+            <!-- Selected JD File Indicator -->
+            <div id="jdFileInfoBox" class="file-info-box" style="display:none;">
+              <div class="file-info-left">
+                <span class="file-badge-icon" id="jdFileTypeIcon">&#128196;</span>
+                <div class="file-details">
+                  <span class="file-name" id="jdFileNameDisplay">job_description.pdf</span>
+                  <span class="file-size" id="jdFileSizeDisplay">95 KB</span>
+                </div>
+              </div>
+              <button type="button" class="file-remove-btn" id="jdFileRemoveBtn" title="Remove JD file">&times;</button>
+            </div>
+          </div>
+
+          <!-- JD Tab 2: Job Description Link (URL) -->
+          <div class="intake-tab-body" id="jdLinkSection" style="display:none;">
+            <div class="url-input-container">
+              <label for="jdUrlInput" class="form-label">Job Posting / Career URL</label>
+              <div class="url-input-row">
+                <input type="url" id="jdUrlInput" class="form-input-text"
+                  placeholder="https://www.linkedin.com/jobs/view/... or company portal link">
+                <button type="button" class="btn-fetch" id="fetchJdUrlBtn">
+                  <span>Analyze Link</span>
+                </button>
+              </div>
+              <div class="url-status-note" id="urlStatusNote">
+                Enter the public job posting URL to analyze company requirements and competencies.
+              </div>
+            </div>
+          </div>
+
+          <!-- JD Tab 3: Domain Selection (Consolidated 112 Profiles across 28 Domains x 4 Career Levels) -->
+          <div class="intake-tab-body active" id="jdDomainSection">
+            <div class="paste-container">
+
+              <!-- Filter by Career Level Pills -->
+              <div class="jd-level-pills-container">
+                <div class="jd-level-label">
+                  <span>&#9878; Quick Career Level Filter:</span>
+                </div>
+                <div class="jd-level-pills" id="jdLevelPills" role="radiogroup" aria-label="Career Level Filter">
+                  <button type="button" class="jd-level-pill active" data-level="CAMPUS">Campus (0–2 yrs)</button>
+                  <button type="button" class="jd-level-pill" data-level="EARLY">Early (2–5 yrs)</button>
+                  <button type="button" class="jd-level-pill" data-level="MID">Mid (5–10 yrs)</button>
+                  <button type="button" class="jd-level-pill" data-level="SENIOR">Senior (10+ yrs)</button>
+                </div>
+              </div>
+
+              <!-- Two Dropdowns: Target Domain and Filter by Career Level -->
+              <div class="jd-cascading-grid">
+                <div class="form-group">
+                  <label for="jdDomainSelect" class="form-label">
+                    Target Domain: <span class="required-star">*</span>
+                  </label>
+                  <div class="select-wrapper">
+                    <select id="jdDomainSelect" class="form-select">
+                      <!-- Dynamically populated from 28 domains in JD Database v2 -->
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="jdLevelSelect" class="form-label">
+                    Filter by Career Level: <span class="required-star">*</span>
+                  </label>
+                  <div class="select-wrapper">
+                    <select id="jdLevelSelect" class="form-select">
+                      <option value="CAMPUS">Campus (0–2 years / Freshers &amp; MBA Final-Year)</option>
+                      <option value="EARLY">Early Lateral (2–5 years experience)</option>
+                      <option value="MID">Mid Management (5–10 years experience)</option>
+                      <option value="SENIOR">Senior Executive (10+ years / CXO / P&amp;L)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Selected Role Snapshot Card -->
+              <div id="jdBenchmarkCard" class="jd-benchmark-card">
+                <!-- Dynamically rendered role snapshot -->
+              </div>
+
+              <!-- Editable / Viewable JD Textarea -->
+              <label for="jdTextInput" class="form-label" style="margin-top: 8px;">
+                Job Description Text (Benchmark Loaded / Custom Editable)
+              </label>
+              <textarea id="jdTextInput" class="resume-textarea" rows="4"
+                placeholder="Select a domain and sub-category above, or click the customized AI generator below to load the institutional benchmark JD..."></textarea>
+              <div class="textarea-footer">
+                <span class="word-counter" id="jdWordCounter">0 words</span>
+                <div style="position: relative; display: flex; align-items: center;">
+                  <span id="jdLoadToast" class="jd-toast-pill">&#10003; Benchmark Loaded</span>
+                  <button type="button" class="sample-load-btn" id="loadSampleJdBtn">
+                    &#10024; Load McKinsey/BCG Consulting JD
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- JD Tab 4: Direct Paste Custom JD -->
+          <div class="intake-tab-body" id="jdPasteSection" style="display:none;">
+            <div class="paste-container">
+              <div class="form-group role-dropdown-compact">
+                <label for="targetRoleSelect" class="form-label">
+                  Target Domain Benchmark:
+                </label>
+                <div class="select-wrapper">
+                  <select id="targetRoleSelect" class="form-select">
+                    <!-- Synced with domain select -->
+                  </select>
+                </div>
+              </div>
+
+              <label for="jdPasteTextInput" class="form-label" style="margin-top: 8px;">
+                Paste Specific Job Description Text (from LinkedIn, Naukri, or Company Portal)
+              </label>
+              <textarea id="jdPasteTextInput" class="resume-textarea" rows="6"
+                placeholder="Paste the specific job description, responsibilities, and required qualifications here..."></textarea>
+              <div class="textarea-footer">
+                <span class="word-counter" id="jdPasteWordCounter">0 words</span>
+                <span class="field-hint">Supports full job specs up to 20,000 characters</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Diagnostic Execution CTA Bar -->
+      <div class="action-footer action-footer-centered">
+        <button type="button" class="btn-primary btn-large" id="runDiagnosticBtn">
+          <span class="btn-text">Run Diagnostic Assessment</span>
+          <span class="btn-arrow" aria-hidden="true">&rarr;</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Loading Indicator -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;" aria-live="polite">
+      <div class="loading-card">
+        <div class="spinner"></div>
+        <div class="loading-title">Analyzing Resume Profile</div>
+        <div class="loading-desc" id="loadingStatusText">Extracting structured sections and evaluating ATS
+          readability...</div>
+      </div>
+    </div>
+
+    <!-- Diagnostic Results Section (Hidden until diagnostic is executed) -->
+    <section class="diagnostic-results" id="diagnosticResults" style="display: none;">
+
+      <!-- Results Header & Quick Actions -->
+      <div class="results-top-bar">
+        <div class="results-heading-group">
+          <div class="results-eyebrow">RESUME FIT SCORE&trade; &bull; DIAGNOSTIC REPORT</div>
+          <h2 class="results-title">Resume Fit Diagnostic Report</h2>
+          <div class="results-meta" id="reportMetaText">Target Domain: Consulting / Strategy &bull; Assessed Today</div>
+        </div>
+        <div class="results-actions">
+          <button type="button" class="btn-secondary" id="printReportBtn">
+            <span class="btn-icon">&#128438;</span> Download / Print Report
+          </button>
+          <button type="button" class="btn-outline" id="resetDiagnosticBtn">
+            <span class="btn-icon">&#8635;</span> Check Another Resume
+          </button>
+        </div>
+      </div>
+
+      <!-- Target Domain Highlight Banner (Calibrated from Job Description) -->
+      <div class="target-domain-banner" id="targetDomainBanner">
+        <div class="td-banner-main">
+          <div class="td-badge-icon" aria-hidden="true">&#127919;</div>
+          <div class="td-details">
+            <div class="td-label">TARGET RECRUITMENT DOMAIN</div>
+            <h3 class="td-name" id="targetDomainBannerTitle">Management Consulting &amp; Strategy</h3>
+            <p class="td-meta" id="targetDomainBannerMeta">Calibrated against target Job Description &bull; 18 Verified
+              Core Competencies</p>
+          </div>
+        </div>
+        <div class="td-tag-wrap">
+          <span class="td-active-pill" id="targetDomainBannerPill">TARGET BENCHMARK ACTIVE</span>
+        </div>
+      </div>
+
+      <!-- Primary Score Showcase Grid -->
+      <div class="score-showcase-grid">
+
+        <!-- Score Ring Card -->
+        <div class="score-card ring-card">
+          <div class="ring-card-header">
+            <span class="card-kicker">OVERALL RESUME FIT SCORE</span>
+          </div>
+
+          <div class="ring-display-container">
+            <div class="ring-wrapper">
+              <svg class="score-svg" viewBox="0 0 160 160">
+                <!-- Background track -->
+                <circle class="ring-track" cx="80" cy="80" r="70" />
+                <!-- Animated Gold Progress Arc -->
+                <circle class="ring-progress" id="scoreRingProgress" cx="80" cy="80" r="70" stroke-dasharray="440"
+                  stroke-dashoffset="440" />
+              </svg>
+              <div class="ring-text-overlay">
+                <span class="ring-num" id="overallScoreNum">0</span>
+                <span class="ring-denom">/100</span>
+              </div>
+            </div>
+
+            <div class="band-indicator-group">
+              <div class="band-badge" id="bandBadge">CALCULATING</div>
+              <div class="band-description" id="bandDescription">
+                Evaluated against institutional recruiter benchmarks for post-graduate management candidates.
+              </div>
+            </div>
+          </div>
+
+          <div class="ring-card-footer">
+            <div class="ring-stat-item">
+              <span class="stat-title">Estimated Length</span>
+              <strong class="stat-value" id="resLengthValue">-</strong>
+            </div>
+            <div class="ring-stat-item">
+              <span class="stat-title">Extracted Bullets</span>
+              <strong class="stat-value" id="bulletCountValue">-</strong>
+            </div>
+            <div class="ring-stat-item">
+              <span class="stat-title">Quantified Ratio</span>
+              <strong class="stat-value" id="quantRatioValue">-</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- 8 Sub-score Breakdown Bars Card -->
+        <div class="score-card breakdown-card">
+          <div class="breakdown-card-header">
+            <span class="card-kicker">EVALUATION VECTORS</span>
+            <span class="dim-subtext">8 Scored Evaluation Vectors</span>
+          </div>
+
+          <div class="dimension-bars-list" id="dimensionBarsList">
+            <!-- Dynamically populated by script.js -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Strengths & Priority Fixes Section -->
+      <div class="insights-grid">
+        <!-- Strengths Card -->
+        <div class="insight-card strengths-card">
+          <div class="insight-header">
+            <div class="insight-icon strength-icon" aria-hidden="true">&#10003;</div>
+            <div>
+              <h3 class="insight-title">Demonstrated Strengths</h3>
+              <p class="insight-subtitle">Dimensions scoring &ge; 80% against recruiter expectations</p>
+            </div>
+          </div>
+          <div class="insight-list" id="strengthsList">
+            <!-- Dynamically generated -->
+          </div>
+        </div>
+
+        <!-- Priority Fixes Card -->
+        <div class="insight-card fixes-card">
+          <div class="insight-header">
+            <div class="insight-icon fix-icon" aria-hidden="true">&#9888;</div>
+            <div>
+              <h3 class="insight-title">Priority Fixes (Impact Ordered)</h3>
+              <p class="insight-subtitle">Actionable adjustments based directly on your resume, ordered by recruiter
+                impact</p>
+            </div>
+          </div>
+          <div class="insight-list" id="priorityFixesList">
+            <!-- Dynamically generated -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Role-Keyword Match Diagnostics Card -->
+      <div class="score-card keywords-card">
+        <div class="keywords-header">
+          <div>
+            <span class="card-kicker">DOMAIN CALIBRATION</span>
+            <h3 class="keywords-title" id="keywordsRoleTitle">Role Keywords Analysis</h3>
+            <p class="keywords-subtitle">
+              Recruiter ATS systems and interview panelists screen for 18 core competencies in this domain. (Full marks
+              at 50% matched).
+            </p>
+          </div>
+          <div class="keyword-match-stat">
+            <span class="stat-highlight" id="keywordMatchRatio">0 / 18</span>
+            <span class="stat-caption">Keywords Detected</span>
+          </div>
+        </div>
+
+        <div class="keyword-chips-container">
+          <div class="chips-group">
+            <div class="chips-group-label">&#10003; Detected Competencies (<span id="detectedCount">0</span>)</div>
+            <div class="chips-wrapper" id="detectedChips">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <div class="chips-group">
+            <div class="chips-group-label">&#8226; Missing Domain Keywords (<span id="missingCount">0</span>)</div>
+            <div class="chips-wrapper" id="missingChips">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Domain Improvement Action Guide: Certifications & Projects -->
+        <div class="domain-action-guide">
+          <div class="guide-column">
+            <div class="guide-header">
+              <span class="guide-icon">&#127891;</span>
+              <div class="guide-title-wrap">
+                <h4 class="guide-title">Suggested Certifications</h4>
+                <span class="guide-subtitle">High-credibility credentials recognized by recruiters in this domain</span>
+              </div>
+            </div>
+            <ul class="guide-list" id="suggestedCertificationsList">
+              <!-- Dynamically populated based on target domain -->
+            </ul>
+          </div>
+
+          <div class="guide-column">
+            <div class="guide-header">
+              <span class="guide-icon">&#128188;</span>
+              <div class="guide-title-wrap">
+                <h4 class="guide-title">Suggested Capstones &amp; Projects</h4>
+                <span class="guide-subtitle">Portfolio initiatives demonstrating practitioner-level problem
+                  solving</span>
+              </div>
+            </div>
+            <ul class="guide-list" id="suggestedProjectsList">
+              <!-- Dynamically populated based on target domain -->
+            </ul>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Targeted Bullet Rewrites Card (Resume Pointers) -->
+      <div class="score-card rewrites-card">
+        <div class="rewrites-header">
+          <span class="card-kicker">RESUME POINTERS</span>
+          <h3 class="rewrites-title">Targeted Bullet Rewrites (Before vs After)</h3>
+          <p class="rewrites-subtitle">
+            Personalized, line-by-line rewrites based directly on your uploaded resume text, elevated with top-tier
+            recruiter benchmarks and metrics for your target domain.
+          </p>
+        </div>
+
+        <div class="rewrites-list" id="rewritesList">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- Cross-Domain Suitability Meter -->
+      <div class="score-card suitability-card" id="domainSuitabilityCard">
+        <div class="suitability-header">
+          <div>
+            <span class="card-kicker">CROSS-DOMAIN BENCHMARKING</span>
+            <h3 class="suitability-title">Domain Suitability Meter</h3>
+            <p class="suitability-subtitle">
+              Recruiter-benchmarked affinity profile of your resume across all marquee recruitment verticals, evaluating
+              competency density, domain terminology, and historical experience signals.
+            </p>
+          </div>
+          <div class="suitability-top-badge" id="suitabilityTopBadge">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <div class="suitability-grid" id="suitabilityGrid">
+          <!-- Dynamically populated domain rows -->
+        </div>
+
+        <div class="suitability-recruiter-box" id="suitabilityRecruiterBox">
+          <!-- Dynamically populated alignment insights -->
+        </div>
+      </div>
+
+      <!-- Institutional Disclaimer -->
+      <aside class="disclaimer-banner" role="note">
+        <div class="disclaimer-icon" aria-hidden="true">&#9432;</div>
+        <div class="disclaimer-text">
+          <strong>Institutional Advisory &amp; Disclaimer:</strong> The Resume Fit Score&trade; is indicative,
+          pedagogical, and designed strictly for resume optimization and candidate self-improvement against recruiter
+          expectations. While calibrated against leading B-school placement committee and corporate recruiting
+          standards, it does not constitute a guaranteed placement or interview offer.
+        </div>
+      </aside>
+
+      <!-- Bottom Floating / Secondary Action Bar -->
+      <div class="results-bottom-actions">
+        <button type="button" class="btn-primary" id="bottomPrintBtn">
+          <span class="btn-icon">&#128438;</span> Download / Print Full Diagnostic Report
+        </button>
+        <button type="button" class="btn-outline" id="bottomResetBtn">
+          <span class="btn-icon">&#8635;</span> Check Another Resume
+        </button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="footer-container">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <img src="brand-logo.png" alt="My Career Company" class="footer-brand-logo" onerror="this.src='logo.png';">
+          <div class="footer-logo">MY CAREER COMPANY</div>
+          <div class="footer-sub">Making career preparation more structured, personalised and measurable.</div>
+        </div>
+        <div class="footer-contact">
+          <div><strong>Institutional Inquiries:</strong> support@mycareercompany.com</div>
+          <div><strong>Direct Helpline:</strong> +91 8145295101</div>
+          <div><strong>Web:</strong> www.mycareercompany.com</div>
+        </div>
+      </div>
+      <div class="footer-divider"></div>
+      <div class="footer-bottom">
+        <div>&copy; 2026 My Career Company. Resume Fit Score&trade; and Career Clinic are institutional programs. All
+          rights reserved.</div>
+        <div class="footer-note">Built for MBA &bull; PGDM &bull; EPGP &bull; MDP &bull; Executive Education cohorts in
+          India.</div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Auth Guard & Email Whitelist Protection -->
+  <script src="auth-guard.js"></script>
+
+  <!-- Application Logic -->
+  <script src="jd-database.js"></script>
+  <script src="script.js"></script>
+</body>
+
+</html>
