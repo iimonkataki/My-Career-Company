@@ -3,8 +3,8 @@ service firebase.storage {
   match /b/{bucket}/o {
     
     // Helper function: Strictly verify that the request is authenticated 
-    // and belongs to one of the authorized evaluator emails.
-    function isAuthorizedEvaluator() {
+    // and belongs to one of the 4 co-founders.
+    function isCoFounder() {
       return request.auth != null && (
         request.auth.token.email.lower() in [
           'upam.patra@gmail.com',
@@ -16,19 +16,25 @@ service firebase.storage {
       );
     }
 
-    // Uploaded candidate resumes repository
+    // Uploaded candidate resumes repository:
+    // - Authenticated users can upload (create) their resume
+    // - ONLY the 4 co-founders can read or delete uploaded resumes
     match /resumes/{fileName} {
-      allow read, write, create, delete: if isAuthorizedEvaluator();
+      allow read, delete: if isCoFounder();
+      allow create: if request.auth != null;
     }
 
-    // Uploaded target job descriptions repository
+    // Uploaded target job descriptions repository:
+    // - Authenticated users can upload (create) JD files
+    // - ONLY the 4 co-founders can read or delete uploaded JDs
     match /job_descriptions/{fileName} {
-      allow read, write, create, delete: if isAuthorizedEvaluator();
+      allow read, delete: if isCoFounder();
+      allow create: if request.auth != null;
     }
 
-    // Catch-all: require authorized evaluator credentials
+    // Catch-all: require co-founder credentials
     match /{allPaths=**} {
-      allow read, write: if isAuthorizedEvaluator();
+      allow read, write: if isCoFounder();
     }
   }
 }

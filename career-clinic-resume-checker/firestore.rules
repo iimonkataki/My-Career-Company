@@ -1,10 +1,17 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper function: Strictly verify that the request is authenticated 
-    // and belongs to one of the authorized evaluator emails.
-    function isAuthorizedEvaluator() {
+    // Institutional lead submissions from 'Book an Institutional Pilot' form
+    match /institutional_leads/{leadId} {
+      allow create: if request.resource.data.name is string
+                    && request.resource.data.email is string
+                    && request.resource.data.institution is string;
+      allow read: if true;
+      allow update, delete: if false;
+    }
+
+    // Strictly verify that the user is one of the 4 co-founders
+    function isCoFounder() {
       return request.auth != null && (
         request.auth.token.email.lower() in [
           'upam.patra@gmail.com',
@@ -16,14 +23,25 @@ service cloud.firestore {
       );
     }
 
-    // Repository collection for saved resumes, JDs, and diagnostic reports
+    // Repository collection for saved candidate resumes, JDs, and diagnostic reports:
+    // - Any authenticated user can create their assessment record (for co-founder review)
+    // - ONLY the 4 co-founders can read, query, update, or delete repository assessments
     match /resume_assessments/{assessmentId} {
-      allow read, write, create, update, delete: if isAuthorizedEvaluator();
+      allow read, update, delete: if isCoFounder();
+      allow create: if request.auth != null;
     }
 
-    // Default catch-all rule: require authorized evaluator credentials
+    // Dynamic allowed users / candidate access list:
+    // - Authenticated users can check if their email is approved
+    // - ONLY co-founders can add or remove approved candidate emails
+    match /allowed_users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if isCoFounder();
+    }
+
+    // Default: require co-founder credentials
     match /{document=**} {
-      allow read, write: if isAuthorizedEvaluator();
+      allow read, write: if isCoFounder();
     }
   }
 }

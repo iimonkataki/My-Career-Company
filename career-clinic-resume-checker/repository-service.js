@@ -69,8 +69,11 @@
     }
   }
 
-  // Local Storage Cache Helpers
+  // Local Storage Cache Helpers (Protected: co-founder access only)
   function getLocalCache() {
+    if (window.AuthGuard && !window.AuthGuard.isCoFounder()) {
+      return [];
+    }
     try {
       const raw = localStorage.getItem(LOCAL_CACHE_KEY);
       return raw ? JSON.parse(raw) : [];
@@ -81,6 +84,9 @@
   }
 
   function saveLocalCache(list) {
+    if (window.AuthGuard && !window.AuthGuard.isCoFounder()) {
+      return;
+    }
     try {
       localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(list.slice(0, 250)));
     } catch (e) {
@@ -336,8 +342,14 @@
 
   /**
    * Fetch All Assessments from Firebase Firestore with Local Cache Merge
+   * Strictly restricted to the 4 co-founders only.
    */
   async function fetchAssessments(filters = {}) {
+    if (window.AuthGuard && !window.AuthGuard.isCoFounder()) {
+      console.warn("[RepositoryService] Access denied: Assessment repository is restricted to the 4 co-founders.");
+      return [];
+    }
+
     initFirebaseServices();
 
     let records = [];
@@ -438,9 +450,13 @@
   }
 
   /**
-   * Delete an Assessment
+   * Delete an Assessment (Restricted to co-founders)
    */
   async function deleteAssessment(recordId) {
+    if (window.AuthGuard && !window.AuthGuard.isCoFounder()) {
+      throw new Error("Unauthorized: Assessment deletion is restricted to the 4 co-founders.");
+    }
+
     initFirebaseServices();
 
     if (isFirestoreAvailable && db) {
@@ -505,9 +521,13 @@
   }
 
   /**
-   * Export All Assessments to CSV
+   * Export All Assessments to CSV (Restricted to co-founders)
    */
   function exportToCsv(assessments) {
+    if (window.AuthGuard && !window.AuthGuard.isCoFounder()) {
+      alert("Unauthorized: Exporting repository data is restricted to the 4 co-founders.");
+      return;
+    }
     if (!assessments || assessments.length === 0) return;
 
     const headers = [
@@ -579,9 +599,13 @@
   }
 
   /**
-   * Export All Assessments to JSON
+   * Export All Assessments to JSON (Restricted to co-founders)
    */
   function exportToJson(assessments) {
+    if (window.AuthGuard && !window.AuthGuard.isCoFounder()) {
+      alert("Unauthorized: Exporting repository data is restricted to the 4 co-founders.");
+      return;
+    }
     if (!assessments || assessments.length === 0) return;
     const jsonStr = JSON.stringify(assessments, null, 2);
     const blob = new Blob([jsonStr], { type: 'application/json' });

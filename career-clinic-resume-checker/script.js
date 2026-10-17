@@ -2693,14 +2693,31 @@ DESIRED QUALIFICATIONS & COMPETENCIES
     const rec = saveResponse.record;
     const evaluator = (rec.evaluator && rec.evaluator.email) || 'Authorized Evaluator';
     const tagSummary = (rec.tags || []).slice(0, 3).join(' ');
+    const isCoFounder = window.AuthGuard && window.AuthGuard.isCoFounder();
 
-    bannerText.innerHTML = `Assessment archived in Firebase &bull; <strong>ID: ${escapeHtml(rec.id)}</strong> &bull; User: ${escapeHtml(evaluator)} &bull; ${escapeHtml(tagSummary)}`;
-    banner.style.display = 'flex';
+    const viewBtn = document.getElementById('viewInRepoBtn');
+    if (viewBtn) {
+      viewBtn.style.display = isCoFounder ? 'inline-flex' : 'none';
+    }
+
+    if (isCoFounder) {
+      bannerText.innerHTML = `Assessment archived in Firebase &bull; <strong>ID: ${escapeHtml(rec.id)}</strong> &bull; User: ${escapeHtml(evaluator)} &bull; ${escapeHtml(tagSummary)}`;
+      banner.style.display = 'flex';
+    } else {
+      banner.style.display = 'none';
+    }
   }
 
   async function updateHeaderRepoCount() {
+    const isCoFounder = window.AuthGuard && window.AuthGuard.isCoFounder();
     const countPill = document.getElementById('headerRepoCount');
-    if (!countPill || !window.RepositoryService) return;
+    const repoTab = document.getElementById('navBtnRepository');
+
+    if (repoTab) {
+      repoTab.style.display = isCoFounder ? 'inline-flex' : 'none';
+    }
+
+    if (!isCoFounder || !countPill || !window.RepositoryService) return;
 
     try {
       const items = await window.RepositoryService.fetchAssessments();
@@ -2717,6 +2734,12 @@ DESIRED QUALIFICATIONS & COMPETENCIES
     const navBtnRepository = document.getElementById('navBtnRepository');
 
     if (viewName === 'repository') {
+      // Exclusively allow the 4 co-founders only
+      if (!window.AuthGuard || !window.AuthGuard.isCoFounder()) {
+        console.warn("[Access Control] Access to the repository is restricted to the 4 co-founders only.");
+        return;
+      }
+
       if (heroSection) heroSection.style.display = 'none';
       if (inputPanel) inputPanel.style.display = 'none';
       if (resultsPanel) resultsPanel.style.display = 'none';

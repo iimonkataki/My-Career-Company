@@ -7,14 +7,27 @@
 (function () {
   'use strict';
 
-  // 1. Permitted Administrator Emails (Strict Whitelist)
-  const PERMITTED_EMAILS = [
+  // 1. Permitted Co-Founders (Exclusive Repository & Database Access)
+  const CO_FOUNDER_EMAILS = [
     "upam.patra@gmail.com",
     "iimonkataki@mycareercompany.com",
     "ibonkataki@mycareercompany.com",
     "anirbanroy@mycareercompany.com",
     "anirbanroy@mycareercompanny.com"
   ].map(e => e.toLowerCase().trim());
+
+  // 2. Permitted Evaluators & Candidates for Diagnostic Engine Access
+  // Users added here or in Firestore 'allowed_users' collection can sign in & test their Fit Score,
+  // but CANNOT see or access the Assessment Repository tab or database.
+  let ADDITIONAL_PERMITTED_EMAILS = [];
+
+  // Toggle: set to true to allow any authenticated Google account to test their Fit Score
+  let ALLOW_ANY_AUTHENTICATED_FOR_FIT_SCORE = false;
+
+  function isCoFounder(email) {
+    if (!email) return false;
+    return CO_FOUNDER_EMAILS.includes(email.toLowerCase().trim());
+  }
 
   // 2. Firebase Project Configuration for My Career Company
   // Uses official my-career-company.firebaseapp.com authDomain to match Google OAuth 2.0 registered redirect URIs
@@ -48,9 +61,28 @@
     }
   }
 
-  function isEmailPermitted(email) {
+  async function isEmailPermitted(email) {
     if (!email) return false;
-    return PERMITTED_EMAILS.includes(email.toLowerCase().trim());
+    const clean = email.toLowerCase().trim();
+
+    // 1. Co-Founders are always permitted
+    if (isCoFounder(clean)) return true;
+
+    // 2. Open Fit Score check if enabled
+    if (ALLOW_ANY_AUTHENTICATED_FOR_FIT_SCORE) return true;
+
+    // 3. Statically listed permitted users/candidates
+    if (ADDITIONAL_PERMITTED_EMAILS.map(e => e.toLowerCase().trim()).includes(clean)) return true;
+
+    // 4. Dynamically permitted users stored in Firestore 'allowed_users' collection
+    if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
+      try {
+        const docSnap = await firebase.firestore().collection('allowed_users').doc(clean).get();
+        if (docSnap && docSnap.exists) return true;
+      } catch (_) {}
+    }
+
+    return false;
   }
 
   /**
@@ -163,8 +195,9 @@
     }
 
     const email = (user.email || '').toLowerCase().trim();
+    const permitted = await isEmailPermitted(email);
 
-    if (isEmailPermitted(email)) {
+    if (permitted) {
       // Access Granted! Unlocks home page diagnostic dashboard
       currentUser = user;
       isAuthorized = true;
@@ -193,7 +226,13 @@
     if (els.gateLoading) els.gateLoading.style.display = 'none';
     if (els.gateLoginCard) els.gateLoginCard.style.display = 'block';
     if (els.gateErrorCard) els.gateErrorCard.style.display = 'none';
-    if (els.headerUserWidget) els.headerUserWidget.innerHTML = '';
+    if (els.headerUserWidget) {
+      els.headerUserWidget.innerHTML = '';
+    }
+    const repoTab = document.getElementById('navBtnRepository');
+    if (repoTab) repoTab.style.display = 'none';
+    const viewInRepoBtn = document.getElementById('viewInRepoBtn');
+    if (viewInRepoBtn) viewInRepoBtn.style.display = 'none';
   }
 
   function showDeniedState(rejectedEmail) {
@@ -214,10 +253,30 @@
         els.deniedEmailText.textContent = rejectedEmail || 'Your Google account';
       }
     }
+    const repoTab = document.getElementById('navBtnRepository');
+    if (repoTab) repoTab.style.display = 'none';
+    const viewInRepoBtn = document.getElementById('viewInRepoBtn');
+    if (viewInRepoBtn) viewInRepoBtn.style.display = 'none';
   }
 
   function showAuthorizedState(user) {
     const els = getElements();
+    const userEmail = (user.email || '').toLowerCase().trim();
+    const userIsCoFounder = isCoFounder(userEmail);
+
+    // Exclusively show repository tab ONLY to the 4 co-founders
+    const repoTab = document.getElementById('navBtnRepository');
+    const viewInRepoBtn = document.getElementById('viewInRepoBtn');
+    const repoSection = document.getElementById('repositorySection');
+    if (repoTab) {
+      repoTab.style.display = userIsCoFounder ? 'inline-flex' : 'none';
+    }
+    if (viewInRepoBtn) {
+      viewInRepoBtn.style.display = userIsCoFounder ? 'inline-flex' : 'none';
+    }
+    if (!userIsCoFounder && repoSection) {
+      repoSection.style.display = 'none';
+    }
 
     // 1. Completely hide the Auth Gate Overlay
     if (els.gate) {
@@ -236,7 +295,7 @@
       els.siteHeader.style.opacity = '1';
     }
 
-    // 4. Update Header with Authorized Administrator Badge & Sign Out button
+    // 4. Update Header with Role Badge (Co-Founder vs Verified User) & Sign Out button
     if (els.headerUserWidget) {
       const initials = (user.displayName || user.email || 'CC')
         .split(' ')
@@ -249,12 +308,16 @@
         ? `<img src="${user.photoURL}" alt="${user.displayName}" class="auth-admin-avatar-img">`
         : `<span class="auth-admin-avatar-initials">${initials}</span>`;
 
+      const roleBadgeHtml = userIsCoFounder
+        ? `<span class="auth-admin-tag cofounder-badge">👑 Co-Founder</span>`
+        : `<span class="auth-admin-tag user-tag">👤 Verified User</span>`;
+
       els.headerUserWidget.innerHTML = `
         <div class="auth-admin-pill" id="authAdminPill">
           <div class="auth-admin-avatar">${avatarHtml}</div>
           <div class="auth-admin-info">
             <span class="auth-admin-name">${escapeHtml(user.displayName || 'Administrator')}</span>
-            <span class="auth-admin-tag">🛡️ Authorized Admin</span>
+            ${roleBadgeHtml}
           </div>
           <button type="button" class="btn-admin-signout" id="adminSignOutBtn" title="Switch account / Sign Out">Sign Out</button>
         </div>
@@ -313,10 +376,18 @@
   // Export globally
   window.AuthGuard = {
     isAuthorized: () => isAuthorized,
+    isCoFounder: () => currentUser ? isCoFounder(currentUser.email) : false,
     getCurrentUser: () => currentUser,
     signInWithGoogle: signInWithGoogle,
     signOut: signOut,
-    permittedEmails: PERMITTED_EMAILS
+    coFounderEmails: CO_FOUNDER_EMAILS,
+    getAdditionalPermittedEmails: () => [...ADDITIONAL_PERMITTED_EMAILS],
+    addPermittedEmail: (email) => {
+      if (email && !ADDITIONAL_PERMITTED_EMAILS.includes(email.toLowerCase().trim())) {
+        ADDITIONAL_PERMITTED_EMAILS.push(email.toLowerCase().trim());
+      }
+    },
+    setAllowAnyAuthenticated: (val) => { ALLOW_ANY_AUTHENTICATED_FOR_FIT_SCORE = Boolean(val); }
   };
 
   if (document.readyState === 'loading') {
