@@ -2317,48 +2317,63 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
 }
 
+/* Horizontal Green Box Action Button */
 .btn-fitscore-subhero {
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 28px;
+  padding: 13px 28px;
   font-family: 'Montserrat', sans-serif;
   font-size: 0.85rem;
   font-weight: 800;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  border-radius: 9999px;
+  border-radius: 8px; /* Crisp Horizontal Box */
   text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
-  background: linear-gradient(135deg, #F5DFC2 0%, #D4AF7C 50%, #B88E56 100%);
-  color: #042720 !important;
-  border: 1.5px solid rgba(212, 175, 124, 0.7);
-  box-shadow: 0 4px 18px rgba(212, 175, 124, 0.4), 0 2px 6px rgba(0, 0, 0, 0.08);
+  background: linear-gradient(135deg, #073D32 0%, #042720 100%);
+  color: #F8F6EF !important;
+  border: 1.5px solid #D4AF7C;
+  box-shadow: 0 4px 16px rgba(4, 39, 32, 0.25), 0 0 10px rgba(212, 175, 124, 0.15);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-fitscore-subhero:hover {
-  background: linear-gradient(135deg, #FFFFFF 0%, #E7C99D 50%, #D4AF7C 100%);
-  color: #021a15 !important;
+  background: linear-gradient(135deg, #0A4E40 0%, #073D32 100%);
+  color: #FFFFFF !important;
+  border-color: #F0D7B2;
   transform: translateY(-2px);
-  box-shadow: 0 8px 26px rgba(212, 175, 124, 0.6), 0 4px 12px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 8px 24px rgba(4, 39, 32, 0.35), 0 0 18px rgba(212, 175, 124, 0.4);
 }
 
 .btn-fitscore-subhero .btn-fitscore-icon {
   font-size: 1.15rem;
   line-height: 1;
+  color: #D4AF7C;
+}
+
+.btn-fitscore-subhero .btn-fitscore-text {
+  color: #F8F6EF;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.btn-fitscore-subhero:hover .btn-fitscore-text {
+  color: #FFFFFF;
 }
 
 .btn-fitscore-subhero .btn-fitscore-arrow {
   display: inline-block;
   font-size: 1.2rem;
   line-height: 1;
-  transition: transform 0.2s ease;
+  color: #D4AF7C;
+  transition: transform 0.2s ease, color 0.2s ease;
 }
 
 .btn-fitscore-subhero:hover .btn-fitscore-arrow {
   transform: translateX(4px);
+  color: #F0D7B2;
 }
 
 @media (max-width: 768px) {
@@ -2372,9 +2387,10 @@ h1, h2, h3, h4, h5, h6 {
 
   .btn-fitscore-subhero {
     width: 100%;
-    max-width: 380px;
+    max-width: 440px;
     justify-content: center;
     font-size: 0.78rem;
-    padding: 11px 18px;
+    padding: 11px 16px;
+    border-radius: 6px;
   }
 }
