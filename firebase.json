@@ -18,11 +18,51 @@
     "trailingSlash": false,
     "rewrites": [
       {
+        "source": "/career-clinic",
+        "destination": "/career-clinic.html"
+      },
+      {
         "source": "/career-clinic/readiness-score",
         "destination": "/readiness-score.html"
       },
       {
         "source": "/career-clinic/placement-plan",
+        "destination": "/placement-plan.html"
+      },
+      {
+        "source": "/readiness-gap",
+        "destination": "/readiness-gap.html"
+      },
+      {
+        "source": "/framework",
+        "destination": "/framework.html"
+      },
+      {
+        "source": "/students",
+        "destination": "/students.html"
+      },
+      {
+        "source": "/institutions",
+        "destination": "/institutions.html"
+      },
+      {
+        "source": "/leadership",
+        "destination": "/leadership.html"
+      },
+      {
+        "source": "/experience",
+        "destination": "/experience.html"
+      },
+      {
+        "source": "/contact",
+        "destination": "/contact.html"
+      },
+      {
+        "source": "/readiness-score",
+        "destination": "/readiness-score.html"
+      },
+      {
+        "source": "/placement-plan",
         "destination": "/placement-plan.html"
       },
       {
@@ -72,11 +112,11 @@
     ],
     "headers": [
       {
-        "source": "**/*.@(css|js)",
+        "source": "**/*.@(css|js|html)",
         "headers": [
           {
             "key": "Cache-Control",
-            "value": "no-cache"
+            "value": "no-cache, no-store, must-revalidate"
           }
         ]
       },
