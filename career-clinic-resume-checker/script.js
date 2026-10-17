@@ -2851,7 +2851,7 @@ DESIRED QUALIFICATIONS & COMPETENCIES
     const jdDomain = (item.jobDescription && item.jobDescription.domain) || 'General';
 
     const evalEmail = (item.evaluator && item.evaluator.email) || 'evaluator@mycareercompany.com';
-    const evalName = (item.evaluator && item.evaluator.name) || evalEmail.split('@')[0];
+    const evalName = item.candidateName || (item.evaluator && item.evaluator.name) || evalEmail.split('@')[0];
     const evalInitials = evalName.substring(0, 2).toUpperCase();
 
     const timeSaved = item.formattedTime || (item.createdAt ? new Date(item.createdAt).toLocaleString('en-IN') : 'Saved');
@@ -2867,7 +2867,10 @@ DESIRED QUALIFICATIONS & COMPETENCIES
             <span class="repo-eval-email">${escapeHtml(evalEmail)}</span>
           </div>
         </div>
-        <div class="repo-card-time">${escapeHtml(timeSaved)}</div>
+        <div class="repo-card-header-right">
+          <span class="repo-card-id-pill" title="Resume Fit Score ID">ID: ${escapeHtml(item.id)}</span>
+          <div class="repo-card-time">${escapeHtml(timeSaved)}</div>
+        </div>
       </div>
 
       <div class="repo-card-body">

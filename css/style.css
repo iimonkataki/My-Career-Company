@@ -2259,3 +2259,112 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.01em;
 }
 
+
+
+/* ==========================================================================
+   RESUME FIT SCORE™ ACTION BUTTONS
+   ========================================================================== */
+
+/* Top Right Hero Action (Home Page - Above Dashboard Preview) */
+.hero-dashboard-action-top {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 14px;
+  position: relative;
+  z-index: 5;
+}
+
+/* Top Right Body Action (All Other Pages - Below Main Top Banner) */
+.body-fitscore-action-top {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 20px;
+  padding-bottom: 6px;
+  position: relative;
+  z-index: 5;
+}
+
+/* Base Resume Fit Score Button */
+.btn-fitscore {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 24px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 9999px;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+/* On Dark Background (Home Page Hero) */
+.btn-fitscore-home {
+  background: linear-gradient(135deg, #E7C99D 0%, #D4AF7C 100%);
+  color: #042720 !important;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 18px rgba(212, 175, 124, 0.35);
+}
+
+.btn-fitscore-home:hover {
+  background: linear-gradient(135deg, #F0D7B2 0%, #E7C99D 100%);
+  color: #021a15 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 26px rgba(212, 175, 124, 0.55);
+}
+
+/* On Light Background (Body of All Other Pages) */
+.btn-fitscore-body {
+  background: linear-gradient(135deg, #D4AF7C 0%, #B88E56 100%);
+  color: #042720 !important;
+  border: 1px solid rgba(184, 142, 86, 0.6);
+  box-shadow: 0 4px 16px rgba(184, 142, 86, 0.25);
+}
+
+.btn-fitscore-body:hover {
+  background: linear-gradient(135deg, #E7C99D 0%, #D4AF7C 100%);
+  color: #021a15 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(184, 142, 86, 0.45);
+}
+
+.btn-fitscore-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.btn-fitscore-arrow {
+  display: inline-block;
+  font-size: 1.1rem;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.btn-fitscore:hover .btn-fitscore-arrow {
+  transform: translateX(4px);
+}
+
+@media (max-width: 768px) {
+  .hero-dashboard-action-top {
+    justify-content: center;
+    margin-top: 12px;
+    margin-bottom: 16px;
+  }
+
+  .body-fitscore-action-top {
+    justify-content: center;
+    padding-top: 16px;
+    padding-bottom: 8px;
+  }
+
+  .btn-fitscore {
+    width: 100%;
+    max-width: 340px;
+    justify-content: center;
+  }
+}

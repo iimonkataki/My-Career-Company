@@ -144,25 +144,81 @@
   }
 
   /**
+   * Extract or resolve candidate name from user profile, resume text, filename, or email
+   */
+  function extractCandidateName(user, resumeFile, resumeText) {
+    // 1. Google display name if provided and not generic
+    if (user && user.displayName && user.displayName.trim()) {
+      const dName = user.displayName.trim();
+      if (!/^(user|evaluator|admin|administrator|student|candidate)$/i.test(dName)) {
+        return dName;
+      }
+    }
+
+    // 2. Parse top lines of resume text for candidate name
+    if (resumeText && typeof resumeText === 'string') {
+      const lines = resumeText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      for (let i = 0; i < Math.min(lines.length, 5); i++) {
+        const line = lines[i];
+        if (/^[A-Z][a-zA-Z'.]+(?:\s+[A-Z][a-zA-Z'.]+){1,3}$/.test(line) && line.length <= 40) {
+          if (!/resume|curriculum|vitae|profile|education|experience|summary|skills|objective|contact/i.test(line)) {
+            return line;
+          }
+        }
+      }
+    }
+
+    // 3. Resume filename (e.g. "Arun_Kumar_CV.pdf" -> "Arun Kumar")
+    if (resumeFile && resumeFile.name) {
+      const base = resumeFile.name.replace(/\.[^/.]+$/, '');
+      const candidateParts = base
+        .replace(/[-_]?(resume|cv|profile|final|updated|v\d+)[-_]?/gi, ' ')
+        .replace(/[_\-]+/g, ' ')
+        .replace(/[^a-zA-Z\s]/g, '')
+        .trim();
+      if (candidateParts.length >= 3 && candidateParts.length <= 40) {
+        return candidateParts;
+      }
+    }
+
+    // 4. Email address username part (e.g. "rohan.sharma@gmail.com" -> "Rohan Sharma")
+    if (user && user.email) {
+      const prefix = user.email.split('@')[0];
+      const parts = prefix.split(/[._-]+/).filter(p => !/^\d+$/.test(p) && p.length > 1);
+      if (parts.length >= 1) {
+        return parts.map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ');
+      }
+      return prefix;
+    }
+
+    return 'Candidate';
+  }
+
+  /**
    * Save Assessment to Firebase Firestore & Storage
    */
   async function saveAssessment(payload) {
     initFirebaseServices();
 
     const now = new Date();
-    const recordId = 'CC-EVAL-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
 
     // Authenticated User Info
     let userEmail = 'anonymous';
     let userName = 'Evaluator';
     let userPhoto = null;
+    let isCoFounderUser = false;
 
-    if (window.AuthGuard && typeof window.AuthGuard.getCurrentUser === 'function') {
-      const u = window.AuthGuard.getCurrentUser();
-      if (u) {
-        userEmail = (u.email || '').toLowerCase().trim();
-        userName = u.displayName || u.email.split('@')[0];
-        userPhoto = u.photoURL || null;
+    if (window.AuthGuard) {
+      if (typeof window.AuthGuard.getCurrentUser === 'function') {
+        const u = window.AuthGuard.getCurrentUser();
+        if (u) {
+          userEmail = (u.email || '').toLowerCase().trim();
+          userName = u.displayName || u.email.split('@')[0];
+          userPhoto = u.photoURL || null;
+        }
+      }
+      if (typeof window.AuthGuard.isCoFounder === 'function') {
+        isCoFounderUser = window.AuthGuard.isCoFounder();
       }
     }
 
@@ -178,6 +234,25 @@
       targetRole = 'consulting',
       result
     } = payload;
+
+    // Resolve candidate name
+    const candidateName = extractCandidateName({ displayName: userName, email: userEmail }, resumeFile, resumeText);
+
+    // Format Resume Fit Score ID:
+    // - Co-founders: institutional ID format (CC-EVAL-...)
+    // - All other users: named directly by their name (e.g. John_Doe_9XA2)
+    let recordId;
+    if (isCoFounderUser) {
+      recordId = 'CC-EVAL-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+    } else {
+      const cleanName = candidateName
+        .trim()
+        .replace(/[^\w\s-]/g, '')
+        .replace(/[\s-]+/g, '_')
+        .replace(/^_+|_+$/g, '');
+      const uniqueSuffix = Date.now().toString(36).toUpperCase().slice(-4);
+      recordId = `${cleanName || 'Candidate'}_${uniqueSuffix}`;
+    }
 
     // 1. Upload Resume file if provided
     let resumeStorage = { url: null, path: null };
@@ -224,6 +299,7 @@
     const evaluatorTag = userEmail.split('@')[0] || 'evaluator';
 
     const tags = [
+      `#candidate:${(candidateName || 'candidate').toLowerCase().replace(/\s+/g, '-')}`,
       `#domain:${domainTag}`,
       `#band:${bandTag}`,
       `#score:${result.totalScore}`,
@@ -239,13 +315,14 @@
     // Build structured assessment record
     const record = {
       id: recordId,
+      candidateName: candidateName,
       createdAt: now.toISOString(),
       savedAt: Date.now(),
       formattedTime: formatReadableDateTime(now),
       
       evaluator: {
         email: userEmail,
-        name: userName,
+        name: candidateName || userName,
         photoURL: userPhoto
       },
 
@@ -390,6 +467,8 @@
     if (filters.searchQuery && filters.searchQuery.trim()) {
       const q = filters.searchQuery.toLowerCase().trim();
       filtered = filtered.filter(item => {
+        const id = (item.id || '').toLowerCase();
+        const cand = (item.candidateName || '').toLowerCase();
         const resumeName = (item.resume && item.resume.fileName || '').toLowerCase();
         const resumeText = (item.resume && item.resume.snippet || '').toLowerCase();
         const jdTitle = (item.jobDescription && item.jobDescription.title || '').toLowerCase();
@@ -397,7 +476,9 @@
         const tags = (item.tags || []).join(' ').toLowerCase();
         const score = String(item.report && item.report.totalScore || '');
 
-        return resumeName.includes(q) ||
+        return id.includes(q) ||
+          cand.includes(q) ||
+          resumeName.includes(q) ||
           jdTitle.includes(q) ||
           evaluator.includes(q) ||
           tags.includes(q) ||
@@ -531,10 +612,11 @@
     if (!assessments || assessments.length === 0) return;
 
     const headers = [
-      "Assessment ID",
+      "Resume Fit Score ID",
+      "Candidate Name",
       "Date & Time",
-      "Evaluator Email",
-      "Evaluator Name",
+      "User / Evaluator Email",
+      "Evaluator Account Name",
       "Resume File Name",
       "Resume File Type",
       "Resume Word Count",
@@ -567,6 +649,7 @@
 
       return [
         escapeCsv(item.id),
+        escapeCsv(item.candidateName || (item.evaluator && item.evaluator.name)),
         escapeCsv(item.formattedTime || item.createdAt),
         escapeCsv(item.evaluator && item.evaluator.email),
         escapeCsv(item.evaluator && item.evaluator.name),
