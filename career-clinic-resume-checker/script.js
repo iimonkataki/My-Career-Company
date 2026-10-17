@@ -2867,7 +2867,7 @@ DESIRED QUALIFICATIONS & COMPETENCIES
   }
 
   async function updateHeaderRepoCount() {
-    const isCoFounder = window.AuthGuard && window.AuthGuard.isCoFounder();
+    const isCoFounder = window.AuthGuard && window.AuthGuard.isCoFounder && window.AuthGuard.isCoFounder();
     const countPill = document.getElementById('headerRepoCount');
     const repoTab = document.getElementById('navBtnRepository');
 
@@ -2877,10 +2877,21 @@ DESIRED QUALIFICATIONS & COMPETENCIES
 
     if (!isCoFounder || !countPill || !window.RepositoryService) return;
 
+    // Fast synchronous path: show cached unique resumes count immediately so it never sits at 0
+    if (typeof window.RepositoryService.getCachedUniqueResumesCount === 'function') {
+      const cachedCount = window.RepositoryService.getCachedUniqueResumesCount();
+      if (cachedCount > 0) {
+        countPill.textContent = cachedCount;
+      }
+    }
+
+    // Live network path: fetch live unique resumes from Firestore with multi-vector deduplication
     try {
-      const items = await window.RepositoryService.fetchAssessments();
-      countPill.textContent = items.length;
-    } catch (_) {}
+      const uniqueResumes = await window.RepositoryService.fetchUniqueResumes();
+      countPill.textContent = uniqueResumes.length;
+    } catch (err) {
+      console.warn('[HeaderCount] Live unique resumes fetch note:', err);
+    }
   }
 
   function switchToView(viewName) {
@@ -2974,7 +2985,7 @@ DESIRED QUALIFICATIONS & COMPETENCIES
       if (statJds) statJds.textContent = uniqueJds.length;
       if (statAvg) statAvg.textContent = stats.averageScore > 0 ? stats.averageScore : '—';
       if (statReady) statReady.textContent = stats.placementReadyCount;
-      if (headerCount) headerCount.textContent = stats.totalCount;
+      if (headerCount) headerCount.textContent = uniqueResumes.length;
 
       if (catAssessments) catAssessments.textContent = assessments.length;
       if (catResumes) catResumes.textContent = uniqueResumes.length;
@@ -3448,6 +3459,23 @@ DESIRED QUALIFICATIONS & COMPETENCIES
       const repoSection = document.getElementById('repositorySection');
       if (repoSection && repoSection.style.display !== 'none') {
         loadRepositoryView();
+      }
+    });
+
+    // Auth authorization listener: activates immediately when co-founder signs in or reloads session
+    window.addEventListener('cc-auth-authorized', (e) => {
+      const isCoFounder = e && e.detail && e.detail.isCoFounder;
+      if (isCoFounder) {
+        if (window.RepositoryService && typeof window.RepositoryService.setupRealtimeSync === 'function') {
+          window.RepositoryService.setupRealtimeSync(() => {
+            updateHeaderRepoCount();
+            const repoSection = document.getElementById('repositorySection');
+            if (repoSection && repoSection.style.display !== 'none') {
+              loadRepositoryView();
+            }
+          });
+        }
+        updateHeaderRepoCount();
       }
     });
 

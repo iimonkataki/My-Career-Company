@@ -278,6 +278,13 @@
       repoSection.style.display = 'none';
     }
 
+    // Immediately notify application that auth has succeeded so header counts and sync activate
+    try {
+      window.dispatchEvent(new CustomEvent('cc-auth-authorized', {
+        detail: { user, isCoFounder: userIsCoFounder }
+      }));
+    } catch (_) {}
+
     // 1. Completely hide the Auth Gate Overlay
     if (els.gate) {
       els.gate.style.display = 'none';

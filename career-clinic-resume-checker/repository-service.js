@@ -1322,22 +1322,59 @@ www.mycareercompany.com`;
     } catch (_) {}
   }
 
-  // Real-time Firestore snapshot listener for co-founders
+  function getCachedUniqueResumesCount() {
+    try {
+      const cached = getListFromCache(LOCAL_CACHE_RESUMES);
+      const { uniqueList } = deduplicateResumeList(cached);
+      return uniqueList.length;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  let realtimeSyncActive = false;
+
+  // Real-time Firestore snapshot listener for co-founders (listening to both Resumes, JDs & Assessments)
   function setupRealtimeSync(callback) {
     initFirebaseServices();
     if (!isFirestoreAvailable || !db) return;
 
     if (window.AuthGuard && !window.AuthGuard.isCoFounder()) return;
+    if (realtimeSyncActive) return;
 
     try {
-      const unsub = db.collection(ASSESSMENTS_COLLECTION).onSnapshot(() => {
+      realtimeSyncActive = true;
+
+      // 1. Listen to Unique Resumes Collection
+      const unsubResumes = db.collection(RESUMES_COLLECTION).onSnapshot(() => {
         if (typeof callback === 'function') callback();
-        dispatchRepositoryUpdate({ type: 'realtime-sync' });
+        dispatchRepositoryUpdate({ type: 'realtime-sync', collection: 'resumes' });
       }, err => {
-        console.warn("[RepositoryService] Realtime sync note:", err.message);
+        console.warn("[RepositoryService] Resumes realtime sync note:", err.message);
       });
-      firestoreListeners.push(unsub);
-    } catch (_) {}
+      firestoreListeners.push(unsubResumes);
+
+      // 2. Listen to Unique Job Descriptions Collection
+      const unsubJds = db.collection(JDS_COLLECTION).onSnapshot(() => {
+        if (typeof callback === 'function') callback();
+        dispatchRepositoryUpdate({ type: 'realtime-sync', collection: 'jds' });
+      }, err => {
+        console.warn("[RepositoryService] JDs realtime sync note:", err.message);
+      });
+      firestoreListeners.push(unsubJds);
+
+      // 3. Listen to Assessments Collection
+      const unsubAssessments = db.collection(ASSESSMENTS_COLLECTION).onSnapshot(() => {
+        if (typeof callback === 'function') callback();
+        dispatchRepositoryUpdate({ type: 'realtime-sync', collection: 'assessments' });
+      }, err => {
+        console.warn("[RepositoryService] Assessments realtime sync note:", err.message);
+      });
+      firestoreListeners.push(unsubAssessments);
+
+    } catch (err) {
+      console.warn("[RepositoryService] Setup sync error:", err);
+    }
   }
 
   // Public Interface
@@ -1348,6 +1385,7 @@ www.mycareercompany.com`;
     fetchAssessments: fetchAssessments,
     fetchUniqueResumes: fetchUniqueResumes,
     fetchUniqueJobDescriptions: fetchUniqueJobDescriptions,
+    getCachedUniqueResumesCount: getCachedUniqueResumesCount,
     deleteAssessment: deleteAssessment,
     deleteResume: deleteResume,
     deleteJobDescription: deleteJobDescription,
