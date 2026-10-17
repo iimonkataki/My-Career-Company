@@ -12,7 +12,8 @@
     "upam.patra@gmail.com",
     "iimonkataki@mycareercompany.com",
     "ibonkataki@mycareercompany.com",
-    "anirbanroy@mycareercompany.com"
+    "anirbanroy@mycareercompany.com",
+    "anirbanroy@mycareercompanny.com"
   ].map(e => e.toLowerCase().trim());
 
   // 2. Firebase Project Configuration for My Career Company

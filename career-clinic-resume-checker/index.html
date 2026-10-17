@@ -18,9 +18,11 @@
   <!-- Mammoth DOCX parser -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.12.1/mammoth.browser.min.js"></script>
 
-  <!-- Firebase App & Auth SDKs -->
+  <!-- Firebase App, Auth, Firestore & Storage SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png">
@@ -50,9 +52,18 @@
         <span class="program-tagline">RESUME FIT SCORE&trade;</span>
       </div>
 
-      <div class="header-badge">
-        <span class="badge-pill">DIAGNOSTIC ENGINE</span>
-      </div>
+      <!-- Navigation Tabs: Diagnostic Engine vs Assessment Repository -->
+      <nav class="header-nav" id="headerNav" aria-label="Portal Navigation">
+        <button type="button" class="nav-tab active" id="navBtnDiagnostic">
+          <span class="nav-icon">🔬</span>
+          <span class="nav-text">Diagnostic Engine</span>
+        </button>
+        <button type="button" class="nav-tab" id="navBtnRepository">
+          <span class="nav-icon">📁</span>
+          <span class="nav-text">Assessment Repository</span>
+          <span class="repo-count-pill" id="headerRepoCount">0</span>
+        </button>
+      </nav>
 
       <!-- Authorized Administrator Profile Widget -->
       <div class="header-user-widget" id="headerUserWidget"></div>
@@ -484,6 +495,17 @@
         </div>
       </div>
 
+      <!-- Firebase Repository Auto-Save Banner -->
+      <div class="repo-save-banner" id="repoSaveBanner" style="display: none;">
+        <div class="repo-save-info">
+          <span class="repo-save-badge">✓ SAVED TO FIREBASE REPOSITORY</span>
+          <span class="repo-save-text" id="repoSaveBannerText">Assessment archived with time saved, user ID, and tags</span>
+        </div>
+        <button type="button" class="btn-repo-link" id="viewInRepoBtn">
+          View in Repository &rarr;
+        </button>
+      </div>
+
       <!-- Target Domain Highlight Banner (Calibrated from Job Description) -->
       <div class="target-domain-banner" id="targetDomainBanner">
         <div class="td-banner-main">
@@ -722,7 +744,243 @@
 
     </section>
 
+    <!-- Assessment Repository & Archive Section -->
+    <section class="repository-section" id="repositorySection" style="display: none;">
+      
+      <!-- Repository Hero & Header -->
+      <div class="repo-header-block">
+        <div class="repo-header-meta">
+          <div class="repo-eyebrow">CAREER CLINIC &bull; INSTITUTIONAL ARCHIVE</div>
+          <h2 class="repo-title">Assessment Repository &amp; Archive</h2>
+          <p class="repo-subtitle">
+            Secure cloud repository linking all uploaded candidate resumes, target job descriptions, and recruiter-calibrated Fit Score&trade; diagnostic reports to Google Firebase.
+          </p>
+          <div class="repo-security-badges">
+            <span class="badge-repo-sec">🔒 Firebase Firestore &amp; Storage Linked</span>
+            <span class="badge-repo-sec">👥 Restricted to 4 Authorized Reviewers</span>
+          </div>
+        </div>
+
+        <div class="repo-header-actions">
+          <button type="button" class="btn-primary" id="repoNotifyTeamBtn">
+            <span class="btn-icon">📢</span> Notify Team on Email
+          </button>
+          <button type="button" class="btn-outline" id="repoExportCsvBtn">
+            <span class="btn-icon">📥</span> Export CSV
+          </button>
+          <button type="button" class="btn-outline" id="repoRefreshBtn">
+            <span class="btn-icon">🔄</span> Refresh
+          </button>
+        </div>
+      </div>
+
+      <!-- Aggregate Repository Stats Row -->
+      <div class="repo-stats-grid">
+        <div class="repo-stat-card">
+          <div class="repo-stat-num" id="repoStatTotal">0</div>
+          <div class="repo-stat-label">Total Resumes Logged</div>
+        </div>
+        <div class="repo-stat-card">
+          <div class="repo-stat-num" id="repoStatAvgScore">0</div>
+          <div class="repo-stat-label">Avg. Fit Score</div>
+        </div>
+        <div class="repo-stat-card">
+          <div class="repo-stat-num" id="repoStatPlacementReady">0</div>
+          <div class="repo-stat-label">Placement Ready (80+)</div>
+        </div>
+        <div class="repo-stat-card">
+          <div class="repo-stat-num" id="repoStatTopDomain">—</div>
+          <div class="repo-stat-label">Top Target Domain</div>
+        </div>
+      </div>
+
+      <!-- Advanced Filter & Search Toolbar -->
+      <div class="repo-toolbar">
+        <div class="repo-search-group">
+          <span class="repo-search-icon" aria-hidden="true">🔍</span>
+          <input type="text" id="repoSearchInput" class="repo-search-input" placeholder="Search by candidate name, filename, JD role, reviewer email, or tag...">
+          <button type="button" id="repoSearchClearBtn" class="repo-search-clear" style="display: none;" title="Clear search">&times;</button>
+        </div>
+
+        <div class="repo-filters-group">
+          <div class="repo-filter-item">
+            <label for="repoFilterDomain" class="repo-filter-label">Domain:</label>
+            <select id="repoFilterDomain" class="repo-select">
+              <option value="all">All Target Domains</option>
+              <option value="consulting">Consulting &amp; Strategy</option>
+              <option value="finance">Finance &amp; Banking</option>
+              <option value="marketing">Brand &amp; Marketing</option>
+              <option value="product">Product Management</option>
+              <option value="operations">Supply Chain &amp; Ops</option>
+              <option value="hr">Human Resources &amp; OD</option>
+              <option value="general_management">General Management</option>
+              <option value="analytics">Analytics &amp; Data Science</option>
+            </select>
+          </div>
+
+          <div class="repo-filter-item">
+            <label for="repoFilterBand" class="repo-filter-label">Fit Band:</label>
+            <select id="repoFilterBand" class="repo-select">
+              <option value="all">All Score Bands</option>
+              <option value="placement-ready">Placement Ready (80+)</option>
+              <option value="competitive">Competitive (65-79)</option>
+              <option value="moderate">Moderate Alignment (50-64)</option>
+              <option value="needs-calibration">Needs Calibration (&lt;50)</option>
+            </select>
+          </div>
+
+          <div class="repo-filter-item">
+            <label for="repoFilterEvaluator" class="repo-filter-label">Evaluator:</label>
+            <select id="repoFilterEvaluator" class="repo-select">
+              <option value="all">All Evaluators</option>
+              <option value="upam.patra@gmail.com">upam.patra@gmail.com</option>
+              <option value="iimonkataki@mycareercompany.com">iimonkataki@mycareercompany.com</option>
+              <option value="anirbanroy@mycareercompany.com">anirbanroy@mycareercompany.com</option>
+              <option value="ibonkataki@mycareercompany.com">ibonkataki@mycareercompany.com</option>
+            </select>
+          </div>
+
+          <div class="repo-filter-item">
+            <label for="repoSortBy" class="repo-filter-label">Sort:</label>
+            <select id="repoSortBy" class="repo-select">
+              <option value="newest">Newest Assessment</option>
+              <option value="oldest">Oldest Assessment</option>
+              <option value="score-high">Highest Fit Score</option>
+              <option value="score-low">Lowest Fit Score</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Assessment Cards / Table Container -->
+      <div class="repo-cards-container" id="repoCardsContainer">
+        <!-- Rendered dynamically by script.js -->
+      </div>
+
+      <!-- Empty State -->
+      <div class="repo-empty-state" id="repoEmptyState" style="display: none;">
+        <div class="repo-empty-icon" aria-hidden="true">📂</div>
+        <h3 class="repo-empty-title">No Assessments Found</h3>
+        <p class="repo-empty-desc">
+          No evaluations match your search or filter criteria. Upload a resume and run a fit diagnostic to automatically log it here.
+        </p>
+        <button type="button" class="btn-primary" id="repoEmptyRunBtn">
+          Go to Diagnostic Engine &rarr;
+        </button>
+      </div>
+
+    </section>
+
   </main>
+
+  <!-- =========================================================================
+       MODALS: Team Notification, Full Report Inspection, Document Preview
+       ========================================================================= -->
+
+  <!-- Team Notification Modal -->
+  <div class="modal-overlay" id="teamNotifyModal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="notifyModalTitle">
+    <div class="modal-card modal-notify-card">
+      <div class="modal-header">
+        <div class="modal-header-text">
+          <div class="modal-eyebrow">ADMINISTRATIVE ACCESS &bull; NOTIFICATION HUB</div>
+          <h3 class="modal-title" id="notifyModalTitle">📢 Notify Authorized Evaluators</h3>
+        </div>
+        <button type="button" class="modal-close-btn" id="modalCloseNotifyBtn" aria-label="Close modal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <p class="notify-intro">
+          Send the official notification email to the 4 whitelisted evaluators with direct access credentials and link to the Firebase Repository &amp; Diagnostic Engine.
+        </p>
+
+        <div class="notify-recipients-box">
+          <span class="notify-recipients-label">Authorized Recipients (Strict Whitelist):</span>
+          <div class="notify-chips">
+            <span class="notify-chip">upam.patra@gmail.com</span>
+            <span class="notify-chip">iimonkataki@mycareercompany.com</span>
+            <span class="notify-chip">anirbanroy@mycareercompany.com</span>
+            <span class="notify-chip">ibonkataki@mycareercompany.com</span>
+          </div>
+        </div>
+
+        <div class="notify-preview-group">
+          <label class="notify-field-label">Subject:</label>
+          <input type="text" class="notify-input" id="notifySubjectInput" readonly value="[Career Clinic] Resume Fit Score™ Repository & Storage Portal Access Activated">
+        </div>
+
+        <div class="notify-preview-group">
+          <label class="notify-field-label">Message Preview:</label>
+          <textarea class="notify-textarea" id="notifyBodyTextarea" readonly rows="8"></textarea>
+        </div>
+
+        <div class="notify-actions-bar">
+          <a href="#" id="modalSendMailtoBtn" class="btn-primary btn-notify-send" target="_blank">
+            <span class="btn-icon">✉️</span> Open in Email Client (Pre-filled Mailto)
+          </a>
+          <button type="button" class="btn-outline" id="modalCopyEmailBtn">
+            <span class="btn-icon">📋</span> Copy Email to Clipboard
+          </button>
+          <span class="copy-success-note" id="notifyCopySuccessNote" style="display: none;">✓ Copied to clipboard!</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Full Report Inspection Modal -->
+  <div class="modal-overlay" id="reportViewerModal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="reportModalTitle">
+    <div class="modal-card modal-report-card">
+      <div class="modal-header">
+        <div class="modal-header-text">
+          <div class="modal-eyebrow" id="reportModalEyebrow">CAREER CLINIC &bull; SAVED DIAGNOSTIC REPORT</div>
+          <h3 class="modal-title" id="reportModalTitle">Resume Fit Diagnostic Report</h3>
+          <div class="modal-meta" id="reportModalMeta">Saved Assessment Details</div>
+        </div>
+        <button type="button" class="modal-close-btn" id="modalCloseReportBtn" aria-label="Close modal">&times;</button>
+      </div>
+
+      <div class="modal-body" id="reportModalBody">
+        <!-- Rendered dynamically by script.js -->
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="modalPrintReportBtn">
+          <span class="btn-icon">&#128438;</span> Print / Download Report
+        </button>
+        <button type="button" class="btn-outline" id="modalCloseReportFooterBtn">
+          Close Report
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Document & Text Preview Modal (Resume / Job Description) -->
+  <div class="modal-overlay" id="documentViewerModal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="docModalTitle">
+    <div class="modal-card modal-doc-card">
+      <div class="modal-header">
+        <div class="modal-header-text">
+          <div class="modal-eyebrow" id="docModalEyebrow">STORED DOCUMENT PREVIEW</div>
+          <h3 class="modal-title" id="docModalTitle">Document Text</h3>
+          <div class="modal-meta" id="docModalMeta">Document Details</div>
+        </div>
+        <button type="button" class="modal-close-btn" id="modalCloseDocBtn" aria-label="Close modal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="doc-toolbar">
+          <span class="doc-word-count" id="docWordCount">0 words</span>
+          <div class="doc-actions">
+            <button type="button" class="btn-outline btn-small" id="modalCopyDocBtn">
+              <span class="btn-icon">📋</span> Copy Text
+            </button>
+            <a href="#" id="modalDownloadDocBtn" class="btn-secondary btn-small" style="display: none;" target="_blank" download>
+              <span class="btn-icon">⬇️</span> Download Original File
+            </a>
+          </div>
+        </div>
+        <div class="doc-text-container" id="docTextContainer"></div>
+      </div>
+    </div>
+  </div>
 
   <!-- Site Footer -->
   <footer class="site-footer">
@@ -752,8 +1010,9 @@
   <!-- Auth Guard & Email Whitelist Protection -->
   <script src="auth-guard.js"></script>
 
-  <!-- Application Logic -->
+  <!-- Application Logic & Firebase Repository Service -->
   <script src="jd-database.js"></script>
+  <script src="repository-service.js"></script>
   <script src="script.js"></script>
 </body>
 

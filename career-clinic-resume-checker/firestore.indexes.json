@@ -1,0 +1,12 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "resume_assessments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "savedAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

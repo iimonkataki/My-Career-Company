@@ -2118,6 +2118,9 @@ DESIRED QUALIFICATIONS & COMPETENCIES
     const resultsPanel = document.getElementById('diagnosticResults');
     if (resultsPanel) resultsPanel.style.display = 'none';
 
+    const saveBanner = document.getElementById('repoSaveBanner');
+    if (saveBanner) saveBanner.style.display = 'none';
+
     hideError();
 
     // Scroll to input panel
@@ -2255,6 +2258,27 @@ DESIRED QUALIFICATIONS & COMPETENCIES
       const diagnosticResult = scoreResume(textToAnalyze, numPages, state.targetRole, jdTextToAnalyze);
       hideLoading();
       renderResults(diagnosticResult);
+
+      // Automatically store to Firebase Repository with metadata and tags
+      if (window.RepositoryService && typeof window.RepositoryService.saveAssessment === 'function') {
+        window.RepositoryService.saveAssessment({
+          resumeFile: state.selectedFile,
+          resumeText: textToAnalyze,
+          resumeNumPages: numPages,
+          jdFile: state.jdFile,
+          jdText: jdTextToAnalyze,
+          jdObject: state.currentJdObject,
+          jdTab: state.jdTab,
+          jdUrl: state.jdUrl,
+          targetRole: state.targetRole,
+          result: diagnosticResult
+        }).then(saveResponse => {
+          showRepositorySaveBanner(saveResponse);
+          updateHeaderRepoCount();
+        }).catch(saveErr => {
+          console.warn("[Repository] Save note:", saveErr);
+        });
+      }
 
     } catch (err) {
       hideLoading();
@@ -2651,6 +2675,503 @@ DESIRED QUALIFICATIONS & COMPETENCIES
         handleExecuteDiagnostic();
       }, 150);
     }
+
+    // Initialize Assessment Repository UI & Navigation
+    initRepositoryUI();
+  }
+
+  // =========================================================================
+  // 8. Assessment Repository & Firebase Integration Controller
+  // =========================================================================
+  let currentLoadedAssessments = [];
+
+  function showRepositorySaveBanner(saveResponse) {
+    const banner = document.getElementById('repoSaveBanner');
+    const bannerText = document.getElementById('repoSaveBannerText');
+    if (!banner || !bannerText || !saveResponse || !saveResponse.record) return;
+
+    const rec = saveResponse.record;
+    const evaluator = (rec.evaluator && rec.evaluator.email) || 'Authorized Evaluator';
+    const tagSummary = (rec.tags || []).slice(0, 3).join(' ');
+
+    bannerText.innerHTML = `Assessment archived in Firebase &bull; <strong>ID: ${escapeHtml(rec.id)}</strong> &bull; User: ${escapeHtml(evaluator)} &bull; ${escapeHtml(tagSummary)}`;
+    banner.style.display = 'flex';
+  }
+
+  async function updateHeaderRepoCount() {
+    const countPill = document.getElementById('headerRepoCount');
+    if (!countPill || !window.RepositoryService) return;
+
+    try {
+      const items = await window.RepositoryService.fetchAssessments();
+      countPill.textContent = items.length;
+    } catch (_) {}
+  }
+
+  function switchToView(viewName) {
+    const heroSection = document.getElementById('heroSection');
+    const inputPanel = document.getElementById('diagnosticInputPanel');
+    const resultsPanel = document.getElementById('diagnosticResults');
+    const repoSection = document.getElementById('repositorySection');
+    const navBtnDiagnostic = document.getElementById('navBtnDiagnostic');
+    const navBtnRepository = document.getElementById('navBtnRepository');
+
+    if (viewName === 'repository') {
+      if (heroSection) heroSection.style.display = 'none';
+      if (inputPanel) inputPanel.style.display = 'none';
+      if (resultsPanel) resultsPanel.style.display = 'none';
+      if (repoSection) repoSection.style.display = 'flex';
+
+      if (navBtnDiagnostic) navBtnDiagnostic.classList.remove('active');
+      if (navBtnRepository) navBtnRepository.classList.add('active');
+
+      loadRepositoryView();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      if (heroSection) heroSection.style.display = '';
+      if (inputPanel) inputPanel.style.display = '';
+      if (resultsPanel && state.lastResult) resultsPanel.style.display = 'flex';
+      if (repoSection) repoSection.style.display = 'none';
+
+      if (navBtnDiagnostic) navBtnDiagnostic.classList.add('active');
+      if (navBtnRepository) navBtnRepository.classList.remove('active');
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  async function loadRepositoryView() {
+    const container = document.getElementById('repoCardsContainer');
+    const emptyState = document.getElementById('repoEmptyState');
+    if (!container || !window.RepositoryService) return;
+
+    container.innerHTML = `
+      <div style="text-align: center; padding: 40px; color: var(--color-gold-light);">
+        <div class="spinner" style="margin: 0 auto 12px;"></div>
+        <div>Loading repository from Google Firebase...</div>
+      </div>
+    `;
+
+    const searchInput = document.getElementById('repoSearchInput');
+    const filterDomain = document.getElementById('repoFilterDomain');
+    const filterBand = document.getElementById('repoFilterBand');
+    const filterEvaluator = document.getElementById('repoFilterEvaluator');
+    const sortBy = document.getElementById('repoSortBy');
+
+    const filters = {
+      searchQuery: searchInput ? searchInput.value : '',
+      domain: filterDomain ? filterDomain.value : 'all',
+      band: filterBand ? filterBand.value : 'all',
+      evaluator: filterEvaluator ? filterEvaluator.value : 'all',
+      sortBy: sortBy ? sortBy.value : 'newest'
+    };
+
+    try {
+      const assessments = await window.RepositoryService.fetchAssessments(filters);
+      currentLoadedAssessments = assessments;
+
+      // Update KPI Statistics
+      const allItems = await window.RepositoryService.fetchAssessments();
+      const stats = window.RepositoryService.calculateStats(allItems);
+
+      const statTotal = document.getElementById('repoStatTotal');
+      const statAvg = document.getElementById('repoStatAvgScore');
+      const statReady = document.getElementById('repoStatPlacementReady');
+      const statTopDom = document.getElementById('repoStatTopDomain');
+      const headerCount = document.getElementById('headerRepoCount');
+
+      if (statTotal) statTotal.textContent = stats.totalCount;
+      if (statAvg) statAvg.textContent = stats.averageScore > 0 ? stats.averageScore : '—';
+      if (statReady) statReady.textContent = stats.placementReadyCount;
+      if (statTopDom) statTopDom.textContent = stats.topDomain;
+      if (headerCount) headerCount.textContent = stats.totalCount;
+
+      if (!assessments || assessments.length === 0) {
+        container.innerHTML = '';
+        if (emptyState) emptyState.style.display = 'block';
+        return;
+      }
+
+      if (emptyState) emptyState.style.display = 'none';
+      container.innerHTML = '';
+
+      assessments.forEach(item => {
+        const card = createAssessmentCardElement(item);
+        container.appendChild(card);
+      });
+
+    } catch (err) {
+      console.error("[RepositoryView] Load error:", err);
+      container.innerHTML = `
+        <div style="text-align: center; padding: 30px; color: #FFA4A4;">
+          Failed to load repository assessments: ${escapeHtml(err.message)}
+        </div>
+      `;
+    }
+  }
+
+  function createAssessmentCardElement(item) {
+    const card = document.createElement('div');
+    card.className = 'repo-card';
+    card.setAttribute('data-id', item.id);
+
+    const rep = item.report || {};
+    const score = rep.totalScore || 0;
+    const bandClass = score >= 80 ? 'score-ready' : (score >= 65 ? 'score-comp' : (score >= 50 ? 'score-mod' : 'score-needs'));
+    const bandLabel = rep.bandLabel || (score >= 80 ? 'Placement Ready' : (score >= 65 ? 'Competitive' : 'Needs Calibration'));
+
+    const resumeName = (item.resume && item.resume.fileName) || 'Resume Document';
+    const resumeType = (item.resume && item.resume.fileType) || 'PDF';
+    const typeBadgeClass = resumeType === 'PDF' ? 'badge-pdf' : (resumeType === 'DOCX' ? 'badge-docx' : 'badge-text');
+
+    const jdTitle = (item.jobDescription && item.jobDescription.title) || 'Target Job Description';
+    const jdDomain = (item.jobDescription && item.jobDescription.domain) || 'General';
+
+    const evalEmail = (item.evaluator && item.evaluator.email) || 'evaluator@mycareercompany.com';
+    const evalName = (item.evaluator && item.evaluator.name) || evalEmail.split('@')[0];
+    const evalInitials = evalName.substring(0, 2).toUpperCase();
+
+    const timeSaved = item.formattedTime || (item.createdAt ? new Date(item.createdAt).toLocaleString('en-IN') : 'Saved');
+
+    const tagsHtml = (item.tags || []).map(t => `<span class="repo-tag-pill">${escapeHtml(t)}</span>`).join('');
+
+    card.innerHTML = `
+      <div class="repo-card-header">
+        <div class="repo-card-evaluator">
+          <div class="repo-eval-avatar">${escapeHtml(evalInitials)}</div>
+          <div class="repo-eval-meta">
+            <span class="repo-eval-name">${escapeHtml(evalName)}</span>
+            <span class="repo-eval-email">${escapeHtml(evalEmail)}</span>
+          </div>
+        </div>
+        <div class="repo-card-time">${escapeHtml(timeSaved)}</div>
+      </div>
+
+      <div class="repo-card-body">
+        <div class="repo-card-entities">
+          <div class="repo-entity-row">
+            <span class="repo-entity-badge ${typeBadgeClass}">${escapeHtml(resumeType)}</span>
+            <span class="repo-entity-title">${escapeHtml(resumeName)}</span>
+            <span class="repo-entity-sub">${item.resume && item.resume.wordCount ? item.resume.wordCount + ' words' : ''} ${item.resume && item.resume.numPages ? '&bull; ' + item.resume.numPages + ' page(s)' : ''}</span>
+          </div>
+          <div class="repo-entity-row">
+            <span class="repo-entity-badge badge-jd">TARGET JD</span>
+            <span class="repo-entity-title">${escapeHtml(jdTitle)}</span>
+            <span class="repo-entity-sub">&bull; ${escapeHtml(jdDomain)}</span>
+          </div>
+        </div>
+
+        <div class="repo-card-score-box">
+          <div class="repo-score-circle ${bandClass}">${score}</div>
+          <div class="repo-score-meta">
+            <span class="repo-score-band">${escapeHtml(bandLabel)}</span>
+            <span class="repo-score-sub">Fit Score Index</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="repo-card-tags">
+        ${tagsHtml}
+      </div>
+
+      <div class="repo-card-actions">
+        <button type="button" class="btn-repo-action btn-repo-report" data-action="report">
+          📊 Full Diagnostic Report
+        </button>
+        <button type="button" class="btn-repo-action btn-repo-doc" data-action="resume">
+          📄 View Resume Text
+        </button>
+        <button type="button" class="btn-repo-action btn-repo-doc" data-action="jd">
+          📋 View Target JD
+        </button>
+        <button type="button" class="btn-repo-action btn-repo-delete" data-action="delete" title="Delete assessment record">
+          🗑️
+        </button>
+      </div>
+    `;
+
+    // Action button listeners
+    const reportBtn = card.querySelector('[data-action="report"]');
+    if (reportBtn) reportBtn.addEventListener('click', () => openReportModal(item));
+
+    const resumeBtn = card.querySelector('[data-action="resume"]');
+    if (resumeBtn) resumeBtn.addEventListener('click', () => openDocumentModal(`Resume: ${resumeName}`, item.resume));
+
+    const jdBtn = card.querySelector('[data-action="jd"]');
+    if (jdBtn) jdBtn.addEventListener('click', () => openDocumentModal(`Job Description: ${jdTitle}`, item.jobDescription));
+
+    const deleteBtn = card.querySelector('[data-action="delete"]');
+    if (deleteBtn) deleteBtn.addEventListener('click', async () => {
+      if (confirm(`Are you sure you want to remove assessment "${item.id}" from the repository?`)) {
+        await window.RepositoryService.deleteAssessment(item.id);
+        loadRepositoryView();
+      }
+    });
+
+    return card;
+  }
+
+  function openReportModal(item) {
+    const modal = document.getElementById('reportViewerModal');
+    const modalTitle = document.getElementById('reportModalTitle');
+    const modalMeta = document.getElementById('reportModalMeta');
+    const modalBody = document.getElementById('reportModalBody');
+    if (!modal || !modalBody) return;
+
+    const rep = item.report || {};
+    const score = rep.totalScore || 0;
+    const bandLabel = rep.bandLabel || 'Diagnostic Result';
+    const resumeName = item.resume ? item.resume.fileName : 'Resume';
+    const jdTitle = item.jobDescription ? item.jobDescription.title : 'Target JD';
+
+    if (modalTitle) modalTitle.textContent = `${resumeName} — ${score}/100`;
+    if (modalMeta) modalMeta.textContent = `Target: ${jdTitle} • Saved on ${item.formattedTime || item.createdAt} by ${item.evaluator ? item.evaluator.email : 'Evaluator'}`;
+
+    // Render dimensions
+    const dimsHtml = (rep.dimensions || []).map(d => {
+      const pct = Math.round((d.score / d.max) * 100);
+      const color = pct >= 80 ? 'high' : (pct < 50 ? 'low' : '');
+      return `
+        <div class="dim-bar-row">
+          <div class="dim-bar-meta">
+            <span class="dim-name">${escapeHtml(d.name)}</span>
+            <span class="dim-score-fraction">${pct}%</span>
+          </div>
+          <div class="dim-progress-track">
+            <div class="dim-progress-fill ${color}" style="width: ${pct}%"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Render strengths
+    const strengthsHtml = (rep.strengths && rep.strengths.length > 0)
+      ? rep.strengths.map(s => `
+          <div class="strength-item">
+            <span class="strength-bullet">✓</span>
+            <div class="strength-text"><strong>${escapeHtml(s.name)}</strong>: Scored in top performance band for institutional placement criteria.</div>
+          </div>
+        `).join('')
+      : '<div style="color: var(--color-text-muted);">No dimensions reached the 80% threshold. Focus on priority fixes below.</div>';
+
+    // Render fixes
+    const fixesHtml = (rep.priorityFixes && rep.priorityFixes.length > 0)
+      ? rep.priorityFixes.map((f, i) => `
+          <div class="priority-fix-card">
+            <div class="fix-num-badge">PRIORITY 0${i + 1}</div>
+            <div class="fix-content">
+              <div class="fix-title">${escapeHtml(f.name)} (${f.loss} pts lost)</div>
+              <div class="fix-desc">${f.advice || ''}</div>
+            </div>
+          </div>
+        `).join('')
+      : '<div style="color: var(--color-text-muted);">Profile shows strong alignment across key criteria.</div>';
+
+    modalBody.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--color-border-subtle);">
+        <div>
+          <div style="font-size: 13px; color: var(--color-gold-primary); text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Fit Score Index</div>
+          <div style="font-size: 38px; font-weight: 800; color: var(--color-text-primary); line-height: 1;">${score}<span style="font-size: 18px; color: var(--color-text-muted);">/100</span></div>
+          <div style="font-size: 13px; font-weight: 600; color: var(--color-gold-light); margin-top: 4px;">${escapeHtml(bandLabel)}</div>
+        </div>
+        <div style="background: rgba(5, 38, 31, 0.7); border: 1px solid var(--color-border-subtle); padding: 12px 18px; border-radius: var(--radius-md);">
+          <div style="font-size: 12px; color: var(--color-text-muted);">Assessment ID: <strong style="color: var(--color-text-primary);">${escapeHtml(item.id)}</strong></div>
+          <div style="font-size: 12px; color: var(--color-text-muted); margin-top: 4px;">Evaluator: <strong style="color: var(--color-gold-light);">${escapeHtml(item.evaluator ? item.evaluator.email : '')}</strong></div>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 24px;">
+        <h4 style="font-size: 15px; color: var(--color-gold-primary); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.04em;">Evaluation Vectors (8 Dimensions)</h4>
+        <div class="dimension-bars-list">
+          ${dimsHtml}
+        </div>
+      </div>
+
+      <div style="margin-bottom: 24px;">
+        <h4 style="font-size: 15px; color: var(--color-gold-primary); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.04em;">Profile Strengths</h4>
+        <div class="strengths-list">
+          ${strengthsHtml}
+        </div>
+      </div>
+
+      <div>
+        <h4 style="font-size: 15px; color: var(--color-gold-primary); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.04em;">Ranked High-Impact Fixes</h4>
+        <div class="priority-fixes-list">
+          ${fixesHtml}
+        </div>
+      </div>
+    `;
+
+    modal.style.display = 'flex';
+  }
+
+  function openDocumentModal(title, docObj) {
+    const modal = document.getElementById('documentViewerModal');
+    const docTitle = document.getElementById('docModalTitle');
+    const docMeta = document.getElementById('docModalMeta');
+    const docWordCount = document.getElementById('docWordCount');
+    const docTextContainer = document.getElementById('docTextContainer');
+    const downloadBtn = document.getElementById('modalDownloadDocBtn');
+    if (!modal || !docTextContainer) return;
+
+    const fullText = (docObj && (docObj.fullText || docObj.snippet)) || 'No text content available for this document.';
+    const wordCount = docObj && docObj.wordCount ? `${docObj.wordCount} words` : `${(fullText.match(/\b\w+\b/g) || []).length} words`;
+
+    if (docTitle) docTitle.textContent = title;
+    if (docMeta) docMeta.textContent = docObj && docObj.fileName ? `File: ${docObj.fileName}` : 'Extracted Text';
+    if (docWordCount) docWordCount.textContent = wordCount;
+    if (docTextContainer) docTextContainer.textContent = fullText;
+
+    if (downloadBtn) {
+      if (docObj && docObj.storageUrl) {
+        downloadBtn.href = docObj.storageUrl;
+        downloadBtn.style.display = 'inline-flex';
+      } else {
+        downloadBtn.style.display = 'none';
+      }
+    }
+
+    modal.style.display = 'flex';
+  }
+
+  function openTeamNotifyModal() {
+    const modal = document.getElementById('teamNotifyModal');
+    const subjectInput = document.getElementById('notifySubjectInput');
+    const bodyTextarea = document.getElementById('notifyBodyTextarea');
+    const sendMailtoBtn = document.getElementById('modalSendMailtoBtn');
+    const copyNote = document.getElementById('notifyCopySuccessNote');
+    if (!modal || !window.RepositoryService) return;
+
+    const data = window.RepositoryService.getTeamNotificationData();
+
+    if (subjectInput) subjectInput.value = data.subject;
+    if (bodyTextarea) bodyTextarea.value = data.body;
+    if (sendMailtoBtn) sendMailtoBtn.href = data.mailtoUrl;
+    if (copyNote) copyNote.style.display = 'none';
+
+    modal.style.display = 'flex';
+  }
+
+  function closeAllModals() {
+    ['teamNotifyModal', 'reportViewerModal', 'documentViewerModal'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+  }
+
+  function initRepositoryUI() {
+    // Navigation switching
+    const navBtnDiagnostic = document.getElementById('navBtnDiagnostic');
+    const navBtnRepository = document.getElementById('navBtnRepository');
+    const viewInRepoBtn = document.getElementById('viewInRepoBtn');
+    const repoEmptyRunBtn = document.getElementById('repoEmptyRunBtn');
+
+    if (navBtnDiagnostic) navBtnDiagnostic.addEventListener('click', () => switchToView('diagnostic'));
+    if (navBtnRepository) navBtnRepository.addEventListener('click', () => switchToView('repository'));
+    if (viewInRepoBtn) viewInRepoBtn.addEventListener('click', () => switchToView('repository'));
+    if (repoEmptyRunBtn) repoEmptyRunBtn.addEventListener('click', () => switchToView('diagnostic'));
+
+    // Toolbar Filters & Search with Debounce
+    const searchInput = document.getElementById('repoSearchInput');
+    const searchClear = document.getElementById('repoSearchClearBtn');
+    let searchDebounce = null;
+
+    if (searchInput) {
+      searchInput.addEventListener('input', () => {
+        if (searchClear) searchClear.style.display = searchInput.value ? 'block' : 'none';
+        clearTimeout(searchDebounce);
+        searchDebounce = setTimeout(() => {
+          loadRepositoryView();
+        }, 250);
+      });
+    }
+
+    if (searchClear && searchInput) {
+      searchClear.addEventListener('click', () => {
+        searchInput.value = '';
+        searchClear.style.display = 'none';
+        loadRepositoryView();
+      });
+    }
+
+    ['repoFilterDomain', 'repoFilterBand', 'repoFilterEvaluator', 'repoSortBy'].forEach(id => {
+      const sel = document.getElementById(id);
+      if (sel) sel.addEventListener('change', () => loadRepositoryView());
+    });
+
+    // Header Actions
+    const notifyBtn = document.getElementById('repoNotifyTeamBtn');
+    if (notifyBtn) notifyBtn.addEventListener('click', openTeamNotifyModal);
+
+    const exportCsvBtn = document.getElementById('repoExportCsvBtn');
+    if (exportCsvBtn) {
+      exportCsvBtn.addEventListener('click', () => {
+        if (window.RepositoryService) {
+          window.RepositoryService.exportToCsv(currentLoadedAssessments);
+        }
+      });
+    }
+
+    const refreshBtn = document.getElementById('repoRefreshBtn');
+    if (refreshBtn) refreshBtn.addEventListener('click', () => loadRepositoryView());
+
+    // Modal Close Buttons
+    ['modalCloseNotifyBtn', 'modalCloseReportBtn', 'modalCloseReportFooterBtn', 'modalCloseDocBtn'].forEach(id => {
+      const btn = document.getElementById(id);
+      if (btn) btn.addEventListener('click', closeAllModals);
+    });
+
+    // Close on overlay backdrop click
+    ['teamNotifyModal', 'reportViewerModal', 'documentViewerModal'].forEach(id => {
+      const overlay = document.getElementById(id);
+      if (overlay) {
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) closeAllModals();
+        });
+      }
+    });
+
+    // Copy Email Button in Team Notify Modal
+    const copyEmailBtn = document.getElementById('modalCopyEmailBtn');
+    if (copyEmailBtn) {
+      copyEmailBtn.addEventListener('click', () => {
+        const bodyTextarea = document.getElementById('notifyBodyTextarea');
+        const copyNote = document.getElementById('notifyCopySuccessNote');
+        if (bodyTextarea) {
+          navigator.clipboard.writeText(bodyTextarea.value).then(() => {
+            if (copyNote) {
+              copyNote.style.display = 'inline';
+              setTimeout(() => { copyNote.style.display = 'none'; }, 2500);
+            }
+          }).catch(err => {
+            alert("Email text: " + bodyTextarea.value);
+          });
+        }
+      });
+    }
+
+    // Copy Doc Text Button in Document Modal
+    const copyDocBtn = document.getElementById('modalCopyDocBtn');
+    if (copyDocBtn) {
+      copyDocBtn.addEventListener('click', () => {
+        const docText = document.getElementById('docTextContainer');
+        if (docText) {
+          navigator.clipboard.writeText(docText.textContent).then(() => {
+            copyDocBtn.textContent = '✓ Copied!';
+            setTimeout(() => { copyDocBtn.innerHTML = '<span class="btn-icon">📋</span> Copy Text'; }, 2000);
+          });
+        }
+      });
+    }
+
+    // Print Modal Report Button
+    const printReportBtn = document.getElementById('modalPrintReportBtn');
+    if (printReportBtn) {
+      printReportBtn.addEventListener('click', () => window.print());
+    }
+
+    // Initial badge update
+    updateHeaderRepoCount();
   }
 
   // Bootstrap when DOM is ready

@@ -1,0 +1,34 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper function: Strictly verify that the request is authenticated 
+    // and belongs to one of the authorized evaluator emails.
+    function isAuthorizedEvaluator() {
+      return request.auth != null && (
+        request.auth.token.email.lower() in [
+          'upam.patra@gmail.com',
+          'iimonkataki@mycareercompany.com',
+          'ibonkataki@mycareercompany.com',
+          'anirbanroy@mycareercompany.com',
+          'anirbanroy@mycareercompanny.com'
+        ]
+      );
+    }
+
+    // Uploaded candidate resumes repository
+    match /resumes/{fileName} {
+      allow read, write, create, delete: if isAuthorizedEvaluator();
+    }
+
+    // Uploaded target job descriptions repository
+    match /job_descriptions/{fileName} {
+      allow read, write, create, delete: if isAuthorizedEvaluator();
+    }
+
+    // Catch-all: require authorized evaluator credentials
+    match /{allPaths=**} {
+      allow read, write: if isAuthorizedEvaluator();
+    }
+  }
+}

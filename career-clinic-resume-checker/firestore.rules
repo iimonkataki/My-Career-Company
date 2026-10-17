@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function: Strictly verify that the request is authenticated 
+    // and belongs to one of the authorized evaluator emails.
+    function isAuthorizedEvaluator() {
+      return request.auth != null && (
+        request.auth.token.email.lower() in [
+          'upam.patra@gmail.com',
+          'iimonkataki@mycareercompany.com',
+          'ibonkataki@mycareercompany.com',
+          'anirbanroy@mycareercompany.com',
+          'anirbanroy@mycareercompanny.com'
+        ]
+      );
+    }
+
+    // Repository collection for saved resumes, JDs, and diagnostic reports
+    match /resume_assessments/{assessmentId} {
+      allow read, write, create, update, delete: if isAuthorizedEvaluator();
+    }
+
+    // Default catch-all rule: require authorized evaluator credentials
+    match /{document=**} {
+      allow read, write: if isAuthorizedEvaluator();
+    }
+  }
+}
