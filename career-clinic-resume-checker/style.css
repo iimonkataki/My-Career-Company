@@ -3145,17 +3145,7 @@ p {
    FIREBASE AUTO-SAVE BANNER IN DIAGNOSTIC RESULTS
    ========================================================================== */
 .repo-save-banner {
-  background: linear-gradient(90deg, rgba(43, 182, 115, 0.12) 0%, rgba(7, 61, 50, 0.6) 100%);
-  border: 1px solid rgba(43, 182, 115, 0.35);
-  border-radius: var(--radius-md);
-  padding: 10px 18px;
-  margin: 12px 0 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  animation: slideDownFade 0.35s ease;
+  display: none !important;
 }
 
 @keyframes slideDownFade {
@@ -4038,35 +4028,7 @@ p {
 
 /* --- Intake Auto-Record Toast Pill --- */
 .intake-record-toast {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: #042720;
-  color: #F8F6EF;
-  border: 1.5px solid #D4AF7C;
-  border-radius: 9999px;
-  padding: 10px 22px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 16px rgba(212, 175, 124, 0.35);
-  font-family: 'Montserrat', sans-serif;
-  font-size: 0.84rem;
-  font-weight: 700;
-  animation: slideInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.intake-record-toast .toast-check {
-  color: #10B981;
-  font-size: 1.1rem;
-  font-weight: 900;
-}
-
-@keyframes slideInUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
+  display: none !important;
 }
 
 /* --- Repository Category Filter Tabs --- */

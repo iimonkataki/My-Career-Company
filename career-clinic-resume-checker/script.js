@@ -12,21 +12,10 @@
   // =========================================================================
   // 1. DOM Elements & State
   // =========================================================================
-    let intakeToastTimer = null;
   let activeRepoCategory = 'assessments'; // 'assessments' | 'resumes' | 'jds'
 
   function showIntakeToast(msg) {
-    const toast = document.getElementById('intakeRecordToast');
-    const toastMsg = document.getElementById('intakeRecordToastMsg');
-    if (!toast || !toastMsg) return;
-    toastMsg.textContent = msg;
-    toast.style.display = 'flex';
-    toast.style.opacity = '1';
-    clearTimeout(intakeToastTimer);
-    intakeToastTimer = setTimeout(() => {
-      toast.style.opacity = '0';
-      setTimeout(() => { toast.style.display = 'none'; }, 300);
-    }, 3500);
+    // Intentionally silent: user requested no banners or toasts about repository/database storage
   }
 
   const state = {
@@ -818,9 +807,11 @@ DESIRED QUALIFICATIONS & COMPETENCIES
    * Parse PDF file in the browser using pdf.js 4.10.38
    * Handles local file:// protocol by assigning worker module to globalThis.pdfjsWorker
    */
-  async function parsePdfFile(arrayBuffer) {
+  async function parsePdfFile(arrayBuffer, showUi = false) {
     try {
-      showLoading("Loading client-side PDF parsing engine (pdf.js 4.10.38)...");
+      if (showUi) {
+        showLoading("Loading client-side PDF parsing engine (pdf.js 4.10.38)...");
+      }
 
       // Dynamic import of PDF.js worker and library as specified
       const workerUrl = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs';
@@ -841,7 +832,9 @@ DESIRED QUALIFICATIONS & COMPETENCIES
         throw new Error("Unable to load PDF parser from CDN (blocked by network or offline). Please paste your resume text into the text area to run the diagnostic.");
       }
 
-      showLoading("Extracting digital text layers from PDF...");
+      if (showUi) {
+        showLoading("Extracting digital text layers from PDF...");
+      }
       const loadingTask = pdfjsLib.getDocument({
         data: new Uint8Array(arrayBuffer),
         isEvalSupported: false
@@ -852,7 +845,9 @@ DESIRED QUALIFICATIONS & COMPETENCIES
       let fullText = '';
 
       for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-        showLoading(`Processing page ${pageNum} of ${numPages}...`);
+        if (showUi) {
+          showLoading(`Processing page ${pageNum} of ${numPages}...`);
+        }
         const page = await pdfDoc.getPage(pageNum);
         const textContent = await page.getTextContent();
 
@@ -881,24 +876,36 @@ DESIRED QUALIFICATIONS & COMPETENCIES
         throw new Error("This PDF is password-protected. Please remove the password and re-upload.");
       }
       throw err;
+    } finally {
+      if (showUi) {
+        hideLoading();
+      }
     }
   }
 
   /**
    * Parse DOCX file in the browser using Mammoth 1.12.1
    */
-  async function parseDocxFile(arrayBuffer) {
+  async function parseDocxFile(arrayBuffer, showUi = false) {
     if (!window.mammoth) {
       throw new Error("Mammoth DOCX parser is not available. Please verify network access or paste your resume text directly.");
     }
-    showLoading("Extracting text from DOCX document...");
-    const result = await window.mammoth.extractRawText({ arrayBuffer: arrayBuffer });
-    const text = result.value || '';
-    const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
-    if (wordCount < 30) {
-      throw new Error("Empty or corrupted DOCX document. Please paste your resume text directly.");
+    if (showUi) {
+      showLoading("Extracting text from DOCX document...");
     }
-    return { text: text, numPages: null };
+    try {
+      const result = await window.mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+      const text = result.value || '';
+      const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+      if (wordCount < 30) {
+        throw new Error("Empty or corrupted DOCX document. Please paste your resume text directly.");
+      }
+      return { text: text, numPages: null };
+    } finally {
+      if (showUi) {
+        hideLoading();
+      }
+    }
   }
 
   // =========================================================================
@@ -2206,12 +2213,17 @@ DESIRED QUALIFICATIONS & COMPETENCIES
             return;
           }
 
-          if (fileName.endsWith('.pdf')) {
-            const pdfResult = await parsePdfFile(state.fileArrayBuffer);
+          if (state.extractedText && state.extractedText.length >= 30) {
+            textToAnalyze = state.extractedText;
+            numPages = state.fileNumPages || 1;
+          } else if (fileName.endsWith('.pdf')) {
+            showLoading("Extracting digital text layers from PDF...");
+            const pdfResult = await parsePdfFile(state.fileArrayBuffer, true);
             textToAnalyze = pdfResult.text;
             numPages = pdfResult.numPages;
           } else if (fileName.endsWith('.docx')) {
-            const docxResult = await parseDocxFile(state.fileArrayBuffer);
+            showLoading("Extracting text from DOCX document...");
+            const docxResult = await parseDocxFile(state.fileArrayBuffer, true);
             textToAnalyze = docxResult.text;
             numPages = docxResult.numPages;
           } else {
@@ -2232,15 +2244,19 @@ DESIRED QUALIFICATIONS & COMPETENCIES
       // 2. Resolve Job Description (Optional Custom or Benchmark JD)
       let jdTextToAnalyze = '';
       if (state.jdTab === 'upload' && state.jdFile && state.jdArrayBuffer) {
-        const jdFileName = state.jdFile.name.toLowerCase();
-        if (jdFileName.endsWith('.pdf')) {
-          showLoading("Extracting Job Description text from PDF...");
-          const res = await parsePdfFile(state.jdArrayBuffer);
-          jdTextToAnalyze = res.text;
-        } else if (jdFileName.endsWith('.docx')) {
-          showLoading("Extracting Job Description text from DOCX...");
-          const res = await parseDocxFile(state.jdArrayBuffer);
-          jdTextToAnalyze = res.text;
+        if (state.jdExtractedText && state.jdExtractedText.length >= 30) {
+          jdTextToAnalyze = state.jdExtractedText;
+        } else {
+          const jdFileName = state.jdFile.name.toLowerCase();
+          if (jdFileName.endsWith('.pdf')) {
+            showLoading("Extracting Job Description text from PDF...");
+            const res = await parsePdfFile(state.jdArrayBuffer, true);
+            jdTextToAnalyze = res.text;
+          } else if (jdFileName.endsWith('.docx')) {
+            showLoading("Extracting Job Description text from DOCX...");
+            const res = await parseDocxFile(state.jdArrayBuffer, true);
+            jdTextToAnalyze = res.text;
+          }
         }
       } else if (state.jdTab === 'domain') {
         const jdTextarea = document.getElementById('jdTextInput');
@@ -2303,7 +2319,7 @@ DESIRED QUALIFICATIONS & COMPETENCIES
       hideLoading();
       renderResults(diagnosticResult);
 
-      // Automatically store to Firebase Repository with metadata and tags
+      // Automatically store to Firebase Repository with metadata and tags completely silently
       if (window.RepositoryService && typeof window.RepositoryService.saveAssessment === 'function') {
         window.RepositoryService.saveAssessment({
           resumeFile: state.selectedFile,
@@ -2317,7 +2333,7 @@ DESIRED QUALIFICATIONS & COMPETENCIES
           targetRole: state.targetRole,
           result: diagnosticResult
         }).then(saveResponse => {
-          showRepositorySaveBanner(saveResponse);
+          // Completely silent - no database banner shown to users
           updateHeaderRepoCount();
         }).catch(saveErr => {
           console.warn("[Repository] Save note:", saveErr);
@@ -2334,6 +2350,7 @@ DESIRED QUALIFICATIONS & COMPETENCIES
   function handleFileSelected(file) {
     if (!file) return;
     hideError();
+    hideLoading();
 
     const fileName = file.name;
     const fileSizeKb = Math.round(file.size / 1024);
@@ -2366,16 +2383,16 @@ DESIRED QUALIFICATIONS & COMPETENCIES
     reader.onload = async function (e) {
       state.fileArrayBuffer = e.target.result;
 
-      // Immediately parse text and record unique resume to repository
+      // Immediately parse text and record unique resume to repository SILENTLY
       try {
         let parsedText = '';
         let pages = 1;
         if (fileName.toLowerCase().endsWith('.pdf')) {
-          const res = await parsePdfFile(state.fileArrayBuffer);
+          const res = await parsePdfFile(state.fileArrayBuffer, false); // SILENT: No UI blocking
           parsedText = res.text;
           pages = res.numPages;
         } else if (fileName.toLowerCase().endsWith('.docx')) {
-          const res = await parseDocxFile(state.fileArrayBuffer);
+          const res = await parseDocxFile(state.fileArrayBuffer, false); // SILENT: No UI blocking
           parsedText = res.text;
           pages = res.numPages;
         }
@@ -2388,7 +2405,6 @@ DESIRED QUALIFICATIONS & COMPETENCIES
             text: parsedText,
             numPages: pages
           }).then(() => {
-            showIntakeToast('✓ Resume recorded in repository immediately');
             updateHeaderRepoCount();
           }).catch(err => {
             console.warn('[Repository] Immediate resume record note:', err);
@@ -2396,10 +2412,13 @@ DESIRED QUALIFICATIONS & COMPETENCIES
         }
       } catch (err) {
         console.warn('[Intake] Text extract note:', err);
+      } finally {
+        hideLoading(); // Guaranteed clear
       }
     };
     reader.onerror = function () {
       showError("File Read Error", "Unable to read the chosen file from local disk.");
+      hideLoading();
     };
     reader.readAsArrayBuffer(file);
   }
@@ -2407,6 +2426,7 @@ DESIRED QUALIFICATIONS & COMPETENCIES
   function handleJdFileSelected(file) {
     if (!file) return;
     hideError();
+    hideLoading();
 
     const fileName = file.name;
     const fileSizeKb = Math.round(file.size / 1024);
@@ -2439,14 +2459,14 @@ DESIRED QUALIFICATIONS & COMPETENCIES
     reader.onload = async function (e) {
       state.jdArrayBuffer = e.target.result;
 
-      // Immediately parse text and record unique JD to repository
+      // Immediately parse text and record unique JD to repository SILENTLY
       try {
         let parsedJdText = '';
         if (fileName.toLowerCase().endsWith('.pdf')) {
-          const res = await parsePdfFile(state.jdArrayBuffer);
+          const res = await parsePdfFile(state.jdArrayBuffer, false); // SILENT: No UI blocking
           parsedJdText = res.text;
         } else if (fileName.toLowerCase().endsWith('.docx')) {
-          const res = await parseDocxFile(state.jdArrayBuffer);
+          const res = await parseDocxFile(state.jdArrayBuffer, false); // SILENT: No UI blocking
           parsedJdText = res.text;
         }
         state.jdExtractedText = parsedJdText;
@@ -2459,7 +2479,6 @@ DESIRED QUALIFICATIONS & COMPETENCIES
             domain: state.targetRole || 'Consulting',
             tab: 'upload'
           }).then(() => {
-            showIntakeToast('✓ Job Description recorded in repository immediately');
             updateHeaderRepoCount();
           }).catch(err => {
             console.warn('[Repository] Immediate JD record note:', err);
@@ -2467,10 +2486,13 @@ DESIRED QUALIFICATIONS & COMPETENCIES
         }
       } catch (err) {
         console.warn('[Intake] Text extract note:', err);
+      } finally {
+        hideLoading(); // Guaranteed clear
       }
     };
     reader.onerror = function () {
       showError("File Read Error", "Unable to read the Job Description file from local disk.");
+      hideLoading();
     };
     reader.readAsArrayBuffer(file);
   }
@@ -2668,7 +2690,6 @@ DESIRED QUALIFICATIONS & COMPETENCIES
             title: 'Job Link: ' + url.substring(0, 50),
             tab: 'link'
           }).then(() => {
-            showIntakeToast('✓ Job Link recorded in repository immediately');
             updateHeaderRepoCount();
           });
         }
@@ -2691,7 +2712,6 @@ DESIRED QUALIFICATIONS & COMPETENCIES
                 fileName: 'Pasted-Resume.txt',
                 numPages: Math.max(1, Math.ceil(text.split(/\s+/).length / 450))
               }).then(() => {
-                showIntakeToast('✓ Pasted resume recorded in repository immediately');
                 updateHeaderRepoCount();
               });
             }
@@ -2772,7 +2792,6 @@ DESIRED QUALIFICATIONS & COMPETENCIES
                 domain: state.targetRole || 'Consulting',
                 tab: 'paste'
               }).then(() => {
-                showIntakeToast('✓ Custom JD recorded in repository immediately');
                 updateHeaderRepoCount();
               });
             }
@@ -2842,26 +2861,9 @@ DESIRED QUALIFICATIONS & COMPETENCIES
   let currentLoadedAssessments = [];
 
   function showRepositorySaveBanner(saveResponse) {
+    // Intentionally suppressed: candidate users must never see repository / database save banners
     const banner = document.getElementById('repoSaveBanner');
-    const bannerText = document.getElementById('repoSaveBannerText');
-    if (!banner || !bannerText || !saveResponse || !saveResponse.record) return;
-
-    const rec = saveResponse.record;
-    const evaluator = (rec.evaluator && rec.evaluator.email) || 'Authorized Evaluator';
-    const tagSummary = (rec.tags || []).slice(0, 3).join(' ');
-    const isCoFounder = window.AuthGuard && window.AuthGuard.isCoFounder();
-
-    const viewBtn = document.getElementById('viewInRepoBtn');
-    if (viewBtn) {
-      viewBtn.style.display = isCoFounder ? 'inline-flex' : 'none';
-    }
-
-    if (isCoFounder) {
-      bannerText.innerHTML = `Assessment archived in Firebase &bull; <strong>ID: ${escapeHtml(rec.id)}</strong> &bull; User: ${escapeHtml(evaluator)} &bull; ${escapeHtml(tagSummary)}`;
-      banner.style.display = 'flex';
-    } else {
-      banner.style.display = 'none';
-    }
+    if (banner) banner.style.display = 'none';
   }
 
   async function updateHeaderRepoCount() {
