@@ -2265,7 +2265,7 @@ h1, h2, h3, h4, h5, h6 {
    RESUME FIT SCORE™ ACTION BUTTONS
    ========================================================================== */
 
-/* Top Right Hero Action (Home Page - Above Dashboard Preview) */
+/* Home Page Hero Action (Above Dashboard Preview) */
 .hero-dashboard-action-top {
   display: flex;
   justify-content: flex-end;
@@ -2274,14 +2274,27 @@ h1, h2, h3, h4, h5, h6 {
   z-index: 5;
 }
 
-/* Top Right Body Action (All Other Pages - Below Main Top Banner) */
-.body-fitscore-action-top {
+/* Page Hero Grid & Action (All Inner Pages - Up in the Green Area on the Right) */
+.page-hero-grid {
   display: flex;
-  justify-content: flex-end;
-  padding-top: 20px;
-  padding-bottom: 6px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 36px;
   position: relative;
-  z-index: 5;
+  z-index: 2;
+  width: 100%;
+}
+
+.page-hero-grid .page-hero-content {
+  flex: 1;
+  max-width: 780px;
+}
+
+.page-hero-action {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 /* Base Resume Fit Score Button */
@@ -2289,7 +2302,7 @@ h1, h2, h3, h4, h5, h6 {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  padding: 11px 24px;
+  padding: 12px 26px;
   font-family: 'Montserrat', sans-serif;
   font-size: 0.84rem;
   font-weight: 700;
@@ -2303,34 +2316,21 @@ h1, h2, h3, h4, h5, h6 {
   user-select: none;
 }
 
-/* On Dark Background (Home Page Hero) */
-.btn-fitscore-home {
+/* In the Green Area (Home Hero & All Page Heroes) */
+.btn-fitscore-home,
+.btn-fitscore-hero {
   background: linear-gradient(135deg, #E7C99D 0%, #D4AF7C 100%);
   color: #042720 !important;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 4px 18px rgba(212, 175, 124, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 0 4px 20px rgba(212, 175, 124, 0.38);
 }
 
-.btn-fitscore-home:hover {
+.btn-fitscore-home:hover,
+.btn-fitscore-hero:hover {
   background: linear-gradient(135deg, #F0D7B2 0%, #E7C99D 100%);
   color: #021a15 !important;
   transform: translateY(-2px);
-  box-shadow: 0 8px 26px rgba(212, 175, 124, 0.55);
-}
-
-/* On Light Background (Body of All Other Pages) */
-.btn-fitscore-body {
-  background: linear-gradient(135deg, #D4AF7C 0%, #B88E56 100%);
-  color: #042720 !important;
-  border: 1px solid rgba(184, 142, 86, 0.6);
-  box-shadow: 0 4px 16px rgba(184, 142, 86, 0.25);
-}
-
-.btn-fitscore-body:hover {
-  background: linear-gradient(135deg, #E7C99D 0%, #D4AF7C 100%);
-  color: #021a15 !important;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(184, 142, 86, 0.45);
+  box-shadow: 0 8px 28px rgba(212, 175, 124, 0.6);
 }
 
 .btn-fitscore-icon {
@@ -2340,13 +2340,32 @@ h1, h2, h3, h4, h5, h6 {
 
 .btn-fitscore-arrow {
   display: inline-block;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   line-height: 1;
   transition: transform 0.2s ease;
 }
 
 .btn-fitscore:hover .btn-fitscore-arrow {
   transform: translateX(4px);
+}
+
+@media (max-width: 992px) {
+  .page-hero-grid {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 22px;
+  }
+
+  .page-hero-action {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .page-hero-action .btn-fitscore {
+    width: 100%;
+    max-width: 390px;
+    justify-content: center;
+  }
 }
 
 @media (max-width: 768px) {
@@ -2356,15 +2375,9 @@ h1, h2, h3, h4, h5, h6 {
     margin-bottom: 16px;
   }
 
-  .body-fitscore-action-top {
-    justify-content: center;
-    padding-top: 16px;
-    padding-bottom: 8px;
-  }
-
-  .btn-fitscore {
+  .hero-dashboard-action-top .btn-fitscore {
     width: 100%;
-    max-width: 340px;
+    max-width: 390px;
     justify-content: center;
   }
 }
