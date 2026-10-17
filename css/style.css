@@ -2265,24 +2265,27 @@ h1, h2, h3, h4, h5, h6 {
    RESUME FIT SCORE™ ACTION BUTTONS
    ========================================================================== */
 
-/* Home Page Hero Action (Above Dashboard Preview) */
+/* Home Page Hero Action (Above Dashboard Preview - Full Horizontal Width Matching Box Below) */
 .hero-dashboard-action-top {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 14px;
+  display: block;
+  width: 100%;
+  margin-bottom: 16px;
   position: relative;
   z-index: 5;
 }
 
 .btn-fitscore-home {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 11px 24px;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px 24px;
   font-family: 'Montserrat', sans-serif;
-  font-size: 0.84rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   border-radius: 9999px;
   text-decoration: none;
@@ -2300,6 +2303,30 @@ h1, h2, h3, h4, h5, h6 {
   color: #021a15 !important;
   transform: translateY(-2px);
   box-shadow: 0 8px 26px rgba(212, 175, 124, 0.55);
+}
+
+.btn-fitscore-home .btn-fitscore-icon {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.btn-fitscore-home .btn-fitscore-arrow {
+  display: inline-block;
+  font-size: 1.2rem;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.btn-fitscore-home:hover .btn-fitscore-arrow {
+  transform: translateX(4px);
+}
+
+@media (max-width: 480px) {
+  .btn-fitscore-home {
+    font-size: 0.76rem;
+    padding: 11px 14px;
+    letter-spacing: 0.03em;
+  }
 }
 
 /* Sub-Hero Action Bar (In White Space Just Below Green Hero On All Inner Pages) */
