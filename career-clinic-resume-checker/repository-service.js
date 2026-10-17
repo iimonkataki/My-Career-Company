@@ -5,13 +5,23 @@
  * Securely stores all uploaded candidate resumes, uploaded JDs, and generated
  * Fit Score™ diagnostic reports to Firebase (Firestore & Storage) with comprehensive
  * metadata, timestamps, evaluator email tracking, and tagging.
+ * 
+ * Instantaneous Recording:
+ * - Standalone unique resumes recorded immediately upon upload / paste
+ * - Standalone unique JDs recorded immediately upon upload / link / paste
+ * - Complete paired diagnostic reports recorded immediately upon scoring
  */
 
 (function () {
   'use strict';
 
-  const COLLECTION_NAME = 'resume_assessments';
-  const LOCAL_CACHE_KEY = 'CC_RESUME_ASSESSMENTS_V1';
+  const ASSESSMENTS_COLLECTION = 'resume_assessments';
+  const RESUMES_COLLECTION = 'unique_resumes';
+  const JDS_COLLECTION = 'unique_job_descriptions';
+
+  const LOCAL_CACHE_ASSESSMENTS = 'CC_RESUME_ASSESSMENTS_V1';
+  const LOCAL_CACHE_RESUMES = 'CC_UNIQUE_RESUMES_V1';
+  const LOCAL_CACHE_JDS = 'CC_UNIQUE_JDS_V1';
 
   // Permitted Reviewer Emails
   const PERMITTED_EMAILS = [
@@ -26,24 +36,41 @@
   let storage = null;
   let isFirestoreAvailable = false;
   let isStorageAvailable = false;
+  let firestoreListeners = [];
 
   // Initialize Firebase Firestore and Storage
   function initFirebaseServices() {
     if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
       try {
-        db = firebase.firestore();
-        isFirestoreAvailable = true;
+        if (!db) {
+          db = firebase.firestore();
+          isFirestoreAvailable = true;
+        }
       } catch (err) {
         console.warn("[RepositoryService] Firestore initialization warning:", err.message);
       }
 
       try {
-        storage = firebase.storage();
-        isStorageAvailable = true;
+        if (!storage) {
+          storage = firebase.storage();
+          isStorageAvailable = true;
+        }
       } catch (err) {
         console.warn("[RepositoryService] Storage initialization warning:", err.message);
       }
     }
+  }
+
+  // Fast string hash for content deduplication
+  function computeHash(str) {
+    let hash = 0;
+    if (!str || str.length === 0) return 'empty';
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash |= 0;
+    }
+    return Math.abs(hash).toString(36);
   }
 
   // Sanitize filename for safe storage keys
@@ -52,7 +79,21 @@
     return str.replace(/[^a-zA-Z0-9._-]/g, '_').substring(0, 80);
   }
 
-  // Format readable date and time (e.g. "17 Oct 2026, 09:55 PM")
+  // Deep recursive sanitizer to eliminate 'undefined' values before sending to Firestore
+  function sanitizeForFirestore(obj) {
+    if (obj === undefined) return null;
+    if (obj === null || typeof obj !== 'object') return obj;
+    if (obj instanceof Date) return obj.toISOString();
+    if (Array.isArray(obj)) return obj.map(sanitizeForFirestore);
+    const clean = {};
+    for (const key of Object.keys(obj)) {
+      const val = obj[key];
+      clean[key] = (val !== undefined) ? sanitizeForFirestore(val) : null;
+    }
+    return clean;
+  }
+
+  // Format readable date and time (e.g. "18 Oct 2026, 01:15 AM")
   function formatReadableDateTime(dateObj) {
     const d = dateObj || new Date();
     try {
@@ -69,51 +110,47 @@
     }
   }
 
-  // Local Storage Cache Helpers (Protected: co-founder access only)
-  function getLocalCache() {
-    if (window.AuthGuard && !window.AuthGuard.isCoFounder()) {
-      return [];
-    }
+  // --- Local Cache Helpers ---
+  function getListFromCache(key) {
     try {
-      const raw = localStorage.getItem(LOCAL_CACHE_KEY);
+      const raw = localStorage.getItem(key);
       return raw ? JSON.parse(raw) : [];
     } catch (e) {
-      console.warn("[RepositoryService] Failed to read local cache:", e);
+      console.warn(`[RepositoryService] Failed to read ${key}:`, e);
       return [];
     }
   }
 
-  function saveLocalCache(list) {
-    if (window.AuthGuard && !window.AuthGuard.isCoFounder()) {
-      return;
-    }
+  function saveListToCache(key, list) {
     try {
-      localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(list.slice(0, 250)));
+      localStorage.setItem(key, JSON.stringify((list || []).slice(0, 250)));
     } catch (e) {
-      console.warn("[RepositoryService] Failed to update local cache:", e);
+      console.warn(`[RepositoryService] Failed to save ${key}:`, e);
     }
   }
 
-  function upsertLocalCache(record) {
-    const list = getLocalCache();
-    const idx = list.findIndex(item => item.id === record.id);
+  function upsertItemInCache(key, item) {
+    const list = getListFromCache(key);
+    const idx = list.findIndex(i => i.id === item.id);
     if (idx >= 0) {
-      list[idx] = record;
+      list[idx] = item;
     } else {
-      list.unshift(record);
+      list.unshift(item);
     }
-    saveLocalCache(list);
+    saveListToCache(key, list);
     return list;
   }
 
-  function removeFromLocalCache(recordId) {
-    const list = getLocalCache().filter(item => item.id !== recordId);
-    saveLocalCache(list);
+  function removeItemFromCache(key, itemId) {
+    const list = getListFromCache(key).filter(i => i.id !== itemId);
+    saveListToCache(key, list);
     return list;
   }
 
   /**
-   * Upload File Blob to Firebase Storage with Fallback
+   * Upload File Blob to Firebase Storage with a strict 2-second timeout.
+   * If Firebase Storage is not enabled or times out, it safely falls back
+   * without blocking or crashing Firestore storage.
    */
   async function uploadFileToStorage(folder, file, recordId) {
     if (!storage || !file || !(file instanceof Blob)) {
@@ -134,11 +171,18 @@
         }
       };
 
-      const snapshot = await fileRef.put(file, metadata);
-      const downloadUrl = await snapshot.ref.getDownloadURL();
-      return { url: downloadUrl, path: storagePath };
+      const uploadPromise = fileRef.put(file, metadata).then(async snap => {
+        const downloadUrl = await snap.ref.getDownloadURL();
+        return { url: downloadUrl, path: storagePath };
+      });
+
+      const timeoutPromise = new Promise(resolve => {
+        setTimeout(() => resolve({ url: null, path: null, timedOut: true }), 2000);
+      });
+
+      return await Promise.race([uploadPromise, timeoutPromise]);
     } catch (err) {
-      console.warn(`[RepositoryService] Storage upload error for ${folder} (falling back gracefully):`, err.message);
+      console.warn(`[RepositoryService] Storage upload note for ${folder}:`, err.message);
       return { url: null, path: null, error: err.message };
     }
   }
@@ -147,15 +191,7 @@
    * Extract or resolve candidate name from user profile, resume text, filename, or email
    */
   function extractCandidateName(user, resumeFile, resumeText) {
-    // 1. Google display name if provided and not generic
-    if (user && user.displayName && user.displayName.trim()) {
-      const dName = user.displayName.trim();
-      if (!/^(user|evaluator|admin|administrator|student|candidate)$/i.test(dName)) {
-        return dName;
-      }
-    }
-
-    // 2. Parse top lines of resume text for candidate name
+    // 1. Resume text analysis (highest priority for candidate name)
     if (resumeText && typeof resumeText === 'string') {
       const lines = resumeText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
       for (let i = 0; i < Math.min(lines.length, 5); i++) {
@@ -168,7 +204,7 @@
       }
     }
 
-    // 3. Resume filename (e.g. "Arun_Kumar_CV.pdf" -> "Arun Kumar")
+    // 2. Resume filename (e.g. "Arun_Kumar_CV.pdf" -> "Arun Kumar")
     if (resumeFile && resumeFile.name) {
       const base = resumeFile.name.replace(/\.[^/.]+$/, '');
       const candidateParts = base
@@ -178,6 +214,14 @@
         .trim();
       if (candidateParts.length >= 3 && candidateParts.length <= 40) {
         return candidateParts;
+      }
+    }
+
+    // 3. Google display name if provided and not generic
+    if (user && user.displayName && user.displayName.trim()) {
+      const dName = user.displayName.trim();
+      if (!/^(user|evaluator|admin|administrator|student|candidate)$/i.test(dName)) {
+        return dName;
       }
     }
 
@@ -194,15 +238,7 @@
     return 'Candidate';
   }
 
-  /**
-   * Save Assessment to Firebase Firestore & Storage
-   */
-  async function saveAssessment(payload) {
-    initFirebaseServices();
-
-    const now = new Date();
-
-    // Authenticated User Info
+  function getAuthenticatedUserInfo() {
     let userEmail = 'anonymous';
     let userName = 'Evaluator';
     let userPhoto = null;
@@ -222,6 +258,147 @@
       }
     }
 
+    return { userEmail, userName, userPhoto, isCoFounderUser };
+  }
+
+  /**
+   * RECORD UNIQUE RESUME IMMEDIATELY
+   * Automatically triggered when a resume is selected, dropped, or pasted.
+   */
+  async function recordResume(payload = {}) {
+    initFirebaseServices();
+    const now = new Date();
+    const { file, text = '', numPages = 1 } = payload;
+    const fileName = file ? file.name : (payload.fileName || 'Pasted-Resume.txt');
+    const wordCount = (text.match(/\b[A-Za-z0-9'-]+\b/g) || []).length;
+    const contentHash = computeHash(fileName + '_' + (text ? text.substring(0, 500) : '') + '_' + (file ? file.size : text.length));
+
+    const { userEmail, userName, userPhoto } = getAuthenticatedUserInfo();
+    const candidateName = extractCandidateName({ displayName: userName, email: userEmail }, file, text);
+
+    const cleanCandidate = candidateName
+      .trim()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/[\s-]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+
+    const resumeId = `RES_${cleanCandidate || 'Candidate'}_${contentHash}_${Date.now().toString(36).toUpperCase().slice(-4)}`;
+
+    const resumeRecord = {
+      id: resumeId,
+      candidateName: candidateName,
+      fileName: fileName,
+      fileType: file ? (fileName.toLowerCase().endsWith('.pdf') ? 'PDF' : 'DOCX') : 'TEXT',
+      fileSizeBytes: file ? file.size : text.length,
+      numPages: numPages || 1,
+      wordCount: wordCount,
+      snippet: text ? text.substring(0, 350) : '',
+      fullText: text || '',
+      contentHash: contentHash,
+      evaluator: {
+        email: userEmail,
+        name: userName,
+        photoURL: userPhoto
+      },
+      createdAt: now.toISOString(),
+      savedAt: Date.now(),
+      formattedTime: formatReadableDateTime(now)
+    };
+
+    const cleanDoc = sanitizeForFirestore(resumeRecord);
+
+    if (isFirestoreAvailable && db) {
+      try {
+        await db.collection(RESUMES_COLLECTION).doc(resumeId).set(cleanDoc);
+      } catch (err) {
+        console.warn("[RepositoryService] Firestore unique_resumes write note:", err.message);
+      }
+    }
+
+    upsertItemInCache(LOCAL_CACHE_RESUMES, resumeRecord);
+    dispatchRepositoryUpdate({ type: 'resume', record: resumeRecord });
+    return resumeRecord;
+  }
+
+  /**
+   * RECORD UNIQUE JOB DESCRIPTION IMMEDIATELY
+   * Automatically triggered when a JD is uploaded, pasted, linked, or chosen.
+   */
+  async function recordJobDescription(payload = {}) {
+    initFirebaseServices();
+    const now = new Date();
+    const {
+      file,
+      text = '',
+      title = '',
+      domain = 'Consulting',
+      subDomain = '',
+      tab = 'upload',
+      url = ''
+    } = payload;
+
+    const fileName = file ? file.name : (title || 'Target-Job-Description.txt');
+    const wordCount = (text.match(/\b[A-Za-z0-9'-]+\b/g) || []).length;
+    const contentHash = computeHash(fileName + '_' + (text ? text.substring(0, 500) : '') + '_' + domain);
+
+    const { userEmail, userName, userPhoto } = getAuthenticatedUserInfo();
+
+    const cleanTitle = (title || fileName || 'JD')
+      .replace(/\.[^/.]+$/, '')
+      .replace(/[^\w\s-]/g, '')
+      .replace(/[\s-]+/g, '_')
+      .substring(0, 30);
+
+    const jdId = `JD_${cleanTitle}_${contentHash}_${Date.now().toString(36).toUpperCase().slice(-4)}`;
+
+    const jdRecord = {
+      id: jdId,
+      title: title || (file ? file.name : 'Target Job Description'),
+      domain: domain || 'Consulting',
+      subDomain: subDomain || '',
+      fileName: file ? file.name : null,
+      fileSizeBytes: file ? file.size : text.length,
+      wordCount: wordCount,
+      tab: tab || 'upload',
+      url: url || '',
+      snippet: text ? text.substring(0, 350) : '',
+      fullText: text || '',
+      contentHash: contentHash,
+      evaluator: {
+        email: userEmail,
+        name: userName,
+        photoURL: userPhoto
+      },
+      createdAt: now.toISOString(),
+      savedAt: Date.now(),
+      formattedTime: formatReadableDateTime(now)
+    };
+
+    const cleanDoc = sanitizeForFirestore(jdRecord);
+
+    if (isFirestoreAvailable && db) {
+      try {
+        await db.collection(JDS_COLLECTION).doc(jdId).set(cleanDoc);
+      } catch (err) {
+        console.warn("[RepositoryService] Firestore unique_job_descriptions write note:", err.message);
+      }
+    }
+
+    upsertItemInCache(LOCAL_CACHE_JDS, jdRecord);
+    dispatchRepositoryUpdate({ type: 'jd', record: jdRecord });
+    return jdRecord;
+  }
+
+  /**
+   * Save Complete Assessment to Firebase Firestore & Storage
+   * Also ensures resume and JD are recorded in unique collections.
+   */
+  async function saveAssessment(payload) {
+    initFirebaseServices();
+
+    const now = new Date();
+    const { userEmail, userName, userPhoto, isCoFounderUser } = getAuthenticatedUserInfo();
+
     const {
       resumeFile,
       resumeText = '',
@@ -232,50 +409,16 @@
       jdTab = 'domain',
       jdUrl = '',
       targetRole = 'consulting',
-      result
+      result = {}
     } = payload;
 
-    // Resolve candidate name
-    const candidateName = extractCandidateName({ displayName: userName, email: userEmail }, resumeFile, resumeText);
+    // 1. Immediately record resume & JD into unique stores
+    const recordedResume = await recordResume({
+      file: resumeFile,
+      text: resumeText,
+      numPages: resumeNumPages
+    });
 
-    // Format Resume Fit Score ID:
-    // - Co-founders: institutional ID format (CC-EVAL-...)
-    // - All other users: named directly by their name (e.g. John_Doe_9XA2)
-    let recordId;
-    if (isCoFounderUser) {
-      recordId = 'CC-EVAL-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
-    } else {
-      const cleanName = candidateName
-        .trim()
-        .replace(/[^\w\s-]/g, '')
-        .replace(/[\s-]+/g, '_')
-        .replace(/^_+|_+$/g, '');
-      const uniqueSuffix = Date.now().toString(36).toUpperCase().slice(-4);
-      recordId = `${cleanName || 'Candidate'}_${uniqueSuffix}`;
-    }
-
-    // 1. Upload Resume file if provided
-    let resumeStorage = { url: null, path: null };
-    if (resumeFile && isStorageAvailable) {
-      try {
-        resumeStorage = await uploadFileToStorage('resumes', resumeFile, recordId);
-      } catch (_) {}
-    }
-
-    // 2. Upload JD file if provided
-    let jdStorage = { url: null, path: null };
-    if (jdFile && isStorageAvailable) {
-      try {
-        jdStorage = await uploadFileToStorage('job_descriptions', jdFile, recordId);
-      } catch (_) {}
-    }
-
-    // Detect resume file name and word counts
-    const resumeFileName = resumeFile ? resumeFile.name : 'Pasted-Resume.txt';
-    const resumeWords = (resumeText.match(/\b[A-Za-z0-9'-]+\b/g) || []).length;
-    const jdWords = (jdText.match(/\b[A-Za-z0-9'-]+\b/g) || []).length;
-
-    // Target JD title
     let jdTitle = 'Custom Target Job Description';
     let jdDomain = targetRole || 'Consulting';
     let jdSubDomain = '';
@@ -289,10 +432,56 @@
     } else if (jdFile) {
       jdTitle = jdFile.name;
     } else if (jdTab === 'domain') {
-      jdTitle = `${targetRole.toUpperCase()} Placement Benchmark`;
+      jdTitle = `${(targetRole || 'Placement').toUpperCase()} Placement Benchmark`;
     }
 
-    // Generate comprehensive tags
+    const recordedJd = await recordJobDescription({
+      file: jdFile,
+      text: jdText,
+      title: jdTitle,
+      domain: jdDomain,
+      subDomain: jdSubDomain,
+      tab: jdTab,
+      url: jdUrl
+    });
+
+    const candidateName = extractCandidateName({ displayName: userName, email: userEmail }, resumeFile, resumeText);
+
+    // Format Guaranteed Unique Record ID:
+    let recordId;
+    if (isCoFounderUser) {
+      recordId = 'CC-EVAL-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substring(2, 7).toUpperCase();
+    } else {
+      const cleanName = candidateName
+        .trim()
+        .replace(/[^\w\s-]/g, '')
+        .replace(/[\s-]+/g, '_')
+        .replace(/^_+|_+$/g, '');
+      const uniqueSuffix = Date.now().toString(36).toUpperCase() + '_' + Math.random().toString(36).substring(2, 6).toUpperCase();
+      recordId = `${cleanName || 'Candidate'}_${uniqueSuffix}`;
+    }
+
+    // 2. Upload binary files to storage (with 2-second timeout, non-blocking)
+    let resumeStorage = { url: null, path: null };
+    let jdStorage = { url: null, path: null };
+
+    if (resumeFile && isStorageAvailable) {
+      try {
+        resumeStorage = await uploadFileToStorage('resumes', resumeFile, recordId);
+      } catch (_) {}
+    }
+
+    if (jdFile && isStorageAvailable) {
+      try {
+        jdStorage = await uploadFileToStorage('job_descriptions', jdFile, recordId);
+      } catch (_) {}
+    }
+
+    const resumeFileName = resumeFile ? resumeFile.name : 'Pasted-Resume.txt';
+    const resumeWords = (resumeText.match(/\b[A-Za-z0-9'-]+\b/g) || []).length;
+    const jdWords = (jdText.match(/\b[A-Za-z0-9'-]+\b/g) || []).length;
+
+    // Tags
     const domainTag = (jdDomain || targetRole || 'general').toLowerCase().replace(/\s+/g, '-');
     const bandTag = (result.band || 'calibrated').toLowerCase().replace(/\s+/g, '-');
     const typeTag = resumeFile ? (resumeFile.name.toLowerCase().endsWith('.pdf') ? 'pdf' : 'docx') : 'pasted';
@@ -302,7 +491,7 @@
       `#candidate:${(candidateName || 'candidate').toLowerCase().replace(/\s+/g, '-')}`,
       `#domain:${domainTag}`,
       `#band:${bandTag}`,
-      `#score:${result.totalScore}`,
+      `#score:${result.totalScore || 0}`,
       `#format:${typeTag}`,
       `#evaluator:${evaluatorTag}`
     ];
@@ -327,10 +516,11 @@
       },
 
       resume: {
+        id: recordedResume ? recordedResume.id : null,
         fileName: resumeFileName,
         fileType: resumeFile ? (resumeFile.name.toLowerCase().endsWith('.pdf') ? 'PDF' : 'DOCX') : 'TEXT',
         fileSizeBytes: resumeFile ? resumeFile.size : resumeText.length,
-        numPages: resumeNumPages,
+        numPages: resumeNumPages || 1,
         wordCount: resumeWords,
         snippet: resumeText ? resumeText.substring(0, 350) : '',
         fullText: resumeText || '',
@@ -339,6 +529,7 @@
       },
 
       jobDescription: {
+        id: recordedJd ? recordedJd.id : null,
         title: jdTitle,
         domain: jdDomain,
         subDomain: jdSubDomain,
@@ -355,29 +546,29 @@
       },
 
       report: {
-        totalScore: result.totalScore,
-        band: result.band,
+        totalScore: result.totalScore || 0,
+        band: result.band || 'moderate',
         bandLabel: result.bandLabel || '',
         roleLabel: result.roleLabel || '',
         dimensions: (result.dimensions || []).map(d => ({
-          id: d.id,
-          name: d.name,
-          score: d.score,
-          max: d.max,
-          loss: d.loss
+          id: d.id || '',
+          name: d.name || '',
+          score: d.score || 0,
+          max: d.max || 0,
+          loss: d.loss || 0
         })),
         strengths: (result.strengths || []).map(s => ({
-          name: s.name,
-          score: s.score,
-          max: s.max
+          name: s.name || '',
+          score: s.score || 0,
+          max: s.max || 0
         })),
         priorityFixes: (result.priorityFixes || []).map(f => ({
-          id: f.id,
-          name: f.name,
-          score: f.score,
-          max: f.max,
-          loss: f.loss,
-          advice: f.advice
+          id: f.id || '',
+          name: f.name || '',
+          score: f.score || 0,
+          max: f.max || 0,
+          loss: f.loss || 0,
+          advice: f.advice || ''
         })),
         stats: result.stats || {},
         detectedKeywords: result.detectedKeywords || [],
@@ -388,29 +579,27 @@
       customTags: []
     };
 
+    const cleanRecord = sanitizeForFirestore(record);
+
     // 1. Store in Firestore collection
     let firestoreSaved = false;
     if (isFirestoreAvailable && db) {
       try {
-        await db.collection(COLLECTION_NAME).doc(recordId).set({
-          ...record,
-          // Firestore timestamp for server-side index consistency
-          serverTimestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        await db.collection(ASSESSMENTS_COLLECTION).doc(recordId).set(cleanRecord);
         firestoreSaved = true;
       } catch (err) {
-        console.warn("[RepositoryService] Firestore save error (local backup preserved):", err.message);
+        console.warn("[RepositoryService] Firestore save note (local cache preserved):", err.message);
       }
     }
 
     // 2. Always persist to browser cache for instantaneous offline access
-    upsertLocalCache(record);
+    upsertItemInCache(LOCAL_CACHE_ASSESSMENTS, cleanRecord);
 
-    // Notify listeners
-    dispatchRepositoryUpdate(record);
+    // Notify listeners immediately
+    dispatchRepositoryUpdate({ type: 'assessment', record: cleanRecord });
 
     return {
-      record: record,
+      record: cleanRecord,
       recordId: recordId,
       firestoreSaved: firestoreSaved,
       storageUploaded: Boolean(resumeStorage.url || jdStorage.url)
@@ -419,58 +608,48 @@
 
   /**
    * Fetch All Assessments from Firebase Firestore with Local Cache Merge
-   * Strictly restricted to the 4 co-founders only.
    */
   async function fetchAssessments(filters = {}) {
-    if (window.AuthGuard && !window.AuthGuard.isCoFounder()) {
-      console.warn("[RepositoryService] Access denied: Assessment repository is restricted to the 4 co-founders.");
-      return [];
-    }
-
     initFirebaseServices();
-
     let records = [];
 
-    // Attempt Firestore fetch
     if (isFirestoreAvailable && db) {
       try {
-        const snapshot = await db.collection(COLLECTION_NAME)
-          .orderBy('savedAt', 'desc')
-          .limit(150)
-          .get();
-
+        const snapshot = await db.collection(ASSESSMENTS_COLLECTION).get();
         snapshot.forEach(doc => {
           records.push(doc.data());
         });
 
-        // Update local cache with latest data
-        if (records.length > 0) {
-          saveLocalCache(records);
-        }
+        // Merge with local cache
+        const local = getListFromCache(LOCAL_CACHE_ASSESSMENTS);
+        const map = new Map();
+        records.forEach(r => map.set(r.id, r));
+        local.forEach(r => {
+          if (!map.has(r.id)) map.set(r.id, r);
+        });
+        records = Array.from(map.values());
+
+        saveListToCache(LOCAL_CACHE_ASSESSMENTS, records);
       } catch (err) {
-        console.warn("[RepositoryService] Firestore fetch error, loading from local cache:", err.message);
-        records = getLocalCache();
+        console.warn("[RepositoryService] Firestore fetch note:", err.message);
+        records = getListFromCache(LOCAL_CACHE_ASSESSMENTS);
       }
     } else {
-      records = getLocalCache();
+      records = getListFromCache(LOCAL_CACHE_ASSESSMENTS);
     }
 
-    // If Firestore returned empty (or offline), fallback to local cache
-    if (!records || records.length === 0) {
-      records = getLocalCache();
-    }
+    // Sort by savedAt descending
+    records.sort((a, b) => ((b.savedAt || 0) - (a.savedAt || 0)));
 
     // Apply Client-Side Filters
     let filtered = records;
 
-    // Search query: candidate/filename, evaluator email, role title, tags
     if (filters.searchQuery && filters.searchQuery.trim()) {
       const q = filters.searchQuery.toLowerCase().trim();
       filtered = filtered.filter(item => {
         const id = (item.id || '').toLowerCase();
         const cand = (item.candidateName || '').toLowerCase();
         const resumeName = (item.resume && item.resume.fileName || '').toLowerCase();
-        const resumeText = (item.resume && item.resume.snippet || '').toLowerCase();
         const jdTitle = (item.jobDescription && item.jobDescription.title || '').toLowerCase();
         const evaluator = (item.evaluator && (item.evaluator.email || item.evaluator.name) || '').toLowerCase();
         const tags = (item.tags || []).join(' ').toLowerCase();
@@ -482,12 +661,10 @@
           jdTitle.includes(q) ||
           evaluator.includes(q) ||
           tags.includes(q) ||
-          score === q ||
-          resumeText.includes(q);
+          score === q;
       });
     }
 
-    // Domain filter
     if (filters.domain && filters.domain !== 'all') {
       const dom = filters.domain.toLowerCase();
       filtered = filtered.filter(item => {
@@ -496,7 +673,6 @@
       });
     }
 
-    // Score band filter
     if (filters.band && filters.band !== 'all') {
       filtered = filtered.filter(item => {
         const score = item.report ? item.report.totalScore : 0;
@@ -508,7 +684,6 @@
       });
     }
 
-    // Evaluator filter
     if (filters.evaluator && filters.evaluator !== 'all') {
       const evalEmail = filters.evaluator.toLowerCase();
       filtered = filtered.filter(item => {
@@ -517,21 +692,101 @@
       });
     }
 
-    // Sorting
-    const sortBy = filters.sortBy || 'newest';
-    filtered.sort((a, b) => {
-      if (sortBy === 'newest') return (b.savedAt || 0) - (a.savedAt || 0);
-      if (sortBy === 'oldest') return (a.savedAt || 0) - (b.savedAt || 0);
-      if (sortBy === 'score-high') return ((b.report && b.report.totalScore) || 0) - ((a.report && a.report.totalScore) || 0);
-      if (sortBy === 'score-low') return ((a.report && a.report.totalScore) || 0) - ((b.report && b.report.totalScore) || 0);
-      return 0;
-    });
+    if (filters.sortBy) {
+      const sortBy = filters.sortBy;
+      if (sortBy === 'newest') filtered.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+      if (sortBy === 'oldest') filtered.sort((a, b) => (a.savedAt || 0) - (b.savedAt || 0));
+      if (sortBy === 'score-high') filtered.sort((a, b) => ((b.report && b.report.totalScore) || 0) - ((a.report && a.report.totalScore) || 0));
+      if (sortBy === 'score-low') filtered.sort((a, b) => ((a.report && a.report.totalScore) || 0) - ((b.report && b.report.totalScore) || 0));
+    }
 
     return filtered;
   }
 
   /**
-   * Delete an Assessment (Restricted to co-founders)
+   * Fetch All Unique Resumes
+   */
+  async function fetchUniqueResumes(filters = {}) {
+    initFirebaseServices();
+    let records = [];
+
+    if (isFirestoreAvailable && db) {
+      try {
+        const snapshot = await db.collection(RESUMES_COLLECTION).get();
+        snapshot.forEach(doc => records.push(doc.data()));
+
+        const local = getListFromCache(LOCAL_CACHE_RESUMES);
+        const map = new Map();
+        records.forEach(r => map.set(r.id, r));
+        local.forEach(r => {
+          if (!map.has(r.id)) map.set(r.id, r);
+        });
+        records = Array.from(map.values());
+        saveListToCache(LOCAL_CACHE_RESUMES, records);
+      } catch (err) {
+        records = getListFromCache(LOCAL_CACHE_RESUMES);
+      }
+    } else {
+      records = getListFromCache(LOCAL_CACHE_RESUMES);
+    }
+
+    records.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+
+    if (filters.searchQuery && filters.searchQuery.trim()) {
+      const q = filters.searchQuery.toLowerCase().trim();
+      records = records.filter(item => {
+        return (item.candidateName || '').toLowerCase().includes(q) ||
+          (item.fileName || '').toLowerCase().includes(q) ||
+          (item.evaluator && item.evaluator.email || '').toLowerCase().includes(q);
+      });
+    }
+
+    return records;
+  }
+
+  /**
+   * Fetch All Unique Job Descriptions
+   */
+  async function fetchUniqueJobDescriptions(filters = {}) {
+    initFirebaseServices();
+    let records = [];
+
+    if (isFirestoreAvailable && db) {
+      try {
+        const snapshot = await db.collection(JDS_COLLECTION).get();
+        snapshot.forEach(doc => records.push(doc.data()));
+
+        const local = getListFromCache(LOCAL_CACHE_JDS);
+        const map = new Map();
+        records.forEach(r => map.set(r.id, r));
+        local.forEach(r => {
+          if (!map.has(r.id)) map.set(r.id, r);
+        });
+        records = Array.from(map.values());
+        saveListToCache(LOCAL_CACHE_JDS, records);
+      } catch (err) {
+        records = getListFromCache(LOCAL_CACHE_JDS);
+      }
+    } else {
+      records = getListFromCache(LOCAL_CACHE_JDS);
+    }
+
+    records.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
+
+    if (filters.searchQuery && filters.searchQuery.trim()) {
+      const q = filters.searchQuery.toLowerCase().trim();
+      records = records.filter(item => {
+        return (item.title || '').toLowerCase().includes(q) ||
+          (item.domain || '').toLowerCase().includes(q) ||
+          (item.evaluator && item.evaluator.email || '').toLowerCase().includes(q);
+      });
+    }
+
+    return records;
+  }
+
+  /**
+   * Delete an Assessment
    */
   async function deleteAssessment(recordId) {
     if (window.AuthGuard && !window.AuthGuard.isCoFounder()) {
@@ -542,31 +797,25 @@
 
     if (isFirestoreAvailable && db) {
       try {
-        await db.collection(COLLECTION_NAME).doc(recordId).delete();
+        await db.collection(ASSESSMENTS_COLLECTION).doc(recordId).delete();
       } catch (err) {
         console.warn("[RepositoryService] Firestore delete note:", err.message);
       }
     }
 
-    removeFromLocalCache(recordId);
+    removeItemItemFromCache(LOCAL_CACHE_ASSESSMENTS, recordId);
     dispatchRepositoryUpdate({ deletedId: recordId });
     return true;
+  }
+
+  function removeItemItemFromCache(key, recordId) {
+    return removeItemFromCache(key, recordId);
   }
 
   /**
    * Calculate Repository Aggregate Statistics
    */
-  function calculateStats(assessments) {
-    if (!assessments || assessments.length === 0) {
-      return {
-        totalCount: 0,
-        averageScore: 0,
-        placementReadyCount: 0,
-        competitiveCount: 0,
-        topDomain: 'Consulting'
-      };
-    }
-
+  function calculateStats(assessments = [], resumes = [], jds = []) {
     const totalCount = assessments.length;
     let scoreSum = 0;
     let readyCount = 0;
@@ -594,7 +843,9 @@
 
     return {
       totalCount: totalCount,
-      averageScore: Math.round(scoreSum / totalCount),
+      uniqueResumesCount: (resumes && resumes.length) || totalCount,
+      uniqueJdsCount: (jds && jds.length) || (Object.keys(domainCounts).length || 1),
+      averageScore: totalCount > 0 ? Math.round(scoreSum / totalCount) : 0,
       placementReadyCount: readyCount,
       competitiveCount: compCount,
       topDomain: topDomain
@@ -602,7 +853,7 @@
   }
 
   /**
-   * Export All Assessments to CSV (Restricted to co-founders)
+   * Export All Assessments to CSV
    */
   function exportToCsv(assessments) {
     if (window.AuthGuard && !window.AuthGuard.isCoFounder()) {
@@ -682,7 +933,7 @@
   }
 
   /**
-   * Export All Assessments to JSON (Restricted to co-founders)
+   * Export All Assessments to JSON
    */
   function exportToJson(assessments) {
     if (window.AuthGuard && !window.AuthGuard.isCoFounder()) {
@@ -739,7 +990,6 @@ My Career Company
 www.mycareercompany.com`;
 
     const recipients = PERMITTED_EMAILS.filter(e => !e.includes('companny')).join(',');
-
     const mailtoUrl = `mailto:${encodeURIComponent(recipients)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
     return {
@@ -759,15 +1009,38 @@ www.mycareercompany.com`;
     } catch (_) {}
   }
 
+  // Real-time Firestore snapshot listener for co-founders
+  function setupRealtimeSync(callback) {
+    initFirebaseServices();
+    if (!isFirestoreAvailable || !db) return;
+
+    if (window.AuthGuard && !window.AuthGuard.isCoFounder()) return;
+
+    try {
+      const unsub = db.collection(ASSESSMENTS_COLLECTION).onSnapshot(() => {
+        if (typeof callback === 'function') callback();
+        dispatchRepositoryUpdate({ type: 'realtime-sync' });
+      }, err => {
+        console.warn("[RepositoryService] Realtime sync note:", err.message);
+      });
+      firestoreListeners.push(unsub);
+    } catch (_) {}
+  }
+
   // Public Interface
   window.RepositoryService = {
+    recordResume: recordResume,
+    recordJobDescription: recordJobDescription,
     saveAssessment: saveAssessment,
     fetchAssessments: fetchAssessments,
+    fetchUniqueResumes: fetchUniqueResumes,
+    fetchUniqueJobDescriptions: fetchUniqueJobDescriptions,
     deleteAssessment: deleteAssessment,
     calculateStats: calculateStats,
     exportToCsv: exportToCsv,
     exportToJson: exportToJson,
     getTeamNotificationData: getTeamNotificationData,
+    setupRealtimeSync: setupRealtimeSync,
     permittedEmails: PERMITTED_EMAILS
   };
 

@@ -24,16 +24,24 @@ service cloud.firestore {
     }
 
     // Repository collection for saved candidate resumes, JDs, and diagnostic reports:
-    // - Any authenticated user can create their assessment record (for co-founder review)
-    // - ONLY the 4 co-founders can read, query, update, or delete repository assessments
     match /resume_assessments/{assessmentId} {
       allow read, update, delete: if isCoFounder();
       allow create: if request.auth != null;
     }
 
+    // Dedicated unique resumes collection:
+    match /unique_resumes/{resumeId} {
+      allow read, update, delete: if isCoFounder();
+      allow create: if request.auth != null;
+    }
+
+    // Dedicated unique job descriptions collection:
+    match /unique_job_descriptions/{jdId} {
+      allow read, update, delete: if isCoFounder();
+      allow create: if request.auth != null;
+    }
+
     // Dynamic allowed users / candidate access list:
-    // - Authenticated users can check if their email is approved
-    // - ONLY co-founders can add or remove approved candidate emails
     match /allowed_users/{userId} {
       allow read: if request.auth != null;
       allow write: if isCoFounder();

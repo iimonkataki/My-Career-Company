@@ -195,6 +195,12 @@
       <button type="button" class="error-close-btn" id="errorCloseBtn" aria-label="Close message">&times;</button>
     </div>
 
+    <!-- Real-time Intake Auto-Record Toast Notification -->
+    <div class="intake-record-toast" id="intakeRecordToast" style="display: none;" role="status" aria-live="polite">
+      <span class="toast-check">✓</span>
+      <span class="toast-msg" id="intakeRecordToastMsg">Item recorded in repository immediately</span>
+    </div>
+
     <!-- Input Section: Upload Resume & Share Job Description -->
     <section class="diagnostic-input-panel" id="diagnosticInputPanel">
       <div class="panel-header">
@@ -778,7 +784,15 @@
       <div class="repo-stats-grid">
         <div class="repo-stat-card">
           <div class="repo-stat-num" id="repoStatTotal">0</div>
-          <div class="repo-stat-label">Total Resumes Logged</div>
+          <div class="repo-stat-label">Diagnostic Assessments</div>
+        </div>
+        <div class="repo-stat-card">
+          <div class="repo-stat-num" id="repoStatResumes">0</div>
+          <div class="repo-stat-label">Unique Resumes Logged</div>
+        </div>
+        <div class="repo-stat-card">
+          <div class="repo-stat-num" id="repoStatJds">0</div>
+          <div class="repo-stat-label">Unique JDs Logged</div>
         </div>
         <div class="repo-stat-card">
           <div class="repo-stat-num" id="repoStatAvgScore">0</div>
@@ -788,10 +802,19 @@
           <div class="repo-stat-num" id="repoStatPlacementReady">0</div>
           <div class="repo-stat-label">Placement Ready (80+)</div>
         </div>
-        <div class="repo-stat-card">
-          <div class="repo-stat-num" id="repoStatTopDomain">—</div>
-          <div class="repo-stat-label">Top Target Domain</div>
-        </div>
+      </div>
+
+      <!-- Repository Category Filter Tabs -->
+      <div class="repo-category-tabs" role="tablist">
+        <button type="button" class="repo-cat-tab active" data-category="assessments" id="tabRepoAssessments">
+          📊 Diagnostic Assessments (<span id="catCountAssessments">0</span>)
+        </button>
+        <button type="button" class="repo-cat-tab" data-category="resumes" id="tabRepoResumes">
+          📄 All Unique Resumes (<span id="catCountResumes">0</span>)
+        </button>
+        <button type="button" class="repo-cat-tab" data-category="jds" id="tabRepoJds">
+          📑 All Unique JDs (<span id="catCountJds">0</span>)
+        </button>
       </div>
 
       <!-- Advanced Filter & Search Toolbar -->

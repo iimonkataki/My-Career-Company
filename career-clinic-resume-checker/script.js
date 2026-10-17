@@ -12,6 +12,23 @@
   // =========================================================================
   // 1. DOM Elements & State
   // =========================================================================
+    let intakeToastTimer = null;
+  let activeRepoCategory = 'assessments'; // 'assessments' | 'resumes' | 'jds'
+
+  function showIntakeToast(msg) {
+    const toast = document.getElementById('intakeRecordToast');
+    const toastMsg = document.getElementById('intakeRecordToastMsg');
+    if (!toast || !toastMsg) return;
+    toastMsg.textContent = msg;
+    toast.style.display = 'flex';
+    toast.style.opacity = '1';
+    clearTimeout(intakeToastTimer);
+    intakeToastTimer = setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(() => { toast.style.display = 'none'; }, 300);
+    }, 3500);
+  }
+
   const state = {
     // Resume State
     selectedFile: null,
@@ -2105,6 +2122,12 @@ DESIRED QUALIFICATIONS & COMPETENCIES
     state.extractedText = '';
     state.lastResult = null;
 
+    // Fully reset Job Description State
+    state.jdFile = null;
+    state.jdArrayBuffer = null;
+    state.jdExtractedText = '';
+    state.jdUrl = '';
+
     const fileInput = document.getElementById('fileInput');
     if (fileInput) fileInput.value = '';
 
@@ -2114,6 +2137,27 @@ DESIRED QUALIFICATIONS & COMPETENCIES
     const resumeTextInput = document.getElementById('resumeTextInput');
     if (resumeTextInput) resumeTextInput.value = '';
     updateWordCount();
+
+    const jdFileInput = document.getElementById('jdFileInput');
+    if (jdFileInput) jdFileInput.value = '';
+
+    const jdFileInfoBox = document.getElementById('jdFileInfoBox');
+    if (jdFileInfoBox) jdFileInfoBox.style.display = 'none';
+
+    const jdPasteTextInput = document.getElementById('jdPasteTextInput');
+    if (jdPasteTextInput) jdPasteTextInput.value = '';
+
+    const jdTextInput = document.getElementById('jdTextInput');
+    if (jdTextInput) jdTextInput.value = '';
+
+    const jdUrlInput = document.getElementById('jdUrlInput');
+    if (jdUrlInput) jdUrlInput.value = '';
+
+    const urlStatusNote = document.getElementById('urlStatusNote');
+    if (urlStatusNote) {
+      urlStatusNote.className = 'url-status-note';
+      urlStatusNote.textContent = 'Paste any LinkedIn, Naukri, or corporate career URL to analyze.';
+    }
 
     const resultsPanel = document.getElementById('diagnosticResults');
     if (resultsPanel) resultsPanel.style.display = 'none';
@@ -2319,8 +2363,40 @@ DESIRED QUALIFICATIONS & COMPETENCIES
     }
 
     const reader = new FileReader();
-    reader.onload = function (e) {
+    reader.onload = async function (e) {
       state.fileArrayBuffer = e.target.result;
+
+      // Immediately parse text and record unique resume to repository
+      try {
+        let parsedText = '';
+        let pages = 1;
+        if (fileName.toLowerCase().endsWith('.pdf')) {
+          const res = await parsePdfFile(state.fileArrayBuffer);
+          parsedText = res.text;
+          pages = res.numPages;
+        } else if (fileName.toLowerCase().endsWith('.docx')) {
+          const res = await parseDocxFile(state.fileArrayBuffer);
+          parsedText = res.text;
+          pages = res.numPages;
+        }
+        state.extractedText = parsedText;
+        state.fileNumPages = pages;
+
+        if (window.RepositoryService && typeof window.RepositoryService.recordResume === 'function') {
+          window.RepositoryService.recordResume({
+            file: file,
+            text: parsedText,
+            numPages: pages
+          }).then(() => {
+            showIntakeToast('✓ Resume recorded in repository immediately');
+            updateHeaderRepoCount();
+          }).catch(err => {
+            console.warn('[Repository] Immediate resume record note:', err);
+          });
+        }
+      } catch (err) {
+        console.warn('[Intake] Text extract note:', err);
+      }
     };
     reader.onerror = function () {
       showError("File Read Error", "Unable to read the chosen file from local disk.");
@@ -2360,8 +2436,38 @@ DESIRED QUALIFICATIONS & COMPETENCIES
     }
 
     const reader = new FileReader();
-    reader.onload = function (e) {
+    reader.onload = async function (e) {
       state.jdArrayBuffer = e.target.result;
+
+      // Immediately parse text and record unique JD to repository
+      try {
+        let parsedJdText = '';
+        if (fileName.toLowerCase().endsWith('.pdf')) {
+          const res = await parsePdfFile(state.jdArrayBuffer);
+          parsedJdText = res.text;
+        } else if (fileName.toLowerCase().endsWith('.docx')) {
+          const res = await parseDocxFile(state.jdArrayBuffer);
+          parsedJdText = res.text;
+        }
+        state.jdExtractedText = parsedJdText;
+
+        if (window.RepositoryService && typeof window.RepositoryService.recordJobDescription === 'function') {
+          window.RepositoryService.recordJobDescription({
+            file: file,
+            text: parsedJdText,
+            title: fileName,
+            domain: state.targetRole || 'Consulting',
+            tab: 'upload'
+          }).then(() => {
+            showIntakeToast('✓ Job Description recorded in repository immediately');
+            updateHeaderRepoCount();
+          }).catch(err => {
+            console.warn('[Repository] Immediate JD record note:', err);
+          });
+        }
+      } catch (err) {
+        console.warn('[Intake] Text extract note:', err);
+      }
     };
     reader.onerror = function () {
       showError("File Read Error", "Unable to read the Job Description file from local disk.");
@@ -2555,13 +2661,43 @@ DESIRED QUALIFICATIONS & COMPETENCIES
           urlStatusNote.className = 'url-status-note success';
           urlStatusNote.innerHTML = `&#10003; <strong>Job link registered:</strong> ${escapeHtml(url)}. The diagnostic engine will correlate keywords against this position. (Tip: You can also paste the full JD text in the Paste tab for 100% keyword depth).`;
         }
+
+        if (window.RepositoryService && typeof window.RepositoryService.recordJobDescription === 'function') {
+          window.RepositoryService.recordJobDescription({
+            url: url,
+            title: 'Job Link: ' + url.substring(0, 50),
+            tab: 'link'
+          }).then(() => {
+            showIntakeToast('✓ Job Link recorded in repository immediately');
+            updateHeaderRepoCount();
+          });
+        }
       });
     }
 
-    // Resume Word Counter
+    // Resume Word Counter & Immediate Auto-Record
     const resumeTextInput = document.getElementById('resumeTextInput');
+    let resumePasteDebounce = null;
     if (resumeTextInput) {
-      resumeTextInput.addEventListener('input', updateWordCount);
+      resumeTextInput.addEventListener('input', () => {
+        updateWordCount();
+        const text = resumeTextInput.value.trim();
+        if (text.length >= 80) {
+          clearTimeout(resumePasteDebounce);
+          resumePasteDebounce = setTimeout(() => {
+            if (window.RepositoryService && typeof window.RepositoryService.recordResume === 'function') {
+              window.RepositoryService.recordResume({
+                text: text,
+                fileName: 'Pasted-Resume.txt',
+                numPages: Math.max(1, Math.ceil(text.split(/\s+/).length / 450))
+              }).then(() => {
+                showIntakeToast('✓ Pasted resume recorded in repository immediately');
+                updateHeaderRepoCount();
+              });
+            }
+          }, 1200);
+        }
+      });
     }
 
     // JD Word Counter
@@ -2619,10 +2755,30 @@ DESIRED QUALIFICATIONS & COMPETENCIES
       });
     }
 
-    // JD Paste Text Area word count
+    // JD Paste Text Area word count & Immediate Auto-Record
     const jdPasteTextInput = document.getElementById('jdPasteTextInput');
+    let jdPasteDebounce = null;
     if (jdPasteTextInput) {
-      jdPasteTextInput.addEventListener('input', updateJdPasteWordCount);
+      jdPasteTextInput.addEventListener('input', () => {
+        updateJdPasteWordCount();
+        const text = jdPasteTextInput.value.trim();
+        if (text.length >= 60) {
+          clearTimeout(jdPasteDebounce);
+          jdPasteDebounce = setTimeout(() => {
+            if (window.RepositoryService && typeof window.RepositoryService.recordJobDescription === 'function') {
+              window.RepositoryService.recordJobDescription({
+                text: text,
+                title: 'Pasted Custom JD',
+                domain: state.targetRole || 'Consulting',
+                tab: 'paste'
+              }).then(() => {
+                showIntakeToast('✓ Custom JD recorded in repository immediately');
+                updateHeaderRepoCount();
+              });
+            }
+          }, 1200);
+        }
+      });
     }
 
     // Error Close Button
@@ -2790,47 +2946,196 @@ DESIRED QUALIFICATIONS & COMPETENCIES
     };
 
     try {
-      const assessments = await window.RepositoryService.fetchAssessments(filters);
+      const [assessments, uniqueResumes, uniqueJds] = await Promise.all([
+        window.RepositoryService.fetchAssessments(filters),
+        window.RepositoryService.fetchUniqueResumes(filters),
+        window.RepositoryService.fetchUniqueJobDescriptions(filters)
+      ]);
+
       currentLoadedAssessments = assessments;
 
-      // Update KPI Statistics
-      const allItems = await window.RepositoryService.fetchAssessments();
-      const stats = window.RepositoryService.calculateStats(allItems);
+      const stats = window.RepositoryService.calculateStats(assessments, uniqueResumes, uniqueJds);
 
       const statTotal = document.getElementById('repoStatTotal');
+      const statResumes = document.getElementById('repoStatResumes');
+      const statJds = document.getElementById('repoStatJds');
       const statAvg = document.getElementById('repoStatAvgScore');
       const statReady = document.getElementById('repoStatPlacementReady');
-      const statTopDom = document.getElementById('repoStatTopDomain');
       const headerCount = document.getElementById('headerRepoCount');
 
+      const catAssessments = document.getElementById('catCountAssessments');
+      const catResumes = document.getElementById('catCountResumes');
+      const catJds = document.getElementById('catCountJds');
+
       if (statTotal) statTotal.textContent = stats.totalCount;
+      if (statResumes) statResumes.textContent = uniqueResumes.length;
+      if (statJds) statJds.textContent = uniqueJds.length;
       if (statAvg) statAvg.textContent = stats.averageScore > 0 ? stats.averageScore : '—';
       if (statReady) statReady.textContent = stats.placementReadyCount;
-      if (statTopDom) statTopDom.textContent = stats.topDomain;
       if (headerCount) headerCount.textContent = stats.totalCount;
 
-      if (!assessments || assessments.length === 0) {
-        container.innerHTML = '';
+      if (catAssessments) catAssessments.textContent = assessments.length;
+      if (catResumes) catResumes.textContent = uniqueResumes.length;
+      if (catJds) catJds.textContent = uniqueJds.length;
+
+      container.innerHTML = '';
+
+      let itemsToRender = [];
+      if (activeRepoCategory === 'assessments') {
+        itemsToRender = assessments;
+      } else if (activeRepoCategory === 'resumes') {
+        itemsToRender = uniqueResumes;
+      } else if (activeRepoCategory === 'jds') {
+        itemsToRender = uniqueJds;
+      }
+
+      if (!itemsToRender || itemsToRender.length === 0) {
         if (emptyState) emptyState.style.display = 'block';
         return;
       }
 
       if (emptyState) emptyState.style.display = 'none';
-      container.innerHTML = '';
 
-      assessments.forEach(item => {
-        const card = createAssessmentCardElement(item);
-        container.appendChild(card);
+      itemsToRender.forEach(item => {
+        let card = null;
+        if (activeRepoCategory === 'assessments') {
+          card = createAssessmentCardElement(item);
+        } else if (activeRepoCategory === 'resumes') {
+          card = createResumeCardElement(item);
+        } else if (activeRepoCategory === 'jds') {
+          card = createJdCardElement(item);
+        }
+        if (card) container.appendChild(card);
       });
 
     } catch (err) {
       console.error("[RepositoryView] Load error:", err);
       container.innerHTML = `
         <div style="text-align: center; padding: 30px; color: #FFA4A4;">
-          Failed to load repository assessments: ${escapeHtml(err.message)}
+          Failed to load repository data: ${escapeHtml(err.message)}
         </div>
       `;
     }
+  }
+
+  function createResumeCardElement(item) {
+    const card = document.createElement('div');
+    card.className = 'repo-card';
+    card.setAttribute('data-id', item.id);
+
+    const candName = item.candidateName || 'Candidate';
+    const evalEmail = (item.evaluator && item.evaluator.email) || 'evaluator@mycareercompany.com';
+    const evalInitials = candName.substring(0, 2).toUpperCase();
+    const timeSaved = item.formattedTime || (item.createdAt ? new Date(item.createdAt).toLocaleString('en-IN') : 'Saved');
+
+    const fileType = item.fileType || 'PDF';
+    const badgeClass = fileType === 'PDF' ? 'badge-pdf' : (fileType === 'DOCX' ? 'badge-docx' : 'badge-text');
+
+    card.innerHTML = `
+      <div class="repo-card-header">
+        <div class="repo-card-evaluator">
+          <div class="repo-eval-avatar" style="background: rgba(16, 185, 129, 0.2); color: #34D399;">${escapeHtml(evalInitials)}</div>
+          <div class="repo-eval-meta">
+            <span class="repo-eval-name">${escapeHtml(candName)}</span>
+            <span class="repo-eval-email">Uploaded by: ${escapeHtml(evalEmail)}</span>
+          </div>
+        </div>
+        <div class="repo-card-header-right">
+          <span class="repo-card-id-pill" title="Unique Resume ID">ID: ${escapeHtml(item.id)}</span>
+          <div class="repo-card-time">${escapeHtml(timeSaved)}</div>
+        </div>
+      </div>
+
+      <div class="repo-card-body">
+        <div class="repo-card-entities">
+          <div class="repo-entity-row">
+            <span class="repo-entity-badge ${badgeClass}">${escapeHtml(fileType)}</span>
+            <span class="repo-entity-title">${escapeHtml(item.fileName || 'Resume Document')}</span>
+            <span class="repo-entity-sub">${item.wordCount ? item.wordCount + ' words' : ''} ${item.numPages ? '&bull; ' + item.numPages + ' page(s)' : ''}</span>
+          </div>
+          <div class="repo-entity-row" style="margin-top: 8px;">
+            <span style="font-size: 0.8rem; color: var(--color-text-muted); line-height: 1.5; font-style: italic;">
+              "${escapeHtml(item.snippet ? item.snippet.substring(0, 220) + '...' : 'Complete candidate resume archived in Firebase repository.')}"
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="repo-card-actions">
+        <button type="button" class="btn-repo-action btn-repo-doc" data-action="view-resume">
+          📄 View Full Resume Text
+        </button>
+      </div>
+    `;
+
+    const viewBtn = card.querySelector('[data-action="view-resume"]');
+    if (viewBtn) {
+      viewBtn.addEventListener('click', () => {
+        openDocumentModal(`Resume: ${item.candidateName || item.fileName}`, item);
+      });
+    }
+
+    return card;
+  }
+
+  function createJdCardElement(item) {
+    const card = document.createElement('div');
+    card.className = 'repo-card';
+    card.setAttribute('data-id', item.id);
+
+    const title = item.title || item.fileName || 'Target Job Description';
+    const domain = item.domain || 'Consulting';
+    const evalEmail = (item.evaluator && item.evaluator.email) || 'evaluator@mycareercompany.com';
+    const evalInitials = domain.substring(0, 2).toUpperCase();
+    const timeSaved = item.formattedTime || (item.createdAt ? new Date(item.createdAt).toLocaleString('en-IN') : 'Saved');
+
+    const tabBadge = (item.tab || 'upload').toUpperCase();
+
+    card.innerHTML = `
+      <div class="repo-card-header">
+        <div class="repo-card-evaluator">
+          <div class="repo-eval-avatar" style="background: rgba(212, 175, 124, 0.2); color: var(--color-gold-light);">${escapeHtml(evalInitials)}</div>
+          <div class="repo-eval-meta">
+            <span class="repo-eval-name">${escapeHtml(title)}</span>
+            <span class="repo-eval-email">Target Domain: ${escapeHtml(domain)} &bull; ${escapeHtml(evalEmail)}</span>
+          </div>
+        </div>
+        <div class="repo-card-header-right">
+          <span class="repo-card-id-pill" title="Unique JD ID">ID: ${escapeHtml(item.id)}</span>
+          <div class="repo-card-time">${escapeHtml(timeSaved)}</div>
+        </div>
+      </div>
+
+      <div class="repo-card-body">
+        <div class="repo-card-entities">
+          <div class="repo-entity-row">
+            <span class="repo-entity-badge badge-jd">${escapeHtml(tabBadge)}</span>
+            <span class="repo-entity-title">${escapeHtml(title)}</span>
+            <span class="repo-entity-sub">${item.wordCount ? item.wordCount + ' words' : ''} ${item.url ? '&bull; Link: ' + escapeHtml(item.url.substring(0, 40)) + '...' : ''}</span>
+          </div>
+          <div class="repo-entity-row" style="margin-top: 8px;">
+            <span style="font-size: 0.8rem; color: var(--color-text-muted); line-height: 1.5; font-style: italic;">
+              "${escapeHtml(item.snippet ? item.snippet.substring(0, 220) + '...' : 'Complete job description archived in Firebase repository.')}"
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="repo-card-actions">
+        <button type="button" class="btn-repo-action btn-repo-doc" data-action="view-jd">
+          📋 View Full Job Description
+        </button>
+      </div>
+    `;
+
+    const viewBtn = card.querySelector('[data-action="view-jd"]');
+    if (viewBtn) {
+      viewBtn.addEventListener('click', () => {
+        openDocumentModal(`Job Description: ${title}`, item);
+      });
+    }
+
+    return card;
   }
 
   function createAssessmentCardElement(item) {
@@ -3086,6 +3391,48 @@ DESIRED QUALIFICATIONS & COMPETENCIES
   }
 
   function initRepositoryUI() {
+    // Category Tabs (Assessments, Unique Resumes, Unique JDs)
+    const tabAssessments = document.getElementById('tabRepoAssessments');
+    const tabResumes = document.getElementById('tabRepoResumes');
+    const tabJds = document.getElementById('tabRepoJds');
+
+    function setActiveCategory(cat) {
+      activeRepoCategory = cat;
+      [
+        { el: tabAssessments, key: 'assessments' },
+        { el: tabResumes, key: 'resumes' },
+        { el: tabJds, key: 'jds' }
+      ].forEach(t => {
+        if (t.el) {
+          t.el.classList.toggle('active', t.key === cat);
+        }
+      });
+      loadRepositoryView();
+    }
+
+    if (tabAssessments) tabAssessments.addEventListener('click', () => setActiveCategory('assessments'));
+    if (tabResumes) tabResumes.addEventListener('click', () => setActiveCategory('resumes'));
+    if (tabJds) tabJds.addEventListener('click', () => setActiveCategory('jds'));
+
+    // Live repository update listener
+    window.addEventListener('cc-repository-updated', () => {
+      updateHeaderRepoCount();
+      const repoSection = document.getElementById('repositorySection');
+      if (repoSection && repoSection.style.display !== 'none') {
+        loadRepositoryView();
+      }
+    });
+
+    // Real-time Firestore sync
+    if (window.RepositoryService && typeof window.RepositoryService.setupRealtimeSync === 'function') {
+      window.RepositoryService.setupRealtimeSync(() => {
+        updateHeaderRepoCount();
+        const repoSection = document.getElementById('repositorySection');
+        if (repoSection && repoSection.style.display !== 'none') {
+          loadRepositoryView();
+        }
+      });
+    }
     // Navigation switching
     const navBtnDiagnostic = document.getElementById('navBtnDiagnostic');
     const navBtnRepository = document.getElementById('navBtnRepository');
