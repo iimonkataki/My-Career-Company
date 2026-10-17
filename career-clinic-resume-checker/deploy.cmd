@@ -19,7 +19,7 @@ if %ERRORLEVEL% NEQ 0 (
 echo.
 echo [2/2] Deploying Hosting to my-career-company...
 cd ..
-call firebase.cmd deploy --only hosting --project my-career-company
+call firebase.cmd deploy --only hosting,firestore,storage --project my-career-company
 cd career-clinic-resume-checker
 
 echo.
