@@ -73,6 +73,210 @@
     return Math.abs(hash).toString(36);
   }
 
+  // Normalize text for content fingerprinting (lowercased alphanumeric string)
+  function normalizeTextForComparison(text) {
+    if (!text || typeof text !== 'string') return '';
+    return text
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '')
+      .substring(0, 3000);
+  }
+
+  // Normalize candidate name (e.g. "Anirban Roy" -> "anirbanroy")
+  function normalizeNameForComparison(name) {
+    if (!name || typeof name !== 'string') return '';
+    return name
+      .toLowerCase()
+      .replace(/[-_]?(resume|cv|profile|final|updated|v\d+)[-_]?/gi, '')
+      .replace(/[^a-z]/g, '')
+      .trim();
+  }
+
+  // Normalize filename (e.g. "Anirban_Roy_Resume.pdf" -> "anirbanroyresume")
+  function normalizeFileNameForComparison(fileName) {
+    if (!fileName || typeof fileName !== 'string') return '';
+    return fileName
+      .toLowerCase()
+      .replace(/\.(pdf|docx|doc|txt)$/i, '')
+      .replace(/[^a-z0-9]/g, '')
+      .trim();
+  }
+
+  // Deterministic content hash from normalized text, filename, and file size
+  function generateContentHash(text, fileName = '', size = 0) {
+    const normText = normalizeTextForComparison(text);
+    const normFile = normalizeFileNameForComparison(fileName);
+    return computeHash(`${normFile}_${normText}_${size || 0}`);
+  }
+
+  /**
+   * Determine if two resume records are duplicates based on name, size, filename, and content
+   */
+  function isDuplicateResume(a, b) {
+    if (!a || !b) return false;
+    if (a.id && b.id && a.id === b.id) return true;
+
+    // 1. Content hash match
+    if (a.contentHash && b.contentHash && a.contentHash === b.contentHash) return true;
+
+    // 2. Candidate name match
+    const nameA = normalizeNameForComparison(a.candidateName);
+    const nameB = normalizeNameForComparison(b.candidateName);
+    const sameName = nameA && nameB && nameA === nameB && nameA !== 'candidate';
+
+    // 3. Filename match
+    const fileA = normalizeFileNameForComparison(a.fileName);
+    const fileB = normalizeFileNameForComparison(b.fileName);
+    const sameFile = fileA && fileB && fileA === fileB;
+
+    // 4. File size match (within ±300 bytes)
+    const sizeA = Number(a.fileSizeBytes) || 0;
+    const sizeB = Number(b.fileSizeBytes) || 0;
+    const sameSize = sizeA > 0 && sizeB > 0 && Math.abs(sizeA - sizeB) <= 300;
+
+    // 5. Word count match (within ±5 words)
+    const wordsA = Number(a.wordCount) || 0;
+    const wordsB = Number(b.wordCount) || 0;
+    const sameWordCount = wordsA > 0 && wordsB > 0 && Math.abs(wordsA - wordsB) <= 5;
+
+    // Same candidate name AND (same file OR same size OR same word count)
+    if (sameName && (sameFile || sameSize || sameWordCount)) {
+      return true;
+    }
+
+    // Same candidate name when candidate name is distinct (>= 5 chars)
+    if (sameName && nameA.length >= 5) {
+      return true;
+    }
+
+    // Same file name AND same file size
+    if (sameFile && sameSize) {
+      return true;
+    }
+
+    // Text snippet / content comparison
+    if (a.snippet && b.snippet && a.snippet.length >= 60 && b.snippet.length >= 60) {
+      const snipA = normalizeTextForComparison(a.snippet).substring(0, 120);
+      const snipB = normalizeTextForComparison(b.snippet).substring(0, 120);
+      if (snipA && snipB && snipA === snipB) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Scan and deduplicate an array of resume records.
+   * Merges duplicate items, keeps the canonical/latest record,
+   * and identifies duplicate IDs that can be removed from Firestore.
+   */
+  function deduplicateResumeList(rawList = []) {
+    const uniqueList = [];
+    const duplicateIdsToDelete = [];
+
+    for (const item of rawList) {
+      if (!item) continue;
+      const existingIdx = uniqueList.findIndex(existing => isDuplicateResume(existing, item));
+      if (existingIdx >= 0) {
+        const existing = uniqueList[existingIdx];
+        if ((item.savedAt || 0) > (existing.savedAt || 0)) {
+          existing.savedAt = item.savedAt;
+          existing.formattedTime = item.formattedTime;
+          if (item.evaluator && item.evaluator.email) existing.evaluator = item.evaluator;
+        }
+        if (!existing.fullText && item.fullText) {
+          existing.fullText = item.fullText;
+          existing.snippet = item.snippet;
+        }
+        if (item.id && item.id !== existing.id) {
+          duplicateIdsToDelete.push(item.id);
+        }
+      } else {
+        uniqueList.push(item);
+      }
+    }
+
+    return { uniqueList, duplicateIdsToDelete };
+  }
+
+  /**
+   * Determine if two Job Descriptions are duplicates
+   */
+  function isDuplicateJd(a, b) {
+    if (!a || !b) return false;
+    if (a.id && b.id && a.id === b.id) return true;
+
+    if (a.contentHash && b.contentHash && a.contentHash === b.contentHash) return true;
+
+    // URL match
+    const urlA = (a.url || '').toLowerCase().trim();
+    const urlB = (b.url || '').toLowerCase().trim();
+    if (urlA && urlB && urlA === urlB) return true;
+
+    const titleA = normalizeFileNameForComparison(a.title || a.fileName);
+    const titleB = normalizeFileNameForComparison(b.title || b.fileName);
+    const sameTitle = titleA && titleB && titleA === titleB;
+
+    const domainA = (a.domain || '').toLowerCase().trim();
+    const domainB = (b.domain || '').toLowerCase().trim();
+    const sameDomain = domainA && domainB && domainA === domainB;
+
+    const sizeA = Number(a.fileSizeBytes) || 0;
+    const sizeB = Number(b.fileSizeBytes) || 0;
+    const sameSize = sizeA > 0 && sizeB > 0 && Math.abs(sizeA - sizeB) <= 200;
+
+    const wordsA = Number(a.wordCount) || 0;
+    const wordsB = Number(b.wordCount) || 0;
+    const sameWordCount = wordsA > 0 && wordsB > 0 && Math.abs(wordsA - wordsB) <= 5;
+
+    if (sameTitle && (sameDomain || sameSize || sameWordCount)) {
+      return true;
+    }
+
+    if (a.snippet && b.snippet && a.snippet.length >= 60 && b.snippet.length >= 60) {
+      const snipA = normalizeTextForComparison(a.snippet).substring(0, 120);
+      const snipB = normalizeTextForComparison(b.snippet).substring(0, 120);
+      if (snipA && snipB && snipA === snipB) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Scan and deduplicate an array of Job Descriptions
+   */
+  function deduplicateJdList(rawList = []) {
+    const uniqueList = [];
+    const duplicateIdsToDelete = [];
+
+    for (const item of rawList) {
+      if (!item) continue;
+      const existingIdx = uniqueList.findIndex(existing => isDuplicateJd(existing, item));
+      if (existingIdx >= 0) {
+        const existing = uniqueList[existingIdx];
+        if ((item.savedAt || 0) > (existing.savedAt || 0)) {
+          existing.savedAt = item.savedAt;
+          existing.formattedTime = item.formattedTime;
+          if (item.evaluator && item.evaluator.email) existing.evaluator = item.evaluator;
+        }
+        if (!existing.fullText && item.fullText) {
+          existing.fullText = item.fullText;
+          existing.snippet = item.snippet;
+        }
+        if (item.id && item.id !== existing.id) {
+          duplicateIdsToDelete.push(item.id);
+        }
+      } else {
+        uniqueList.push(item);
+      }
+    }
+
+    return { uniqueList, duplicateIdsToDelete };
+  }
+
   // Sanitize filename for safe storage keys
   function sanitizeKey(str) {
     if (!str) return 'document';
@@ -264,6 +468,7 @@
   /**
    * RECORD UNIQUE RESUME IMMEDIATELY
    * Automatically triggered when a resume is selected, dropped, or pasted.
+   * Scans existing records by name, file size, filename, and content to prevent duplicates.
    */
   async function recordResume(payload = {}) {
     initFirebaseServices();
@@ -271,10 +476,11 @@
     const { file, text = '', numPages = 1 } = payload;
     const fileName = file ? file.name : (payload.fileName || 'Pasted-Resume.txt');
     const wordCount = (text.match(/\b[A-Za-z0-9'-]+\b/g) || []).length;
-    const contentHash = computeHash(fileName + '_' + (text ? text.substring(0, 500) : '') + '_' + (file ? file.size : text.length));
+    const fileSizeBytes = file ? file.size : text.length;
 
     const { userEmail, userName, userPhoto } = getAuthenticatedUserInfo();
     const candidateName = extractCandidateName({ displayName: userName, email: userEmail }, file, text);
+    const contentHash = generateContentHash(text, fileName, fileSizeBytes);
 
     const cleanCandidate = candidateName
       .trim()
@@ -282,14 +488,15 @@
       .replace(/[\s-]+/g, '_')
       .replace(/^_+|_+$/g, '');
 
-    const resumeId = `RES_${cleanCandidate || 'Candidate'}_${contentHash}_${Date.now().toString(36).toUpperCase().slice(-4)}`;
+    // Deterministic canonical ID based strictly on candidate name and content signature
+    const canonicalId = `RES_${cleanCandidate || 'Candidate'}_${contentHash}`;
 
     const resumeRecord = {
-      id: resumeId,
+      id: canonicalId,
       candidateName: candidateName,
       fileName: fileName,
       fileType: file ? (fileName.toLowerCase().endsWith('.pdf') ? 'PDF' : 'DOCX') : 'TEXT',
-      fileSizeBytes: file ? file.size : text.length,
+      fileSizeBytes: fileSizeBytes,
       numPages: numPages || 1,
       wordCount: wordCount,
       snippet: text ? text.substring(0, 350) : '',
@@ -305,11 +512,24 @@
       formattedTime: formatReadableDateTime(now)
     };
 
+    // Scan existing cached resumes to detect duplicate by name, size, filename, or content
+    const cachedResumes = getListFromCache(LOCAL_CACHE_RESUMES);
+    const existingMatch = cachedResumes.find(r => isDuplicateResume(r, resumeRecord));
+    if (existingMatch) {
+      // Reuse existing document ID and preserve original creation time
+      resumeRecord.id = existingMatch.id;
+      resumeRecord.createdAt = existingMatch.createdAt || resumeRecord.createdAt;
+      if (!resumeRecord.fullText && existingMatch.fullText) {
+        resumeRecord.fullText = existingMatch.fullText;
+        resumeRecord.snippet = existingMatch.snippet;
+      }
+    }
+
     const cleanDoc = sanitizeForFirestore(resumeRecord);
 
     if (isFirestoreAvailable && db) {
       try {
-        await db.collection(RESUMES_COLLECTION).doc(resumeId).set(cleanDoc);
+        await db.collection(RESUMES_COLLECTION).doc(resumeRecord.id).set(cleanDoc);
       } catch (err) {
         console.warn("[RepositoryService] Firestore unique_resumes write note:", err.message);
       }
@@ -323,6 +543,7 @@
   /**
    * RECORD UNIQUE JOB DESCRIPTION IMMEDIATELY
    * Automatically triggered when a JD is uploaded, pasted, linked, or chosen.
+   * Scans existing records by title, domain, file size, and content to prevent duplicates.
    */
   async function recordJobDescription(payload = {}) {
     initFirebaseServices();
@@ -339,7 +560,8 @@
 
     const fileName = file ? file.name : (title || 'Target-Job-Description.txt');
     const wordCount = (text.match(/\b[A-Za-z0-9'-]+\b/g) || []).length;
-    const contentHash = computeHash(fileName + '_' + (text ? text.substring(0, 500) : '') + '_' + domain);
+    const fileSizeBytes = file ? file.size : text.length;
+    const contentHash = generateContentHash(text, fileName || title, fileSizeBytes);
 
     const { userEmail, userName, userPhoto } = getAuthenticatedUserInfo();
 
@@ -349,15 +571,15 @@
       .replace(/[\s-]+/g, '_')
       .substring(0, 30);
 
-    const jdId = `JD_${cleanTitle}_${contentHash}_${Date.now().toString(36).toUpperCase().slice(-4)}`;
+    const canonicalId = `JD_${cleanTitle}_${contentHash}`;
 
     const jdRecord = {
-      id: jdId,
+      id: canonicalId,
       title: title || (file ? file.name : 'Target Job Description'),
       domain: domain || 'Consulting',
       subDomain: subDomain || '',
       fileName: file ? file.name : null,
-      fileSizeBytes: file ? file.size : text.length,
+      fileSizeBytes: fileSizeBytes,
       wordCount: wordCount,
       tab: tab || 'upload',
       url: url || '',
@@ -374,11 +596,22 @@
       formattedTime: formatReadableDateTime(now)
     };
 
+    const cachedJds = getListFromCache(LOCAL_CACHE_JDS);
+    const existingMatch = cachedJds.find(j => isDuplicateJd(j, jdRecord));
+    if (existingMatch) {
+      jdRecord.id = existingMatch.id;
+      jdRecord.createdAt = existingMatch.createdAt || jdRecord.createdAt;
+      if (!jdRecord.fullText && existingMatch.fullText) {
+        jdRecord.fullText = existingMatch.fullText;
+        jdRecord.snippet = existingMatch.snippet;
+      }
+    }
+
     const cleanDoc = sanitizeForFirestore(jdRecord);
 
     if (isFirestoreAvailable && db) {
       try {
-        await db.collection(JDS_COLLECTION).doc(jdId).set(cleanDoc);
+        await db.collection(JDS_COLLECTION).doc(jdRecord.id).set(cleanDoc);
       } catch (err) {
         console.warn("[RepositoryService] Firestore unique_job_descriptions write note:", err.message);
       }
@@ -704,7 +937,7 @@
   }
 
   /**
-   * Fetch All Unique Resumes
+   * Fetch All Unique Resumes (with Active Multi-Vector Deduplication Scanner)
    */
   async function fetchUniqueResumes(filters = {}) {
     initFirebaseServices();
@@ -722,12 +955,30 @@
           if (!map.has(r.id)) map.set(r.id, r);
         });
         records = Array.from(map.values());
-        saveListToCache(LOCAL_CACHE_RESUMES, records);
       } catch (err) {
         records = getListFromCache(LOCAL_CACHE_RESUMES);
       }
     } else {
       records = getListFromCache(LOCAL_CACHE_RESUMES);
+    }
+
+    // Run through multi-vector deduplication scanner (name, size, filename, content)
+    const { uniqueList, duplicateIdsToDelete } = deduplicateResumeList(records);
+    records = uniqueList;
+
+    // Persist clean deduplicated list to cache
+    saveListToCache(LOCAL_CACHE_RESUMES, records);
+
+    // Asynchronously purge duplicate documents from Firestore if authorized co-founder
+    if (duplicateIdsToDelete.length > 0 && isFirestoreAvailable && db) {
+      const isCoFounder = window.AuthGuard && window.AuthGuard.isCoFounder && window.AuthGuard.isCoFounder();
+      if (isCoFounder) {
+        duplicateIdsToDelete.forEach(dupId => {
+          db.collection(RESUMES_COLLECTION).doc(dupId).delete().catch(e => {
+            console.warn('[RepositoryService] Clean duplicate resume document note:', e.message);
+          });
+        });
+      }
     }
 
     records.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
@@ -745,7 +996,7 @@
   }
 
   /**
-   * Fetch All Unique Job Descriptions
+   * Fetch All Unique Job Descriptions (with Active Deduplication Scanner)
    */
   async function fetchUniqueJobDescriptions(filters = {}) {
     initFirebaseServices();
@@ -763,12 +1014,28 @@
           if (!map.has(r.id)) map.set(r.id, r);
         });
         records = Array.from(map.values());
-        saveListToCache(LOCAL_CACHE_JDS, records);
       } catch (err) {
         records = getListFromCache(LOCAL_CACHE_JDS);
       }
     } else {
       records = getListFromCache(LOCAL_CACHE_JDS);
+    }
+
+    // Run through deduplication scanner (title, domain, size, content)
+    const { uniqueList, duplicateIdsToDelete } = deduplicateJdList(records);
+    records = uniqueList;
+
+    saveListToCache(LOCAL_CACHE_JDS, records);
+
+    if (duplicateIdsToDelete.length > 0 && isFirestoreAvailable && db) {
+      const isCoFounder = window.AuthGuard && window.AuthGuard.isCoFounder && window.AuthGuard.isCoFounder();
+      if (isCoFounder) {
+        duplicateIdsToDelete.forEach(dupId => {
+          db.collection(JDS_COLLECTION).doc(dupId).delete().catch(e => {
+            console.warn('[RepositoryService] Clean duplicate JD document note:', e.message);
+          });
+        });
+      }
     }
 
     records.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
@@ -803,8 +1070,54 @@
       }
     }
 
-    removeItemItemFromCache(LOCAL_CACHE_ASSESSMENTS, recordId);
+    removeItemFromCache(LOCAL_CACHE_ASSESSMENTS, recordId);
     dispatchRepositoryUpdate({ deletedId: recordId });
+    return true;
+  }
+
+  /**
+   * Delete a Unique Resume
+   */
+  async function deleteResume(resumeId) {
+    if (window.AuthGuard && !window.AuthGuard.isCoFounder()) {
+      throw new Error("Unauthorized: Resume deletion is restricted to the 4 co-founders.");
+    }
+
+    initFirebaseServices();
+
+    if (isFirestoreAvailable && db) {
+      try {
+        await db.collection(RESUMES_COLLECTION).doc(resumeId).delete();
+      } catch (err) {
+        console.warn("[RepositoryService] Firestore delete resume note:", err.message);
+      }
+    }
+
+    removeItemFromCache(LOCAL_CACHE_RESUMES, resumeId);
+    dispatchRepositoryUpdate({ deletedResumeId: resumeId });
+    return true;
+  }
+
+  /**
+   * Delete a Unique Job Description
+   */
+  async function deleteJobDescription(jdId) {
+    if (window.AuthGuard && !window.AuthGuard.isCoFounder()) {
+      throw new Error("Unauthorized: Job Description deletion is restricted to the 4 co-founders.");
+    }
+
+    initFirebaseServices();
+
+    if (isFirestoreAvailable && db) {
+      try {
+        await db.collection(JDS_COLLECTION).doc(jdId).delete();
+      } catch (err) {
+        console.warn("[RepositoryService] Firestore delete JD note:", err.message);
+      }
+    }
+
+    removeItemFromCache(LOCAL_CACHE_JDS, jdId);
+    dispatchRepositoryUpdate({ deletedJdId: jdId });
     return true;
   }
 
@@ -1036,6 +1349,8 @@ www.mycareercompany.com`;
     fetchUniqueResumes: fetchUniqueResumes,
     fetchUniqueJobDescriptions: fetchUniqueJobDescriptions,
     deleteAssessment: deleteAssessment,
+    deleteResume: deleteResume,
+    deleteJobDescription: deleteJobDescription,
     calculateStats: calculateStats,
     exportToCsv: exportToCsv,
     exportToJson: exportToJson,

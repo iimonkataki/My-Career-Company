@@ -3067,6 +3067,9 @@ DESIRED QUALIFICATIONS & COMPETENCIES
         <button type="button" class="btn-repo-action btn-repo-doc" data-action="view-resume">
           📄 View Full Resume Text
         </button>
+        <button type="button" class="btn-repo-action btn-repo-delete" data-action="delete" title="Delete resume from repository">
+          🗑️
+        </button>
       </div>
     `;
 
@@ -3074,6 +3077,16 @@ DESIRED QUALIFICATIONS & COMPETENCIES
     if (viewBtn) {
       viewBtn.addEventListener('click', () => {
         openDocumentModal(`Resume: ${item.candidateName || item.fileName}`, item);
+      });
+    }
+
+    const deleteBtn = card.querySelector('[data-action="delete"]');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', async () => {
+        if (confirm(`Are you sure you want to remove resume "${item.candidateName || item.fileName}" from the repository?`)) {
+          await window.RepositoryService.deleteResume(item.id);
+          loadRepositoryView();
+        }
       });
     }
 
@@ -3127,6 +3140,9 @@ DESIRED QUALIFICATIONS & COMPETENCIES
         <button type="button" class="btn-repo-action btn-repo-doc" data-action="view-jd">
           📋 View Full Job Description
         </button>
+        <button type="button" class="btn-repo-action btn-repo-delete" data-action="delete" title="Delete job description from repository">
+          🗑️
+        </button>
       </div>
     `;
 
@@ -3134,6 +3150,16 @@ DESIRED QUALIFICATIONS & COMPETENCIES
     if (viewBtn) {
       viewBtn.addEventListener('click', () => {
         openDocumentModal(`Job Description: ${title}`, item);
+      });
+    }
+
+    const jdDeleteBtn = card.querySelector('[data-action="delete"]');
+    if (jdDeleteBtn) {
+      jdDeleteBtn.addEventListener('click', async () => {
+        if (confirm(`Are you sure you want to remove job description "${title}" from the repository?`)) {
+          await window.RepositoryService.deleteJobDescription(item.id);
+          loadRepositoryView();
+        }
       });
     }
 
