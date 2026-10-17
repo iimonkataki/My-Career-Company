@@ -494,8 +494,8 @@ h1, h2, h3, h4, h5, h6 {
 .page-hero {
   background-color: var(--color-forest);
   color: var(--color-ivory);
-  padding-top: clamp(130px, 15vw, 170px);
-  padding-bottom: clamp(60px, 7vw, 90px);
+  padding-top: clamp(94px, 10vw, 110px);
+  padding-bottom: clamp(18px, 2.5vw, 26px);
   position: relative;
   border-bottom: 2px solid var(--color-gold-border);
   overflow: hidden;
@@ -517,11 +517,11 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .page-hero-title {
-  font-size: clamp(2.3rem, 4vw, 3.4rem);
+  font-size: clamp(2rem, 3.5vw, 2.9rem);
   font-weight: 800;
   line-height: 1.15;
   color: var(--color-ivory);
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 
 .page-hero-title .highlight-gold {
@@ -529,12 +529,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .page-hero-sub {
-  font-size: clamp(1.05rem, 1.3vw, 1.2rem);
+  font-size: clamp(0.98rem, 1.2vw, 1.12rem);
   font-weight: 300;
-  line-height: 1.65;
+  line-height: 1.55;
   color: var(--color-text-inverse-muted);
-  margin-bottom: 24px;
-  max-width: 760px;
+  margin-bottom: 0;
+  max-width: 820px;
 }
 
 /* ==========================================================================
@@ -2302,146 +2302,79 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 8px 26px rgba(212, 175, 124, 0.55);
 }
 
-/* Page Hero Grid (All Inner Pages - Ensures Hero Content & Vertical Button sit side-by-side in Green Area) */
-.page-hero-grid {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  width: 100%;
+/* Sub-Hero Action Bar (In White Space Just Below Green Hero On All Inner Pages) */
+.subhero-action-bar {
+  background: #FFFFFF;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(4, 39, 32, 0.08);
   position: relative;
-  z-index: 2;
+  z-index: 20;
 }
 
-.page-hero-grid .page-hero-content {
-  flex: 1 1 auto;
-  max-width: calc(100% - 170px);
-  min-width: 0;
-}
-
-.page-hero-action {
-  flex: 0 0 150px;
+.subhero-action-container {
   display: flex;
-  align-items: center;
   justify-content: flex-end;
-  z-index: 10;
-}
-
-/* Vertical Gold Action Button in Green Area */
-.btn-fitscore-vertical {
-  display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  text-align: center;
-  width: 145px;
-  padding: 16px 12px;
-  background: linear-gradient(145deg, #F5DFC2 0%, #D4AF7C 45%, #B88E56 100%);
-  color: #042720 !important;
-  text-decoration: none;
-  border-radius: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.7);
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.35), 0 0 24px rgba(212, 175, 124, 0.45);
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
-  overflow: hidden;
-  user-select: none;
 }
 
-.btn-fitscore-vertical::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.45) 0%, transparent 60%);
-  opacity: 0.6;
-  pointer-events: none;
-  transition: transform 0.5s ease;
-}
-
-.btn-fitscore-vertical:hover::before {
-  transform: translate(20%, 20%);
-}
-
-.btn-fitscore-vertical:hover {
-  transform: translateY(-4px) scale(1.04);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 0 36px rgba(212, 175, 124, 0.7);
-  background: linear-gradient(145deg, #FFFFFF 0%, #E7C99D 50%, #D4AF7C 100%);
-}
-
-.btn-fitscore-vertical .v-btn-icon {
-  font-size: 1.35rem;
-  line-height: 1;
-  margin-bottom: 5px;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
-}
-
-.btn-fitscore-vertical .v-btn-text {
-  display: flex;
-  flex-direction: column;
+.btn-fitscore-subhero {
+  display: inline-flex;
   align-items: center;
-  line-height: 1.18;
+  gap: 12px;
+  padding: 12px 28px;
   font-family: 'Montserrat', sans-serif;
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
-  color: #042720;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: 9999px;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  background: linear-gradient(135deg, #F5DFC2 0%, #D4AF7C 50%, #B88E56 100%);
+  color: #042720 !important;
+  border: 1.5px solid rgba(212, 175, 124, 0.7);
+  box-shadow: 0 4px 18px rgba(212, 175, 124, 0.4), 0 2px 6px rgba(0, 0, 0, 0.08);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.btn-fitscore-vertical .v-word {
-  display: block;
+.btn-fitscore-subhero:hover {
+  background: linear-gradient(135deg, #FFFFFF 0%, #E7C99D 50%, #D4AF7C 100%);
+  color: #021a15 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 26px rgba(212, 175, 124, 0.6), 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
-.btn-fitscore-vertical .v-btn-arrow {
-  display: block;
-  font-size: 1.25rem;
+.btn-fitscore-subhero .btn-fitscore-icon {
+  font-size: 1.15rem;
   line-height: 1;
-  margin-top: 6px;
-  color: #042720;
-  transition: transform 0.25s ease;
 }
 
-.btn-fitscore-vertical:hover .v-btn-arrow {
-  transform: translateY(3px);
+.btn-fitscore-subhero .btn-fitscore-arrow {
+  display: inline-block;
+  font-size: 1.2rem;
+  line-height: 1;
+  transition: transform 0.2s ease;
 }
 
-@media (max-width: 860px) {
-  .page-hero-grid {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 20px;
+.btn-fitscore-subhero:hover .btn-fitscore-arrow {
+  transform: translateX(4px);
+}
+
+@media (max-width: 768px) {
+  .subhero-action-bar {
+    padding: 12px 0;
   }
 
-  .page-hero-grid .page-hero-content {
-    max-width: 100%;
+  .subhero-action-container {
+    justify-content: center;
   }
 
-  .page-hero-action {
+  .btn-fitscore-subhero {
     width: 100%;
-    justify-content: flex-start;
-  }
-
-  .btn-fitscore-vertical {
-    width: 100%;
-    max-width: 320px;
-    padding: 12px 20px;
-    flex-direction: row;
-    gap: 10px;
-  }
-
-  .btn-fitscore-vertical .v-btn-text {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 4px;
-    font-size: 0.84rem;
-  }
-
-  .btn-fitscore-vertical .v-btn-arrow {
-    margin-top: 0;
-    margin-left: 4px;
-    transform: rotate(-90deg);
+    max-width: 380px;
+    justify-content: center;
+    font-size: 0.78rem;
+    padding: 11px 18px;
   }
 }
