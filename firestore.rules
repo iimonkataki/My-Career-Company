@@ -1,13 +1,31 @@
-rules_version = '2';
+﻿rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Institutional lead submissions from "Book an Institutional Pilot" form
+    // Institutional lead submissions from 'Book an Institutional Pilot' form
     match /institutional_leads/{leadId} {
       allow create: if request.resource.data.name is string
                     && request.resource.data.email is string
                     && request.resource.data.institution is string;
-      allow read: if true; // allow reading leads for Google Sheets synchronization
+      allow read: if true;
       allow update, delete: if false;
+    }
+
+    // Permitted administrator emails for Career Clinic Resume Fit Score Repository
+    function isAuthorizedEvaluator() {
+      return request.auth != null && (
+        request.auth.token.email.lower() in [
+          'upam.patra@gmail.com',
+          'iimonkataki@mycareercompany.com',
+          'ibonkataki@mycareercompany.com',
+          'anirbanroy@mycareercompany.com',
+          'anirbanroy@mycareercompanny.com'
+        ]
+      );
+    }
+
+    // Repository collection for saved resumes, JDs, and diagnostic reports
+    match /resume_assessments/{assessmentId} {
+      allow read, write, create, update, delete: if isAuthorizedEvaluator();
     }
 
     // Default deny for other paths

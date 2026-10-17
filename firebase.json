@@ -34,6 +34,10 @@
         "destination": "/career-clinic-resume-checker/script.js"
       },
       {
+        "source": "/ResumeFitScore/repository-service.js",
+        "destination": "/career-clinic-resume-checker/repository-service.js"
+      },
+      {
         "source": "/ResumeFitScore/jd-database.js",
         "destination": "/career-clinic-resume-checker/jd-database.js"
       },
@@ -110,5 +114,8 @@
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
   }
 }
