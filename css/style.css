@@ -2274,35 +2274,11 @@ h1, h2, h3, h4, h5, h6 {
   z-index: 5;
 }
 
-/* Page Hero Grid & Action (All Inner Pages - Up in the Green Area on the Right) */
-.page-hero-grid {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 36px;
-  position: relative;
-  z-index: 2;
-  width: 100%;
-}
-
-.page-hero-grid .page-hero-content {
-  flex: 1;
-  max-width: 780px;
-}
-
-.page-hero-action {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-}
-
-/* Base Resume Fit Score Button */
-.btn-fitscore {
+.btn-fitscore-home {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 26px;
+  padding: 11px 24px;
   font-family: 'Montserrat', sans-serif;
   font-size: 0.84rem;
   font-weight: 700;
@@ -2312,48 +2288,135 @@ h1, h2, h3, h4, h5, h6 {
   text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  user-select: none;
-}
-
-/* In the Green Area (Home Hero & All Page Heroes) */
-.btn-fitscore-home,
-.btn-fitscore-hero {
   background: linear-gradient(135deg, #E7C99D 0%, #D4AF7C 100%);
   color: #042720 !important;
   border: 1px solid rgba(255, 255, 255, 0.45);
-  box-shadow: 0 4px 20px rgba(212, 175, 124, 0.38);
+  box-shadow: 0 4px 18px rgba(212, 175, 124, 0.35);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.btn-fitscore-home:hover,
-.btn-fitscore-hero:hover {
+.btn-fitscore-home:hover {
   background: linear-gradient(135deg, #F0D7B2 0%, #E7C99D 100%);
   color: #021a15 !important;
   transform: translateY(-2px);
-  box-shadow: 0 8px 28px rgba(212, 175, 124, 0.6);
+  box-shadow: 0 8px 26px rgba(212, 175, 124, 0.55);
 }
 
-.btn-fitscore-icon {
-  font-size: 1.05rem;
+/* Page Hero Grid (All Inner Pages - Ensures Hero Content & Vertical Button sit side-by-side in Green Area) */
+.page-hero-grid {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  position: relative;
+  z-index: 2;
+}
+
+.page-hero-grid .page-hero-content {
+  flex: 1 1 auto;
+  max-width: calc(100% - 170px);
+  min-width: 0;
+}
+
+.page-hero-action {
+  flex: 0 0 150px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  z-index: 10;
+}
+
+/* Vertical Gold Action Button in Green Area */
+.btn-fitscore-vertical {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 145px;
+  padding: 16px 12px;
+  background: linear-gradient(145deg, #F5DFC2 0%, #D4AF7C 45%, #B88E56 100%);
+  color: #042720 !important;
+  text-decoration: none;
+  border-radius: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.35), 0 0 24px rgba(212, 175, 124, 0.45);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+}
+
+.btn-fitscore-vertical::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.45) 0%, transparent 60%);
+  opacity: 0.6;
+  pointer-events: none;
+  transition: transform 0.5s ease;
+}
+
+.btn-fitscore-vertical:hover::before {
+  transform: translate(20%, 20%);
+}
+
+.btn-fitscore-vertical:hover {
+  transform: translateY(-4px) scale(1.04);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 0 36px rgba(212, 175, 124, 0.7);
+  background: linear-gradient(145deg, #FFFFFF 0%, #E7C99D 50%, #D4AF7C 100%);
+}
+
+.btn-fitscore-vertical .v-btn-icon {
+  font-size: 1.35rem;
   line-height: 1;
+  margin-bottom: 5px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
 }
 
-.btn-fitscore-arrow {
-  display: inline-block;
-  font-size: 1.15rem;
+.btn-fitscore-vertical .v-btn-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.18;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #042720;
+}
+
+.btn-fitscore-vertical .v-word {
+  display: block;
+}
+
+.btn-fitscore-vertical .v-btn-arrow {
+  display: block;
+  font-size: 1.25rem;
   line-height: 1;
-  transition: transform 0.2s ease;
+  margin-top: 6px;
+  color: #042720;
+  transition: transform 0.25s ease;
 }
 
-.btn-fitscore:hover .btn-fitscore-arrow {
-  transform: translateX(4px);
+.btn-fitscore-vertical:hover .v-btn-arrow {
+  transform: translateY(3px);
 }
 
-@media (max-width: 992px) {
+@media (max-width: 860px) {
   .page-hero-grid {
     flex-direction: column;
     align-items: flex-start;
-    gap: 22px;
+    gap: 20px;
+  }
+
+  .page-hero-grid .page-hero-content {
+    max-width: 100%;
   }
 
   .page-hero-action {
@@ -2361,23 +2424,24 @@ h1, h2, h3, h4, h5, h6 {
     justify-content: flex-start;
   }
 
-  .page-hero-action .btn-fitscore {
+  .btn-fitscore-vertical {
     width: 100%;
-    max-width: 390px;
-    justify-content: center;
-  }
-}
-
-@media (max-width: 768px) {
-  .hero-dashboard-action-top {
-    justify-content: center;
-    margin-top: 12px;
-    margin-bottom: 16px;
+    max-width: 320px;
+    padding: 12px 20px;
+    flex-direction: row;
+    gap: 10px;
   }
 
-  .hero-dashboard-action-top .btn-fitscore {
-    width: 100%;
-    max-width: 390px;
-    justify-content: center;
+  .btn-fitscore-vertical .v-btn-text {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+    font-size: 0.84rem;
+  }
+
+  .btn-fitscore-vertical .v-btn-arrow {
+    margin-top: 0;
+    margin-left: 4px;
+    transform: rotate(-90deg);
   }
 }
