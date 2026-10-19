@@ -6,8 +6,14 @@ echo ========================================================
 echo.
 
 echo [1/2] Authenticating with Google Firebase CLI...
-echo A browser window will open if your session has expired.
+echo If a browser window does not open automatically, visit the URL shown below.
 call firebase.cmd login --reauth
+
+if %ERRORLEVEL% NEQ 0 (
+    echo.
+    echo Trying manual authentication mode...
+    call firebase.cmd login --reauth --no-localhost
+)
 
 if %ERRORLEVEL% NEQ 0 (
     echo.
@@ -28,5 +34,4 @@ echo   SUCCESS! Deployment complete.
 echo   Live at: https://www.mycareercompany.com/ResumeFitScore
 echo ========================================================
 echo.
-
-
+pause
