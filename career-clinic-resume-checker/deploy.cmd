@@ -22,10 +22,9 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b %ERRORLEVEL%
 )
 
-echo.
-echo [2/2] Deploying Hosting to my-career-company...
+echo [2/2] Deploying Hosting & Firestore to my-career-company...
 cd ..
-call firebase.cmd deploy --only hosting,firestore,storage --project my-career-company
+call firebase.cmd deploy --only hosting,firestore --project my-career-company
 cd career-clinic-resume-checker
 
 echo.
