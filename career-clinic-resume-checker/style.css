@@ -2310,6 +2310,8 @@ p {
   padding: 12px 14px;
   margin: 10px 0 14px 0;
   transition: all var(--transition-normal);
+  box-sizing: border-box;
+  max-width: 100%;
 }
 
 .jd-benchmark-header {
@@ -2421,6 +2423,9 @@ p {
   display: flex;
   align-items: flex-start;
   gap: 6px;
+  box-sizing: border-box;
+  max-width: 100%;
+  word-break: break-word;
 }
 
 .jd-reg-icon {
