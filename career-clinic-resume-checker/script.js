@@ -3456,6 +3456,7 @@ DESIRED QUALIFICATIONS & COMPETENCIES
               statusEl.className = 'access-grant-status success-banner';
               statusEl.innerHTML = `✓ <strong>Invitation Re-Dispatched:</strong> Automated email sent from <code>support@mycareercompany.com</code> to <strong>${escapeHtml(email)}</strong>.`;
             }
+            openAccessInviteModal(email, name, inst);
             setTimeout(() => {
               btn.disabled = false;
               btn.innerHTML = origHtml;
@@ -4224,6 +4225,9 @@ www.mycareercompany.com`;
             grantStatus.className = 'access-grant-status success-banner';
             grantStatus.innerHTML = `✓ <strong>Access Granted &amp; Email Sent:</strong> Automated invitation email sent from <code>support@mycareercompany.com</code> to <strong>${escapeHtml(email)}</strong> with direct portal access link.`;
           }
+
+          // Open invitation preview modal
+          openAccessInviteModal(email, name, institution);
 
           // Clear form fields
           newAccessEmail.value = '';

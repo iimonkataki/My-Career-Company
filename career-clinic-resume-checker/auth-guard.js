@@ -494,25 +494,50 @@ www.mycareercompany.com`;
     };
   }
 
+  // Google Apps Script Webhook (runs authenticated under support@mycareercompany.com with MailApp.sendEmail authorization)
+  const GOOGLE_APPS_SCRIPT_WEBHOOK = "https://script.google.com/macros/s/AKfycbxH9SO8xJ7jym99FZwHL9WkB2j1KDWbzppSrlCzD9UOqAEYxgS-aWiY-DF2dud7sG1k/exec";
+
   async function sendInvitationEmail(cleanEmail, metadata = {}) {
     const emailPayload = buildInvitationEmail(cleanEmail, metadata);
+    const recipient = (cleanEmail || '').toLowerCase().trim();
 
-    // Queue in Firestore 'mail' collection (Firebase Trigger Email extension standard)
-    if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
-      try {
-        await firebase.firestore().collection('mail').add(emailPayload);
-      } catch (mailErr) {
-        console.warn("[AuthGuard] Trigger Email queue note:", mailErr);
+    // 1. Dispatch over internet via Google Apps Script Webhook (sends native email from support@mycareercompany.com)
+    let webhookSuccess = false;
+    try {
+      if (typeof fetch === 'function') {
+        const webhookPayload = {
+          action: "sendAccessInvitation",
+          type: "access_invitation",
+          to: recipient,
+          recipientEmail: recipient,
+          email: recipient,
+          recipientName: metadata.name ? metadata.name.trim() : "",
+          name: metadata.name ? metadata.name.trim() : "",
+          institution: metadata.institution ? metadata.institution.trim() : "",
+          subject: emailPayload.message.subject,
+          text: emailPayload.message.text,
+          html: emailPayload.message.html,
+          portalUrl: emailPayload.metadata.portalUrl || "https://www.mycareercompany.com/ResumeFitScore",
+          submittedAt: new Date().toISOString()
+        };
+
+        // Note: mode 'no-cors' with 'text/plain;charset=utf-8' ensures cross-origin POST succeeds in all browsers without CORS rejection
+        await fetch(GOOGLE_APPS_SCRIPT_WEBHOOK, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'text/plain;charset=utf-8'
+          },
+          body: JSON.stringify(webhookPayload)
+        });
+        webhookSuccess = true;
+        console.log("[AuthGuard] Official invitation email dispatched via Google Apps Script Webhook to:", recipient);
       }
-
-      // Also record in allowed_users invitation audit sub-collection
-      try {
-        await firebase.firestore().collection('allowed_users').doc(cleanEmail)
-          .collection('invitations').add(emailPayload);
-      } catch (_) {}
+    } catch (whErr) {
+      console.warn("[AuthGuard] Google Apps Script webhook dispatch notice:", whErr);
     }
 
-    // Direct REST dispatch attempt if endpoint is present
+    // 2. Also forward to local server / proxy endpoint if present
     try {
       if (typeof fetch === 'function') {
         fetch('/api/send-access-email', {
@@ -522,6 +547,29 @@ www.mycareercompany.com`;
         }).catch(() => {});
       }
     } catch (_) {}
+
+    // 3. Queue in Firestore 'mail' collection (Firebase Trigger Email extension standard)
+    if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
+      try {
+        await firebase.firestore().collection('mail').add({
+          ...emailPayload,
+          webhookDispatched: webhookSuccess,
+          dispatchedAt: new Date().toISOString()
+        });
+      } catch (mailErr) {
+        console.warn("[AuthGuard] Trigger Email queue note:", mailErr);
+      }
+
+      // Also record in allowed_users invitation audit sub-collection
+      try {
+        await firebase.firestore().collection('allowed_users').doc(recipient)
+          .collection('invitations').add({
+            ...emailPayload,
+            webhookDispatched: webhookSuccess,
+            dispatchedAt: new Date().toISOString()
+          });
+      } catch (_) {}
+    }
 
     return emailPayload;
   }

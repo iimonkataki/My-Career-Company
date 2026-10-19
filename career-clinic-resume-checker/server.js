@@ -43,13 +43,52 @@ function startServer(port) {
         req.on('end', () => {
           try {
             const data = JSON.parse(body || '{}');
+            const recipient = Array.isArray(data.to) ? data.to.join(', ') : (data.to || data.recipientEmail || '');
             console.log(`\n======================================================`);
             console.log(`  [AUTOMATED EMAIL DISPATCH] support@mycareercompany.com`);
-            console.log(`  To: ${Array.isArray(data.to) ? data.to.join(', ') : data.to}`);
+            console.log(`  To: ${recipient}`);
             console.log(`  From: ${data.from || 'support@mycareercompany.com'}`);
             console.log(`  Subject: ${data.message ? data.message.subject : 'Access Granted'}`);
             console.log(`  Dispatched: ${new Date().toISOString()}`);
             console.log(`======================================================\n`);
+
+            // Also forward to Google Apps Script Webhook to trigger actual Google Workspace email dispatch
+            try {
+              const https = require('https');
+              const webhookUrl = "https://script.google.com/macros/s/AKfycbxH9SO8xJ7jym99FZwHL9WkB2j1KDWbzppSrlCzD9UOqAEYxgS-aWiY-DF2dud7sG1k/exec";
+              const postData = JSON.stringify({
+                action: "sendAccessInvitation",
+                type: "access_invitation",
+                to: recipient,
+                recipientEmail: recipient,
+                email: recipient,
+                name: (data.metadata && data.metadata.recipientName) || data.name || '',
+                institution: (data.metadata && data.metadata.institution) || data.institution || '',
+                subject: (data.message && data.message.subject) || '',
+                text: (data.message && data.message.text) || '',
+                html: (data.message && data.message.html) || '',
+                portalUrl: (data.metadata && data.metadata.portalUrl) || 'https://www.mycareercompany.com/ResumeFitScore',
+                submittedAt: new Date().toISOString()
+              });
+
+              const webhookReq = https.request(webhookUrl, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'text/plain;charset=utf-8',
+                  'Content-Length': Buffer.byteLength(postData)
+                }
+              }, (hookRes) => {
+                console.log(`[Server] Webhook forwarded, response code: ${hookRes.statusCode}`);
+              });
+              webhookReq.on('error', (err) => {
+                console.warn('[Server] Webhook forward error:', err.message);
+              });
+              webhookReq.write(postData);
+              webhookReq.end();
+            } catch (fwdErr) {
+              console.warn('[Server] Forwarding notice:', fwdErr.message);
+            }
+
             res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
             res.end(JSON.stringify({ success: true, messageId: 'msg_' + Date.now(), dispatchedFrom: 'support@mycareercompany.com' }));
           } catch (e) {

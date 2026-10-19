@@ -44,26 +44,128 @@ var NOTIFICATION_RECIPIENTS = [
   "support@mycareercompany.com"
 ].join(",");
 
-// 1. WEBHOOK ENDPOINT: Receives live form submissions from www.mycareercompany.com
+// 1. WEBHOOK ENDPOINT: Receives live form submissions & access invitations
 function doPost(e) {
+  var data = {};
+
+  // Parse incoming payload
+  if (e && e.postData && e.postData.contents) {
+    try {
+      data = JSON.parse(e.postData.contents);
+    } catch (jsonErr) {
+      data = e.parameter || {};
+    }
+  } else if (e && e.parameter) {
+    data = e.parameter;
+  }
+
+  // =========================================================================
+  // ROUTE 1: ACCESS INVITATION EMAIL DISPATCH (Career Clinic Resume Fit Score)
+  // Sends authentic email from support@mycareercompany.com directly to granted user
+  // =========================================================================
+  if (data.action === "sendAccessInvitation" || data.type === "access_invitation") {
+    var rawRecipient = data.to || data.recipientEmail || data.email;
+    var recipient = "";
+    if (Array.isArray(rawRecipient)) {
+      recipient = rawRecipient.join(",").trim();
+    } else if (rawRecipient) {
+      recipient = String(rawRecipient).trim();
+    }
+
+    if (recipient) {
+      var recipientGreeting = (data.recipientName || data.name || "").trim() || "Colleague";
+      var portalUrl = data.portalUrl || "https://www.mycareercompany.com/ResumeFitScore";
+      var institution = (data.institution || "").trim();
+      var institutionText = (institution && institution !== "—") ? (" for " + institution) : "";
+      var subject = data.subject || ("[Career Clinic] Access Granted to Resume Fit Score™ Portal" + institutionText);
+
+      var plainText = data.text || (
+        "Dear " + recipientGreeting + ",\n\n" +
+        "You have been granted official access to the Career Clinic — Resume Fit Score™ Portal by My Career Company.\n\n" +
+        "You can now sign in with this Google account (" + recipient + ") and access the Diagnostic Engine to evaluate candidate resumes against calibrated recruiter benchmarks across 28 recruitment domains.\n\n" +
+        "Access Link: " + portalUrl + "\n\n" +
+        "Key Features Available to You:\n" +
+        "• Calibrated evaluation against verified placement benchmarks\n" +
+        "• Multi-format CV intake (.PDF, .DOCX, and direct text)\n" +
+        "• Cross-domain suitability calibration & bullet rewrites\n" +
+        "• Target JD correlation and competitive placement readiness scoring\n\n" +
+        "If you have any questions or require assistance, please reach out to the administrative team at My Career Company.\n\n" +
+        "Best regards,\n" +
+        "Career Clinic Institutional Evaluation Team\n" +
+        "My Career Company\n" +
+        "www.mycareercompany.com"
+      );
+
+      var htmlBody = data.html || (
+        '<!DOCTYPE html>' +
+        '<html lang="en">' +
+        '<head><meta charset="utf-8"></head>' +
+        '<body style="font-family:\'Montserrat\',-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Helvetica,Arial,sans-serif;background-color:#05261F;color:#F8F6EF;margin:0;padding:28px 16px;">' +
+        '  <div style="max-width:620px;margin:0 auto;background:#073D32;border:1px solid rgba(212,175,124,0.35);border-radius:12px;overflow:hidden;box-shadow:0 16px 40px rgba(0,0,0,0.5);">' +
+        '    <div style="background:#05261F;padding:22px 28px;border-bottom:2px solid #D4AF7C;">' +
+        '      <div style="font-size:18px;font-weight:800;letter-spacing:1px;color:#D4AF7C;">MY CAREER COMPANY</div>' +
+        '      <div style="font-size:11.5px;color:#95A199;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">Career Clinic &bull; Resume Fit Score™ Portal</div>' +
+        '    </div>' +
+        '    <div style="padding:28px;line-height:1.7;color:#D2D5CA;">' +
+        '      <div style="font-size:16px;font-weight:600;color:#F8F6EF;margin-bottom:14px;">Dear ' + escapeHtml(recipientGreeting) + ',</div>' +
+        '      <p style="margin:0 0 16px;">You have been granted official access to the <strong>Career Clinic — Resume Fit Score™ Portal</strong> by <strong>My Career Company</strong>.</p>' +
+        '      <p style="margin:0 0 16px;">You can now sign in with this Google account (<strong style="color:#D4AF7C;">' + escapeHtml(recipient) + '</strong>) and access the Diagnostic Engine to evaluate candidate resumes against calibrated recruiter benchmarks across 28 recruitment domains.</p>' +
+        '      <div style="background:#0A493D;border:1px solid rgba(212,175,124,0.22);border-left:4px solid #D4AF7C;padding:16px 20px;border-radius:8px;margin:20px 0;">' +
+        '        <div style="color:#D4AF7C;font-weight:700;font-size:13px;margin-bottom:8px;">📌 Key Features Available to You:</div>' +
+        '        <ul style="margin:0;padding-left:18px;color:#E0E4DB;font-size:13px;line-height:1.75;">' +
+        '          <li>Calibrated evaluation against verified placement benchmarks</li>' +
+        '          <li>Multi-format CV intake (.PDF, .DOCX, and direct text)</li>' +
+        '          <li>Cross-domain suitability calibration &amp; bullet rewrites</li>' +
+        '          <li>Target JD correlation and competitive placement readiness scoring</li>' +
+        '        </ul>' +
+        '      </div>' +
+        '      <div style="text-align:center;margin:28px 0 24px;">' +
+        '        <a href="' + portalUrl + '" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#D4AF7C 0%,#B88E56 100%);color:#05261F !important;font-weight:800;font-size:15px;padding:14px 32px;border-radius:8px;text-decoration:none;box-shadow:0 4px 16px rgba(212,175,124,0.35);">Access Resume Fit Score™ Portal &rarr;</a>' +
+        '      </div>' +
+        '      <p style="font-size:12.5px;color:#95A199;text-align:center;margin:0 0 8px;">Direct link: <a href="' + portalUrl + '" style="color:#D4AF7C;" target="_blank">' + portalUrl + '</a></p>' +
+        '    </div>' +
+        '    <div style="background:#05261F;padding:18px 28px;border-top:1px solid rgba(212,175,124,0.15);text-align:center;font-size:11.5px;color:#95A199;line-height:1.5;">' +
+        '      &copy; 2026 My Career Company. Sent automatically from <strong>support@mycareercompany.com</strong>.<br>' +
+        '      Career Clinic &bull; Resume Fit Score™ Diagnostic Engine.' +
+        '    </div>' +
+        '  </div>' +
+        '</body></html>'
+      );
+
+      try {
+        MailApp.sendEmail({
+          to: recipient,
+          subject: subject,
+          body: plainText,
+          htmlBody: htmlBody,
+          name: "Career Clinic — My Career Company",
+          replyTo: "support@mycareercompany.com"
+        });
+
+        return ContentService.createTextOutput(JSON.stringify({
+          status: "success",
+          recipient: recipient,
+          message: "Official access invitation email dispatched to " + recipient + " from support@mycareercompany.com"
+        })).setMimeType(ContentService.MimeType.JSON);
+      } catch (sendErr) {
+        return ContentService.createTextOutput(JSON.stringify({
+          status: "error",
+          recipient: recipient,
+          message: "MailApp error: " + sendErr.message
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+  }
+
+  // =========================================================================
+  // ROUTE 2: INSTITUTIONAL PILOT LEAD SUBMISSION (Google Sheets + Team Alerts)
+  // =========================================================================
   var lock = LockService.getScriptLock();
   lock.tryLock(10000);
 
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getSheetByName("Pilot Leads") || ss.getSheetByName("Leads") || ss.getSheets()[0];
-    var data = {};
-
-    // Parse incoming payload
-    if (e && e.postData && e.postData.contents) {
-      try {
-        data = JSON.parse(e.postData.contents);
-      } catch (jsonErr) {
-        data = e.parameter || {};
-      }
-    } else if (e && e.parameter) {
-      data = e.parameter;
-    }
 
     var timestampStr = Utilities.formatDate(new Date(), "Asia/Kolkata", "yyyy-MM-dd HH:mm:ss");
     var leadId = data.leadId || ("MCC-" + Utilities.getUuid().substring(0, 6).toUpperCase());
@@ -476,11 +578,33 @@ function resetAndResyncAllLeads() {
   }
 }
 
-// 7. HEALTH CHECK
+// 7. HEALTH CHECK & TEST DISPATCH
 function doGet(e) {
+  var param = (e && e.parameter) || {};
+  if (param.action === "testEmail" && param.to) {
+    try {
+      MailApp.sendEmail({
+        to: param.to,
+        subject: "[Career Clinic] Test Access Email Delivery",
+        body: "This is a test email sent from support@mycareercompany.com to verify access email dispatch.",
+        name: "Career Clinic — My Career Company"
+      });
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "success",
+        message: "Test email dispatched to " + param.to + " from support@mycareercompany.com"
+      })).setMimeType(ContentService.MimeType.JSON);
+    } catch (testErr) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "error",
+        message: testErr.message
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
   return ContentService.createTextOutput(JSON.stringify({
     status: "online",
     service: "My Career Company — Dynamic Lead & Email Engine",
+    features: ["institutional_pilot_leads", "access_invitations"],
     recipients: NOTIFICATION_RECIPIENTS,
     timestamp: new Date().toISOString()
   })).setMimeType(ContentService.MimeType.JSON);
