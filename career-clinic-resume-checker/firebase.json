@@ -32,6 +32,7 @@
         "source": "/ResumeFitScore/**",
         "destination": "/index.html"
       }
-    ]
+    ],
+    "site": "my-career-company"
   }
 }

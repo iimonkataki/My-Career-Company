@@ -149,7 +149,8 @@
         "destination": "/ResumeFitScore",
         "type": 301
       }
-    ]
+    ],
+    "site": "my-career-company"
   },
   "firestore": {
     "rules": "firestore.rules",
