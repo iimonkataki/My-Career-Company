@@ -231,8 +231,12 @@
     }
     const repoTab = document.getElementById('navBtnRepository');
     if (repoTab) repoTab.style.display = 'none';
+    const accessTab = document.getElementById('navBtnAccess');
+    if (accessTab) accessTab.style.display = 'none';
     const viewInRepoBtn = document.getElementById('viewInRepoBtn');
     if (viewInRepoBtn) viewInRepoBtn.style.display = 'none';
+    const accessSection = document.getElementById('accessSection');
+    if (accessSection) accessSection.style.display = 'none';
   }
 
   function showDeniedState(rejectedEmail) {
@@ -255,8 +259,12 @@
     }
     const repoTab = document.getElementById('navBtnRepository');
     if (repoTab) repoTab.style.display = 'none';
+    const accessTab = document.getElementById('navBtnAccess');
+    if (accessTab) accessTab.style.display = 'none';
     const viewInRepoBtn = document.getElementById('viewInRepoBtn');
     if (viewInRepoBtn) viewInRepoBtn.style.display = 'none';
+    const accessSection = document.getElementById('accessSection');
+    if (accessSection) accessSection.style.display = 'none';
   }
 
   function showAuthorizedState(user) {
@@ -264,18 +272,25 @@
     const userEmail = (user.email || '').toLowerCase().trim();
     const userIsCoFounder = isCoFounder(userEmail);
 
-    // Exclusively show repository tab ONLY to the 4 co-founders
+    // Exclusively show repository tab and access tab ONLY to the 4 co-founders
     const repoTab = document.getElementById('navBtnRepository');
+    const accessTab = document.getElementById('navBtnAccess');
     const viewInRepoBtn = document.getElementById('viewInRepoBtn');
     const repoSection = document.getElementById('repositorySection');
+    const accessSection = document.getElementById('accessSection');
+
     if (repoTab) {
       repoTab.style.display = userIsCoFounder ? 'inline-flex' : 'none';
+    }
+    if (accessTab) {
+      accessTab.style.display = userIsCoFounder ? 'inline-flex' : 'none';
     }
     if (viewInRepoBtn) {
       viewInRepoBtn.style.display = userIsCoFounder ? 'inline-flex' : 'none';
     }
-    if (!userIsCoFounder && repoSection) {
-      repoSection.style.display = 'none';
+    if (!userIsCoFounder) {
+      if (repoSection) repoSection.style.display = 'none';
+      if (accessSection) accessSection.style.display = 'none';
     }
 
     // Immediately notify application that auth has succeeded so header counts and sync activate
@@ -353,6 +368,231 @@
   }
 
   /**
+   * Allowed Users CRUD methods for Access Tab
+   */
+  async function fetchAllowedUsers() {
+    const list = [];
+    if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
+      try {
+        const snap = await firebase.firestore().collection('allowed_users').get();
+        snap.forEach(doc => {
+          list.push({ id: doc.id, ...doc.data() });
+        });
+      } catch (err) {
+        console.warn("[AuthGuard] Fetch allowed_users note:", err);
+      }
+    }
+    // Fallback/cache in localStorage
+    try {
+      const cached = JSON.parse(localStorage.getItem('CC_ALLOWED_USERS_CACHE') || '[]');
+      const map = new Map();
+      list.forEach(item => map.set(item.email || item.id, item));
+      cached.forEach(item => {
+        const k = item.email || item.id;
+        if (!map.has(k)) map.set(k, item);
+      });
+      const merged = Array.from(map.values());
+      localStorage.setItem('CC_ALLOWED_USERS_CACHE', JSON.stringify(merged));
+      return merged;
+    } catch (_) {
+      return list;
+    }
+  }
+
+  function buildInvitationEmail(cleanEmail, metadata = {}) {
+    const recipientGreeting = metadata.name && metadata.name.trim() ? metadata.name.trim() : 'Colleague';
+    const institutionText = metadata.institution && metadata.institution.trim() && metadata.institution.trim() !== '—'
+      ? ` for ${metadata.institution.trim()}`
+      : '';
+    const subject = `[Career Clinic] Access Granted to Resume Fit Score™ Portal${institutionText}`;
+    const portalUrl = 'https://www.mycareercompany.com/ResumeFitScore';
+
+    const plainText = `Dear ${recipientGreeting},
+
+You have been granted official access to the Career Clinic — Resume Fit Score™ Portal by My Career Company.
+
+You can now sign in with this Google account (${cleanEmail}) and access the Diagnostic Engine to evaluate candidate resumes against calibrated recruiter benchmarks across 28 recruitment domains.
+
+Access Link: ${portalUrl}
+
+Key Features Available to You:
+• Calibrated evaluation against verified placement benchmarks
+• Multi-format CV intake (.PDF, .DOCX, and direct text)
+• Cross-domain suitability calibration & bullet rewrites
+• Target JD correlation and competitive placement readiness scoring
+
+If you have any questions or require assistance, please reach out to the administrative team at My Career Company.
+
+Best regards,
+Career Clinic Institutional Evaluation Team
+My Career Company
+www.mycareercompany.com`;
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>${escapeHtml(subject)}</title>
+</head>
+<body style="font-family:'Montserrat',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background-color:#05261F;color:#F8F6EF;margin:0;padding:28px 16px;">
+  <div style="max-width:620px;margin:0 auto;background:#073D32;border:1px solid rgba(212,175,124,0.35);border-radius:12px;overflow:hidden;box-shadow:0 16px 40px rgba(0,0,0,0.5);">
+    <div style="background:#05261F;padding:22px 28px;border-bottom:2px solid #D4AF7C;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:18px;font-weight:800;letter-spacing:1px;color:#D4AF7C;">MY CAREER COMPANY</div>
+        <div style="font-size:11.5px;color:#95A199;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;">Career Clinic &bull; Resume Fit Score™ Portal</div>
+      </div>
+    </div>
+    <div style="padding:28px;line-height:1.7;color:#D2D5CA;">
+      <div style="font-size:16px;font-weight:600;color:#F8F6EF;margin-bottom:14px;">Dear ${escapeHtml(recipientGreeting)},</div>
+      <p style="margin:0 0 16px;">
+        You have been granted official access to the <strong>Career Clinic — Resume Fit Score™ Portal</strong> by <strong>My Career Company</strong>.
+      </p>
+      <p style="margin:0 0 16px;">
+        You can now sign in with this Google account (<strong style="color:#D4AF7C;">${escapeHtml(cleanEmail)}</strong>) and access the Diagnostic Engine to evaluate candidate resumes against calibrated recruiter benchmarks across 28 recruitment domains.
+      </p>
+      <div style="background:#0A493D;border:1px solid rgba(212,175,124,0.22);border-left:4px solid #D4AF7C;padding:16px 20px;border-radius:8px;margin:20px 0;">
+        <div style="color:#D4AF7C;font-weight:700;font-size:13px;margin-bottom:8px;">📌 Key Features Available to You:</div>
+        <ul style="margin:0;padding-left:18px;color:#E0E4DB;font-size:13px;line-height:1.75;">
+          <li>Calibrated evaluation against verified placement benchmarks</li>
+          <li>Multi-format CV intake (.PDF, .DOCX, and direct text)</li>
+          <li>Cross-domain suitability calibration &amp; bullet rewrites</li>
+          <li>Target JD correlation and competitive placement readiness scoring</li>
+        </ul>
+      </div>
+      <div style="text-align:center;margin:28px 0 24px;">
+        <a href="${portalUrl}" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#D4AF7C 0%,#B88E56 100%);color:#05261F !important;font-weight:800;font-size:15px;padding:14px 32px;border-radius:8px;text-decoration:none;box-shadow:0 4px 16px rgba(212,175,124,0.35);letter-spacing:0.3px;">Access Resume Fit Score™ Portal &rarr;</a>
+      </div>
+      <p style="font-size:12.5px;color:#95A199;text-align:center;margin:0 0 8px;">
+        Direct link: <a href="${portalUrl}" style="color:#D4AF7C;" target="_blank">${portalUrl}</a>
+      </p>
+    </div>
+    <div style="background:#05261F;padding:18px 28px;border-top:1px solid rgba(212,175,124,0.15);text-align:center;font-size:11.5px;color:#95A199;line-height:1.5;">
+      &copy; 2026 My Career Company. Sent automatically from <strong>support@mycareercompany.com</strong>.<br>
+      Career Clinic &bull; Resume Fit Score™ Diagnostic Engine.
+    </div>
+  </div>
+</body>
+</html>`;
+
+    return {
+      to: [cleanEmail],
+      from: 'Career Clinic <support@mycareercompany.com>',
+      replyTo: 'support@mycareercompany.com',
+      message: {
+        subject: subject,
+        text: plainText,
+        html: html
+      },
+      metadata: {
+        sender: 'support@mycareercompany.com',
+        recipientEmail: cleanEmail,
+        recipientName: metadata.name || '',
+        institution: metadata.institution || '',
+        portalUrl: portalUrl,
+        dispatchedAt: new Date().toISOString()
+      }
+    };
+  }
+
+  async function sendInvitationEmail(cleanEmail, metadata = {}) {
+    const emailPayload = buildInvitationEmail(cleanEmail, metadata);
+
+    // Queue in Firestore 'mail' collection (Firebase Trigger Email extension standard)
+    if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
+      try {
+        await firebase.firestore().collection('mail').add(emailPayload);
+      } catch (mailErr) {
+        console.warn("[AuthGuard] Trigger Email queue note:", mailErr);
+      }
+
+      // Also record in allowed_users invitation audit sub-collection
+      try {
+        await firebase.firestore().collection('allowed_users').doc(cleanEmail)
+          .collection('invitations').add(emailPayload);
+      } catch (_) {}
+    }
+
+    // Direct REST dispatch attempt if endpoint is present
+    try {
+      if (typeof fetch === 'function') {
+        fetch('/api/send-access-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(emailPayload)
+        }).catch(() => {});
+      }
+    } catch (_) {}
+
+    return emailPayload;
+  }
+
+  async function grantUserAccess(email, metadata = {}) {
+    if (!email) throw new Error("A valid email address is required.");
+    const clean = email.toLowerCase().trim();
+    if (!clean.includes('@') || !clean.includes('.')) {
+      throw new Error("Please enter a valid email address format.");
+    }
+
+    const payload = {
+      email: clean,
+      name: metadata.name ? metadata.name.trim() : '',
+      role: metadata.role || 'Evaluator / Candidate',
+      institution: metadata.institution ? metadata.institution.trim() : '',
+      grantedAt: new Date().toISOString(),
+      grantedBy: currentUser ? currentUser.email : 'System',
+      status: 'active',
+      emailDispatched: true,
+      emailDispatchedFrom: 'support@mycareercompany.com',
+      lastEmailSentAt: new Date().toISOString()
+    };
+
+    if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
+      try {
+        await firebase.firestore().collection('allowed_users').doc(clean).set(payload);
+      } catch (err) {
+        console.warn("[AuthGuard] Write allowed_users note:", err);
+      }
+    }
+
+    // Automatically send official invitation email from support@mycareercompany.com
+    await sendInvitationEmail(clean, metadata);
+
+    // Cache locally
+    try {
+      const cached = JSON.parse(localStorage.getItem('CC_ALLOWED_USERS_CACHE') || '[]');
+      const filtered = cached.filter(u => (u.email || u.id) !== clean);
+      filtered.unshift(payload);
+      localStorage.setItem('CC_ALLOWED_USERS_CACHE', JSON.stringify(filtered));
+    } catch (_) {}
+
+    return payload;
+  }
+
+  async function revokeUserAccess(email) {
+    if (!email) throw new Error("Email is required.");
+    const clean = email.toLowerCase().trim();
+    if (isCoFounder(clean)) {
+      throw new Error("Cannot revoke access for primary Co-Founder account.");
+    }
+
+    if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) {
+      try {
+        await firebase.firestore().collection('allowed_users').doc(clean).delete();
+      } catch (err) {
+        console.warn("[AuthGuard] Delete allowed_users note:", err);
+      }
+    }
+
+    try {
+      const cached = JSON.parse(localStorage.getItem('CC_ALLOWED_USERS_CACHE') || '[]');
+      const filtered = cached.filter(u => (u.email || u.id) !== clean);
+      localStorage.setItem('CC_ALLOWED_USERS_CACHE', JSON.stringify(filtered));
+    } catch (_) {}
+
+    return true;
+  }
+
+  /**
    * Initialize Auth Listeners on Load
    */
   function init() {
@@ -394,7 +634,12 @@
         ADDITIONAL_PERMITTED_EMAILS.push(email.toLowerCase().trim());
       }
     },
-    setAllowAnyAuthenticated: (val) => { ALLOW_ANY_AUTHENTICATED_FOR_FIT_SCORE = Boolean(val); }
+    setAllowAnyAuthenticated: (val) => { ALLOW_ANY_AUTHENTICATED_FOR_FIT_SCORE = Boolean(val); },
+    fetchAllowedUsers: fetchAllowedUsers,
+    grantUserAccess: grantUserAccess,
+    revokeUserAccess: revokeUserAccess,
+    sendInvitationEmail: sendInvitationEmail,
+    buildInvitationEmail: buildInvitationEmail
   };
 
   if (document.readyState === 'loading') {

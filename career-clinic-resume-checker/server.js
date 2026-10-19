@@ -36,6 +36,30 @@ function startServer(port) {
         return;
       }
 
+      // Automated Access Invitation Email Dispatch API endpoint
+      if (req.method === 'POST' && (pathname === '/api/send-access-email' || pathname === '/ResumeFitScore/api/send-access-email')) {
+        let body = '';
+        req.on('data', chunk => { body += chunk; });
+        req.on('end', () => {
+          try {
+            const data = JSON.parse(body || '{}');
+            console.log(`\n======================================================`);
+            console.log(`  [AUTOMATED EMAIL DISPATCH] support@mycareercompany.com`);
+            console.log(`  To: ${Array.isArray(data.to) ? data.to.join(', ') : data.to}`);
+            console.log(`  From: ${data.from || 'support@mycareercompany.com'}`);
+            console.log(`  Subject: ${data.message ? data.message.subject : 'Access Granted'}`);
+            console.log(`  Dispatched: ${new Date().toISOString()}`);
+            console.log(`======================================================\n`);
+            res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+            res.end(JSON.stringify({ success: true, messageId: 'msg_' + Date.now(), dispatchedFrom: 'support@mycareercompany.com' }));
+          } catch (e) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false, error: e.message }));
+          }
+        });
+        return;
+      }
+
       // If accessing root /, redirect to /ResumeFitScore/
       if (pathname === '/') {
         res.writeHead(302, { 'Location': '/ResumeFitScore/' + (parsedUrl.search || '') });

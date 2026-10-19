@@ -47,6 +47,14 @@ service cloud.firestore {
       allow write: if isCoFounder();
     }
 
+    // Automated Email Dispatch (Firebase Trigger Email extension):
+    match /mail/{mailId} {
+      allow create, read: if isCoFounder();
+    }
+    match /email_notifications/{noteId} {
+      allow create, read: if isCoFounder();
+    }
+
     // Default: require co-founder credentials
     match /{document=**} {
       allow read, write: if isCoFounder();

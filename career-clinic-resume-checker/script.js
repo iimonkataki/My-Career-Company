@@ -19,14 +19,18 @@
   }
 
   const state = {
-    // Resume State
+    // Candidate Profile & Affiliation (INPUT A)
+    candidateType: 'college_student', // 'college_student' | 'working_professional'
+    institutionName: '',
+
+    // Resume State (INPUT B)
     selectedFile: null,
     fileArrayBuffer: null,
     fileNumPages: null,
     extractedText: '',
     resumeTab: 'upload', // 'upload' or 'paste'
 
-    // Job Description State
+    // Job Description State (INPUT C)
     jdFile: null,
     jdArrayBuffer: null,
     jdExtractedText: '',
@@ -47,12 +51,12 @@
       { name: "Market Sizing", regex: /\bmarket\s*sizing\b/i },
       { name: "Due Diligence", regex: /\bdue\s*diligence\b/i },
       { name: "Go-To-Market / GTM", regex: /\b(?:go[- ]to[- ]market|gtm)\b/i },
-      { name: "Benchmarking", regex: /\bbenchmark(?:ing|s)?\b/i },
+      { name: "Competitive Benchmarking", regex: /\b(?:competitive|industry)\s*benchmark(?:ing|s)?\b/i },
       { name: "Cost Optimization", regex: /\bcost\s*optimi[zs]ation\b/i },
       { name: "MECE Framework", regex: /\bmece\b/i },
       { name: "Value Proposition", regex: /\bvalue\s*proposition\b/i },
       { name: "Financial Modeling", regex: /\bfinancial\s*model(?:ing|s)?\b/i },
-      { name: "Competitive Landscape", regex: /\bcompetitive\s*(?:landscape|landscaping|intelligence|benchmarking)\b/i },
+      { name: "Competitive Landscape", regex: /\bcompetitive\s*(?:landscape|landscaping|intelligence)\b/i },
       { name: "Hypothesis-Driven", regex: /\bhypothesis[- ]driven\b/i },
       { name: "Operational Excellence", regex: /\boperational\s*excellence\b/i },
       { name: "CAGR", regex: /\bcagr\b/i },
@@ -60,7 +64,7 @@
       { name: "Synergy Realization", regex: /\bsynerg(?:y|ies)\b/i },
       { name: "Stakeholder Management", regex: /\bstakeholder\s*management\b/i },
       { name: "Change Management", regex: /\bchange\s*management\b/i },
-      { name: "Post-Merger Integration", regex: /\b(?:post[- ]merger|pmi|integration)\b/i },
+      { name: "Post-Merger Integration", regex: /\b(?:post[- ]merger\s*integration|pmi)\b/i },
       { name: "Digital Transformation", regex: /\bdigital\s*transformation\b/i }
     ],
     finance: [
@@ -104,24 +108,24 @@
       { name: "Omnichannel", regex: /\bomnichannel\b/i }
     ],
     product: [
-      { name: "Product Roadmap", regex: /\bproduct\s*roadmap(?:s)?\b/i },
+      { name: "Product Roadmap", regex: /\b(?:product\s*)?roadmap(?:s)?\b/i },
       { name: "User Stories", regex: /\buser\s*stor(?:y|ies)\b/i },
-      { name: "Wireframing", regex: /\bwirefram(?:e|ing|es)\b/i },
-      { name: "Agile / Scrum", regex: /\b(?:agile|scrum)\b/i },
-      { name: "A/B Testing", regex: /\ba\/b\s*testing\b/i },
-      { name: "Feature Prioritization", regex: /\bfeature\s*prioriti[zs]ation\b/i },
-      { name: "PRD Document", regex: /\bprd|product\s*requirement(?:s)?\s*document\b/i },
-      { name: "User Personas", regex: /\buser\s*personas?\b/i },
-      { name: "Sprint Planning", regex: /\bsprint\s*planning\b/i },
-      { name: "UI/UX Design", regex: /\bui\/ux|user\s*experience\b/i },
-      { name: "North Star Metric", regex: /\bnorth\s*star\s*metric\b/i },
-      { name: "Retention", regex: /\bretention\b/i },
-      { name: "Customer Journey", regex: /\bcustomer\s*journey\b/i },
-      { name: "Churn Reduction", regex: /\bchurn\b/i },
-      { name: "Product Discovery", regex: /\bproduct\s*discovery\b/i },
-      { name: "Backlog Grooming", regex: /\bbacklog\b/i },
-      { name: "API Integration", regex: /\bapi(?:s)?\b/i },
-      { name: "Product-Market Fit", regex: /\bproduct[- ]market\s*fit\b/i }
+      { name: "Wireframing & Prototyping", regex: /\b(?:wirefram(?:e|ing|es)|mockups?|prototyp(?:e|ing|es)|figma)\b/i },
+      { name: "Agile / Scrum / Sprints", regex: /\b(?:agile|scrum|sprint(?:s| planning)?|kanban|jira)\b/i },
+      { name: "A/B Testing & Experimentation", regex: /\b(?:a\/b\s*test(?:ing|s)?|multivariate\s*testing|experimentation)\b/i },
+      { name: "Feature Prioritization", regex: /\b(?:feature\s*prioriti[zs]ation|rice\s*framework|moscow|backlog\s*prioritization)\b/i },
+      { name: "PRD / Tech Specs", regex: /\b(?:prd|product\s*requirement(?:s)?\s*document|product\s*specs?|technical\s*specifications?)\b/i },
+      { name: "User Personas & Research", regex: /\b(?:user\s*personas?|user\s*research|customer\s*discovery|usability\s*testing)\b/i },
+      { name: "UI/UX & Customer Journeys", regex: /\b(?:ui\/ux|user\s*experience|customer\s*journeys?|user\s*flows?)\b/i },
+      { name: "North Star Metric & OKRs", regex: /\b(?:north\s*star(?:\s*metric)?|okrs?|product\s*kpis?)\b/i },
+      { name: "User Retention & Churn", regex: /\b(?:retention(?:\s*rate)?|churn(?:\s*rate|\s*reduction)?|cohort\s*retention)\b/i },
+      { name: "Product Discovery & MVP", regex: /\b(?:product\s*discovery|mvp|minimum\s*viable\s*product)\b/i },
+      { name: "Backlog & Sprint Grooming", regex: /\b(?:backlog(?:\s*grooming|\s*refinement)?|sprint\s*backlog)\b/i },
+      { name: "API & Cross-Functional Engineering", regex: /\b(?:api(?:s)?|cross[- ]functional\s*engineering|engineering\s*sprints)\b/i },
+      { name: "Product-Market Fit (PMF)", regex: /\b(?:product[- ]market\s*fit|pmf)\b/i },
+      { name: "Funnel & Activation Metrics", regex: /\b(?:funnel\s*optimi[zs]ation|drop[- ]off|activation\s*rate|onboarding\s*flow)\b/i },
+      { name: "Product Analytics", regex: /\b(?:product\s*analytics|mixpanel|amplitude|google\s*analytics|ga4|metabase)\b/i },
+      { name: "Product Lifecycle Management", regex: /\b(?:product\s*lifecycle|feature\s*adoption|go[- ]to[- ]market|gtm)\b/i }
     ],
     operations: [
       { name: "Supply Chain Optimization", regex: /\bsupply\s*chain\b/i },
@@ -245,7 +249,7 @@
         "Corporate turnaround & hypothesis-driven restructuring strategy deck",
         "Post-Merger Integration (PMI) synergy realization & governance roadmap"
       ],
-      titleKeywords: ['consultant', 'consulting', 'strategy', 'advisory', 'engagement manager', 'case', 'transformation', 'strategic planning']
+      titleKeywords: ['management consultant', 'strategy consultant', 'associate consultant', 'senior consultant', 'principal consultant', 'engagement manager', 'consulting analyst', 'strategy advisory', 'mckinsey', 'bcg', 'bain']
     },
     finance: {
       label: "Investment Banking & Corporate Finance",
@@ -325,7 +329,7 @@
         "A/B test experiment design & funnel drop-off audit on an onboarding flow",
         "Competitive benchmarking & product teardown of leading Indian tech unicorns"
       ],
-      titleKeywords: ['product manager', 'product management', 'prd', 'scrum', 'agile', 'roadmap', 'user stories', 'features', 'wireframes', 'ux']
+      titleKeywords: ['product manager', 'associate product manager', 'apm', 'senior product manager', 'group product manager', 'product management', 'product owner', 'technical product manager', 'head of product', 'prd', 'wireframes', 'product roadmap']
     },
     operations: {
       label: "Operations & Supply Chain Management",
@@ -410,33 +414,104 @@
   };
 
   /**
-   * Intelligently infer target recruitment domain from JD text
+   * Parse clean, human-readable Job Title from a job posting URL
    */
-  function detectDomainFromJd(text) {
-    if (!text || text.trim().length < 30) return null;
-    const lower = text.toLowerCase();
-    let bestDomain = null;
-    let maxMatches = 0;
-
-    for (const [key, meta] of Object.entries(DOMAIN_METADATA)) {
-      let matches = 0;
-      const kwList = ROLE_KEYWORDS[key] || [];
-      for (const kw of kwList) {
-        if (kw.regex.test(lower)) matches += 2;
+  function parseJdLinkTitle(url) {
+    if (!url || typeof url !== 'string') return 'Target Job Link';
+    try {
+      const parsed = new URL(url.trim());
+      const pathname = decodeURIComponent(parsed.pathname || '');
+      // Filter out generic route segments
+      const segments = pathname.split('/').filter(s => s && !/^(jobs?|view|posting|careers?|position|detail|v|\d+|in|en)$/i.test(s));
+      if (segments.length > 0) {
+        // Prefer the most descriptive segment (often last)
+        const slug = segments[segments.length - 1];
+        let clean = slug
+          .replace(/[-_]+/g, ' ')
+          .replace(/\b\d{5,}\b/g, '') // remove trailing numerical IDs
+          .replace(/[^\w\s]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        if (clean.length >= 3) {
+          return clean
+            .split(' ')
+            .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+            .join(' ');
+        }
       }
-      if (meta.titleKeywords) {
-        for (const tk of meta.titleKeywords) {
-          if (lower.includes(tk)) matches += 3;
+      const host = parsed.hostname.replace(/^www\./i, '');
+      return `Job Posting at ${host}`;
+    } catch (_) {
+      return url.length > 50 ? url.substring(0, 50) + '...' : url;
+    }
+  }
+
+  /**
+   * Intelligently infer target recruitment domain from JD text, URL, title, or filename
+   * Rectifies Consulting default bias by evaluating word-bounded domain competencies and title weights.
+   */
+  function detectDomainFromJd(textOrUrl, optionalTitle = '', optionalFileName = '') {
+    if (!textOrUrl && !optionalTitle && !optionalFileName) return null;
+
+    const rawCombined = `${optionalTitle} ${optionalFileName} ${textOrUrl || ''}`;
+    // Normalize punctuation, hyphens, and slashes so URL slugs like 'product-manager' become 'product manager'
+    const normalized = rawCombined
+      .toLowerCase()
+      .replace(/[-_\\/:]+/g, ' ')
+      .replace(/\s+/g, ' ');
+
+    // Fast URL / Title slug matching for immediate high-confidence domain detection
+    const slugPatterns = [
+      { pattern: /\b(?:product\s*manager|associate\s*product\s*manager|apm|product\s*owner|head\s*of\s*product|technical\s*product\s*manager)\b/i, domain: 'product', weight: 20 },
+      { pattern: /\b(?:management\s*consultant|strategy\s*consultant|associate\s*consultant|engagement\s*manager|consulting\s*analyst|mckinsey|bcg|bain)\b/i, domain: 'consulting', weight: 20 },
+      { pattern: /\b(?:investment\s*bank(?:er|ing)|equity\s*research|financial\s*analyst|portfolio\s*manager|corporate\s*finance|wealth\s*management|credit\s*risk)\b/i, domain: 'finance', weight: 20 },
+      { pattern: /\b(?:brand\s*manager|product\s*marketing|growth\s*marketing|digital\s*marketing|marketing\s*manager|content\s*marketing)\b/i, domain: 'marketing', weight: 20 },
+      { pattern: /\b(?:b2b\s*sales|account\s*executive|business\s*development|sales\s*manager|enterprise\s*sales|key\s*account)\b/i, domain: 'sales', weight: 20 },
+      { pattern: /\b(?:supply\s*chain|operations\s*manager|procurement|logistics|warehouse|operations\s*executive)\b/i, domain: 'operations', weight: 20 },
+      { pattern: /\b(?:data\s*scientist|data\s*analyst|business\s*analytics|bi\s*analyst|analytics\s*manager|machine\s*learning)\b/i, domain: 'analytics', weight: 20 },
+      { pattern: /\b(?:hr\s*business\s*partner|hrbp|talent\s*acquisition|human\s*resources|recruiter|people\s*operations)\b/i, domain: 'hr', weight: 20 },
+      { pattern: /\b(?:general\s*management|management\s*trainee|chief\s*of\s*staff|program\s*manager)\b/i, domain: 'genman', weight: 20 }
+    ];
+
+    let bestDomain = null;
+    let maxScore = 0;
+    const scores = {};
+
+    for (const sp of slugPatterns) {
+      if (sp.pattern.test(normalized)) {
+        scores[sp.domain] = (scores[sp.domain] || 0) + sp.weight;
+      }
+    }
+
+    // Evaluate full competency vocabulary and word-bounded title keywords
+    for (const [key, meta] of Object.entries(DOMAIN_METADATA)) {
+      let score = scores[key] || 0;
+      const kwList = ROLE_KEYWORDS[key] || [];
+
+      for (const kw of kwList) {
+        if (kw.regex.test(normalized)) {
+          score += 3;
         }
       }
 
-      if (matches > maxMatches) {
-        maxMatches = matches;
+      if (meta.titleKeywords) {
+        for (const tk of meta.titleKeywords) {
+          const re = new RegExp('\\b' + tk.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + '\\b', 'i');
+          if (re.test(normalized)) {
+            score += 6;
+          }
+        }
+      }
+
+      scores[key] = score;
+      if (score > maxScore) {
+        maxScore = score;
         bestDomain = key;
       }
     }
 
-    return maxMatches >= 4 ? bestDomain : null;
+    // Minimum confidence floor of 6 points to avoid random false positives
+    return maxScore >= 6 ? bestDomain : null;
   }
 
   const STRONG_ACTION_VERBS = [
@@ -1657,6 +1732,7 @@ DESIRED QUALIFICATIONS & COMPETENCIES
 
   /**
    * Cross-Domain Suitability Analysis across all marquee recruitment verticals
+   * Uses word-bounded matching and explicit role title signals to guarantee accurate domain ranking
    */
   function calculateDomainSuitability(text, targetRoleKey) {
     const lower = text.toLowerCase();
@@ -1671,18 +1747,56 @@ DESIRED QUALIFICATIONS & COMPETENCIES
         }
       }
 
+      // Word-bounded title keyword evaluation
       let titleMatchCount = 0;
       if (meta.titleKeywords) {
         for (const tk of meta.titleKeywords) {
-          if (lower.includes(tk)) titleMatchCount++;
+          const re = new RegExp('\\b' + tk.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + '\\b', 'i');
+          if (re.test(lower)) titleMatchCount++;
         }
       }
 
-      // Base calculation: keyword density + title/experience affinity
-      const kwScore = (matchedKw.length / 14) * 60; // Up to 60 pts
-      const titleScore = Math.min(25, titleMatchCount * 5); // Up to 25 pts
-      let rawScore = Math.round(kwScore + titleScore + 18);
-      rawScore = Math.max(25, Math.min(96, rawScore));
+      // High-priority role headline / designated experience bonus (+25)
+      let primaryTitleBonus = 0;
+      if (key === 'product') {
+        if (/\b(?:product\s*manager|associate\s*product\s*manager|apm|product\s*owner|head\s*of\s*product|vp\s*product|product\s*lead|technical\s*product\s*manager)\b/i.test(lower)) {
+          primaryTitleBonus = 25;
+        }
+      } else if (key === 'consulting') {
+        if (/\b(?:management\s*consultant|strategy\s*consultant|associate\s*consultant|engagement\s*manager|consulting\s*analyst)\b/i.test(lower)) {
+          primaryTitleBonus = 25;
+        }
+      } else if (key === 'finance') {
+        if (/\b(?:investment\s*bank(?:er|ing)|equity\s*research\s*analyst|financial\s*analyst|portfolio\s*manager|wealth\s*manager)\b/i.test(lower)) {
+          primaryTitleBonus = 25;
+        }
+      } else if (key === 'marketing') {
+        if (/\b(?:brand\s*manager|product\s*marketing\s*manager|growth\s*marketer|digital\s*marketing\s*manager)\b/i.test(lower)) {
+          primaryTitleBonus = 25;
+        }
+      } else if (key === 'operations') {
+        if (/\b(?:supply\s*chain\s*manager|operations\s*manager|procurement\s*manager|logistics\s*manager)\b/i.test(lower)) {
+          primaryTitleBonus = 25;
+        }
+      } else if (key === 'analytics') {
+        if (/\b(?:data\s*scientist|data\s*analyst|business\s*intelligence\s*analyst|bi\s*analyst)\b/i.test(lower)) {
+          primaryTitleBonus = 25;
+        }
+      } else if (key === 'sales') {
+        if (/\b(?:account\s*executive|b2b\s*sales\s*manager|business\s*development\s*manager|key\s*account\s*manager)\b/i.test(lower)) {
+          primaryTitleBonus = 25;
+        }
+      } else if (key === 'hr') {
+        if (/\b(?:hr\s*business\s*partner|hrbp|talent\s*acquisition\s*manager|people\s*operations\s*manager)\b/i.test(lower)) {
+          primaryTitleBonus = 25;
+        }
+      }
+
+      // Keyword score: proportional to domain competencies matched (up to 55 pts)
+      const kwScore = (matchedKw.length / Math.max(1, kwList.length)) * 55;
+      const titleScore = Math.min(18, titleMatchCount * 6);
+      let rawScore = Math.round(kwScore + titleScore + primaryTitleBonus + 10);
+      rawScore = Math.max(20, Math.min(98, rawScore));
 
       let fitTier = 'developing';
       let fitLabel = 'Developing Fit';
@@ -2184,6 +2298,14 @@ DESIRED QUALIFICATIONS & COMPETENCIES
     const roleSelect = document.getElementById('targetRoleSelect');
     state.targetRole = roleSelect ? roleSelect.value : 'consulting';
 
+    // Synchronize Input A: Candidate Profile & Background
+    const profileRadioCollege = document.getElementById('profileRadioCollege');
+    state.candidateType = (profileRadioCollege && profileRadioCollege.checked) ? 'college_student' : 'working_professional';
+    const candidateInstInput = document.getElementById('candidateInstitutionInput');
+    if (candidateInstInput && candidateInstInput.value.trim()) {
+      state.institutionName = candidateInstInput.value.trim();
+    }
+
     if (window.AuthGuard && !window.AuthGuard.isAuthorized()) {
       showError("Access Restricted", "You must be signed in with an authorized institutional administrator account to run diagnostics.");
       return;
@@ -2193,7 +2315,7 @@ DESIRED QUALIFICATIONS & COMPETENCIES
     let numPages = null;
 
     try {
-      // 1. Resolve Resume Text
+      // 1. Resolve Resume Text (INPUT B)
       if (state.resumeTab === 'upload') {
         if (!state.selectedFile) {
           const pastedText = document.getElementById('resumeTextInput')?.value.trim();
@@ -2241,8 +2363,13 @@ DESIRED QUALIFICATIONS & COMPETENCIES
         }
       }
 
-      // 2. Resolve Job Description (Optional Custom or Benchmark JD)
+      // 2. Resolve Job Description (INPUT C)
       let jdTextToAnalyze = '';
+      const linkInputElem = document.getElementById('jdUrlInput');
+      if (linkInputElem && linkInputElem.value.trim()) {
+        state.jdUrl = linkInputElem.value.trim();
+      }
+
       if (state.jdTab === 'upload' && state.jdFile && state.jdArrayBuffer) {
         if (state.jdExtractedText && state.jdExtractedText.length >= 30) {
           jdTextToAnalyze = state.jdExtractedText;
@@ -2292,19 +2419,33 @@ DESIRED QUALIFICATIONS & COMPETENCIES
         }
       }
 
-      // Fallback: if user loaded sample JD in the textarea
+      // Fallback: if user loaded sample JD in the textarea or pasted URL
       if (!jdTextToAnalyze) {
-        const jdTextarea = document.getElementById('jdTextInput');
-        if (jdTextarea && jdTextarea.value.trim().length > 30) {
-          jdTextToAnalyze = jdTextarea.value.trim();
-        } else if (state.currentJdObject && window.JD_DATABASE) {
-          jdTextToAnalyze = window.JD_DATABASE.formatJdText(state.currentJdObject);
+        if (state.jdUrl) {
+          jdTextToAnalyze = state.jdUrl;
+        } else {
+          const jdTextarea = document.getElementById('jdTextInput');
+          if (jdTextarea && jdTextarea.value.trim().length > 30) {
+            jdTextToAnalyze = jdTextarea.value.trim();
+          } else if (state.currentJdObject && window.JD_DATABASE) {
+            jdTextToAnalyze = window.JD_DATABASE.formatJdText(state.currentJdObject);
+          }
         }
       }
 
-      // 3. Highlight & Calibrate Target Domain based on JD text if not explicitly set in domain tab
-      if (state.jdTab !== 'domain' && jdTextToAnalyze && jdTextToAnalyze.length > 35) {
-        const detectedDomain = detectDomainFromJd(jdTextToAnalyze);
+      // Title determination for Target JD
+      let jdCustomTitle = '';
+      if (state.jdFile) {
+        jdCustomTitle = state.jdFile.name;
+      } else if (state.jdUrl) {
+        jdCustomTitle = parseJdLinkTitle(state.jdUrl);
+      } else if (state.currentJdObject) {
+        jdCustomTitle = `${state.currentJdObject.domain} (${state.currentJdObject.level || 'Fresher'})`;
+      }
+
+      // 3. Highlight & Calibrate Target Domain based on JD text / URL (Rectifies Consulting default bias)
+      if (state.jdTab !== 'domain' && (jdTextToAnalyze || state.jdUrl)) {
+        const detectedDomain = detectDomainFromJd(jdTextToAnalyze || state.jdUrl, jdCustomTitle, state.jdFile?.name);
         if (detectedDomain) {
           state.targetRole = detectedDomain;
           const roleSelect = document.getElementById('targetRoleSelect');
@@ -2319,7 +2460,7 @@ DESIRED QUALIFICATIONS & COMPETENCIES
       hideLoading();
       renderResults(diagnosticResult);
 
-      // Automatically store to Firebase Repository with metadata and tags completely silently
+      // Automatically store to Firebase Repository with metadata, institutional affiliation, and tags completely silently
       if (window.RepositoryService && typeof window.RepositoryService.saveAssessment === 'function') {
         window.RepositoryService.saveAssessment({
           resumeFile: state.selectedFile,
@@ -2330,7 +2471,10 @@ DESIRED QUALIFICATIONS & COMPETENCIES
           jdObject: state.currentJdObject,
           jdTab: state.jdTab,
           jdUrl: state.jdUrl,
+          jdTitle: jdCustomTitle,
           targetRole: state.targetRole,
+          candidateType: state.candidateType,
+          institutionName: state.institutionName,
           result: diagnosticResult
         }).then(saveResponse => {
           // Completely silent - no database banner shown to users
@@ -2399,11 +2543,21 @@ DESIRED QUALIFICATIONS & COMPETENCIES
         state.extractedText = parsedText;
         state.fileNumPages = pages;
 
+        // Synchronize Input A before recording
+        const profileRadioCollege = document.getElementById('profileRadioCollege');
+        state.candidateType = (profileRadioCollege && profileRadioCollege.checked) ? 'college_student' : 'working_professional';
+        const candidateInstInput = document.getElementById('candidateInstitutionInput');
+        if (candidateInstInput && candidateInstInput.value.trim()) {
+          state.institutionName = candidateInstInput.value.trim();
+        }
+
         if (window.RepositoryService && typeof window.RepositoryService.recordResume === 'function') {
           window.RepositoryService.recordResume({
             file: file,
             text: parsedText,
-            numPages: pages
+            numPages: pages,
+            candidateType: state.candidateType,
+            institutionName: state.institutionName
           }).then(() => {
             updateHeaderRepoCount();
           }).catch(err => {
@@ -2471,13 +2625,33 @@ DESIRED QUALIFICATIONS & COMPETENCIES
         }
         state.jdExtractedText = parsedJdText;
 
+        // Automatically infer recruitment domain from uploaded JD content (not defaulting to Consulting)
+        if (parsedJdText && parsedJdText.length > 20) {
+          const detected = detectDomainFromJd(parsedJdText, fileName, fileName);
+          if (detected) {
+            state.targetRole = detected;
+            const pasteRoleSelect = document.getElementById('targetRoleSelect');
+            if (pasteRoleSelect) pasteRoleSelect.value = detected;
+          }
+        }
+
+        // Synchronize Input A affiliation
+        const profileRadioCollege = document.getElementById('profileRadioCollege');
+        state.candidateType = (profileRadioCollege && profileRadioCollege.checked) ? 'college_student' : 'working_professional';
+        const candidateInstInput = document.getElementById('candidateInstitutionInput');
+        if (candidateInstInput && candidateInstInput.value.trim()) {
+          state.institutionName = candidateInstInput.value.trim();
+        }
+
         if (window.RepositoryService && typeof window.RepositoryService.recordJobDescription === 'function') {
           window.RepositoryService.recordJobDescription({
             file: file,
             text: parsedJdText,
             title: fileName,
-            domain: state.targetRole || 'Consulting',
-            tab: 'upload'
+            domain: state.targetRole || 'general',
+            tab: 'upload',
+            candidateType: state.candidateType,
+            institutionName: state.institutionName
           }).then(() => {
             updateHeaderRepoCount();
           }).catch(err => {
@@ -2501,7 +2675,57 @@ DESIRED QUALIFICATIONS & COMPETENCIES
   // 7. Initialize Application on DOMContentLoaded
   // =========================================================================
   function initApp() {
-    // Resume Intake Tabs
+    // =========================================================================
+    // INPUT A: Candidate Profile & Background
+    // =========================================================================
+    const profileRadioCollege = document.getElementById('profileRadioCollege');
+    const profileRadioWorking = document.getElementById('profileRadioWorking');
+    const profileTypeCollegeLabel = document.getElementById('profileTypeCollegeLabel');
+    const profileTypeWorkingLabel = document.getElementById('profileTypeWorkingLabel');
+    const candidateInstitutionLabel = document.getElementById('candidateInstitutionLabel');
+    const candidateInstitutionInput = document.getElementById('candidateInstitutionInput');
+    const candidateInstitutionHint = document.getElementById('candidateInstitutionHint');
+    const candidateInstitutionIcon = document.getElementById('candidateInstitutionIcon');
+
+    function updateProfileTypeUI(isCollege) {
+      state.candidateType = isCollege ? 'college_student' : 'working_professional';
+      if (profileTypeCollegeLabel) profileTypeCollegeLabel.classList.toggle('active', isCollege);
+      if (profileTypeWorkingLabel) profileTypeWorkingLabel.classList.toggle('active', !isCollege);
+      if (candidateInstitutionLabel) {
+        candidateInstitutionLabel.innerHTML = isCollege
+          ? 'Current College / University: <span class="required-star">*</span>'
+          : 'Current Company / Employer: <span class="required-star">*</span>';
+      }
+      if (candidateInstitutionInput) {
+        candidateInstitutionInput.placeholder = isCollege
+          ? 'e.g. IIM Ahmedabad, IIM Bangalore, FMS Delhi, XLRI, IIT Bombay...'
+          : 'e.g. McKinsey, Google, Amazon, Bain, HUL, Tata Sons, Infosys...';
+      }
+      if (candidateInstitutionIcon) {
+        candidateInstitutionIcon.textContent = isCollege ? '🏛️' : '🏢';
+      }
+      if (candidateInstitutionHint) {
+        candidateInstitutionHint.textContent = isCollege
+          ? 'Institutional affiliation for placement cohort benchmarking & analytics'
+          : 'Current employer / organization for corporate cohort analytics';
+      }
+    }
+
+    if (profileRadioCollege) {
+      profileRadioCollege.addEventListener('change', () => updateProfileTypeUI(true));
+    }
+    if (profileRadioWorking) {
+      profileRadioWorking.addEventListener('change', () => updateProfileTypeUI(false));
+    }
+    if (candidateInstitutionInput) {
+      candidateInstitutionInput.addEventListener('input', () => {
+        state.institutionName = candidateInstitutionInput.value.trim();
+      });
+    }
+
+    // =========================================================================
+    // INPUT B: Resume Intake Tabs
+    // =========================================================================
     const tabResumeUpload = document.getElementById('tabResumeUpload');
     const tabResumePaste = document.getElementById('tabResumePaste');
     const resumeUploadSection = document.getElementById('resumeUploadSection');
@@ -2528,7 +2752,9 @@ DESIRED QUALIFICATIONS & COMPETENCIES
     // Initialize Calibrated JD Taxonomy and Cascading Dropdowns
     initJdTaxonomy();
 
-    // Job Description Intake Tabs (4 Tabs)
+    // =========================================================================
+    // INPUT C: Job Description Intake Tabs (4 Tabs)
+    // =========================================================================
     const tabJdUpload = document.getElementById('tabJdUpload');
     const tabJdLink = document.getElementById('tabJdLink');
     const tabJdDomain = document.getElementById('tabJdDomain');
@@ -2662,37 +2888,72 @@ DESIRED QUALIFICATIONS & COMPETENCIES
       });
     }
 
-    // Job Description URL Analyze Button
+    // Job Description URL Intake & Auto-Register (INPUT C)
     const fetchJdUrlBtn = document.getElementById('fetchJdUrlBtn');
     const jdUrlInput = document.getElementById('jdUrlInput');
     const urlStatusNote = document.getElementById('urlStatusNote');
 
-    if (fetchJdUrlBtn && jdUrlInput) {
-      fetchJdUrlBtn.addEventListener('click', () => {
-        const url = jdUrlInput.value.trim();
-        if (!url) {
-          if (urlStatusNote) {
-            urlStatusNote.className = 'url-status-note warning';
-            urlStatusNote.textContent = 'Please enter a valid job URL to analyze.';
-          }
-          return;
-        }
-
-        state.jdUrl = url;
+    function registerJdUrl() {
+      if (!jdUrlInput) return;
+      const url = jdUrlInput.value.trim();
+      if (!url) {
         if (urlStatusNote) {
-          urlStatusNote.className = 'url-status-note success';
-          urlStatusNote.innerHTML = `&#10003; <strong>Job link registered:</strong> ${escapeHtml(url)}. The diagnostic engine will correlate keywords against this position. (Tip: You can also paste the full JD text in the Paste tab for 100% keyword depth).`;
+          urlStatusNote.className = 'url-status-note warning';
+          urlStatusNote.textContent = 'Please enter a valid job URL to analyze.';
         }
+        return;
+      }
 
-        if (window.RepositoryService && typeof window.RepositoryService.recordJobDescription === 'function') {
-          window.RepositoryService.recordJobDescription({
-            url: url,
-            title: 'Job Link: ' + url.substring(0, 50),
-            tab: 'link'
-          }).then(() => {
-            updateHeaderRepoCount();
-          });
-        }
+      state.jdUrl = url;
+      const parsedTitle = parseJdLinkTitle(url);
+      const detectedDomain = detectDomainFromJd(url, parsedTitle);
+      if (detectedDomain) {
+        state.targetRole = detectedDomain;
+        const pasteRoleSelect = document.getElementById('targetRoleSelect');
+        if (pasteRoleSelect) pasteRoleSelect.value = detectedDomain;
+      }
+
+      if (urlStatusNote) {
+        urlStatusNote.className = 'url-status-note success';
+        const domLabel = (detectedDomain && DOMAIN_METADATA[detectedDomain]) ? DOMAIN_METADATA[detectedDomain].shortLabel : 'General';
+        urlStatusNote.innerHTML = `&#10003; <strong>Job link registered:</strong> ${escapeHtml(parsedTitle)} [Target Domain: ${domLabel}]. Stored in unique JDs repository.`;
+      }
+
+      // Synchronize Input A before recording
+      const profileRadioCollege = document.getElementById('profileRadioCollege');
+      state.candidateType = (profileRadioCollege && profileRadioCollege.checked) ? 'college_student' : 'working_professional';
+      const candidateInstInput = document.getElementById('candidateInstitutionInput');
+      if (candidateInstInput && candidateInstInput.value.trim()) {
+        state.institutionName = candidateInstInput.value.trim();
+      }
+
+      if (window.RepositoryService && typeof window.RepositoryService.recordJobDescription === 'function') {
+        window.RepositoryService.recordJobDescription({
+          url: url,
+          title: parsedTitle,
+          domain: state.targetRole || 'general',
+          tab: 'link',
+          candidateType: state.candidateType,
+          institutionName: state.institutionName
+        }).then(() => {
+          updateHeaderRepoCount();
+        }).catch(err => {
+          console.warn('[Repository] Link JD record note:', err);
+        });
+      }
+    }
+
+    if (fetchJdUrlBtn) {
+      fetchJdUrlBtn.addEventListener('click', registerJdUrl);
+    }
+    let jdUrlDebounce = null;
+    if (jdUrlInput) {
+      jdUrlInput.addEventListener('input', () => {
+        clearTimeout(jdUrlDebounce);
+        jdUrlDebounce = setTimeout(registerJdUrl, 1000);
+      });
+      jdUrlInput.addEventListener('paste', () => {
+        setTimeout(registerJdUrl, 150);
       });
     }
 
@@ -2706,11 +2967,21 @@ DESIRED QUALIFICATIONS & COMPETENCIES
         if (text.length >= 80) {
           clearTimeout(resumePasteDebounce);
           resumePasteDebounce = setTimeout(() => {
+            // Synchronize Input A
+            const profileRadioCollege = document.getElementById('profileRadioCollege');
+            state.candidateType = (profileRadioCollege && profileRadioCollege.checked) ? 'college_student' : 'working_professional';
+            const candidateInstInput = document.getElementById('candidateInstitutionInput');
+            if (candidateInstInput && candidateInstInput.value.trim()) {
+              state.institutionName = candidateInstInput.value.trim();
+            }
+
             if (window.RepositoryService && typeof window.RepositoryService.recordResume === 'function') {
               window.RepositoryService.recordResume({
                 text: text,
                 fileName: 'Pasted-Resume.txt',
-                numPages: Math.max(1, Math.ceil(text.split(/\s+/).length / 450))
+                numPages: Math.max(1, Math.ceil(text.split(/\s+/).length / 450)),
+                candidateType: state.candidateType,
+                institutionName: state.institutionName
               }).then(() => {
                 updateHeaderRepoCount();
               });
@@ -2736,7 +3007,6 @@ DESIRED QUALIFICATIONS & COMPETENCIES
       });
     }
 
-    // Customized AI JD Generator Button
     // Customized AI JD Generator Button
     const loadSampleJdBtn = document.getElementById('loadSampleJdBtn');
     const jdLoadToast = document.getElementById('jdLoadToast');
@@ -2785,12 +3055,22 @@ DESIRED QUALIFICATIONS & COMPETENCIES
         if (text.length >= 60) {
           clearTimeout(jdPasteDebounce);
           jdPasteDebounce = setTimeout(() => {
+            // Synchronize Input A
+            const profileRadioCollege = document.getElementById('profileRadioCollege');
+            state.candidateType = (profileRadioCollege && profileRadioCollege.checked) ? 'college_student' : 'working_professional';
+            const candidateInstInput = document.getElementById('candidateInstitutionInput');
+            if (candidateInstInput && candidateInstInput.value.trim()) {
+              state.institutionName = candidateInstInput.value.trim();
+            }
+
             if (window.RepositoryService && typeof window.RepositoryService.recordJobDescription === 'function') {
               window.RepositoryService.recordJobDescription({
                 text: text,
                 title: 'Pasted Custom JD',
                 domain: state.targetRole || 'Consulting',
-                tab: 'paste'
+                tab: 'paste',
+                candidateType: state.candidateType,
+                institutionName: state.institutionName
               }).then(() => {
                 updateHeaderRepoCount();
               });
@@ -2894,15 +3174,39 @@ DESIRED QUALIFICATIONS & COMPETENCIES
     }
   }
 
+  let activeCohortType = 'college'; // 'college' | 'company'
+  let latestCohortStats = null;
+
   function switchToView(viewName) {
     const heroSection = document.getElementById('heroSection');
     const inputPanel = document.getElementById('diagnosticInputPanel');
     const resultsPanel = document.getElementById('diagnosticResults');
     const repoSection = document.getElementById('repositorySection');
+    const accessSection = document.getElementById('accessSection');
     const navBtnDiagnostic = document.getElementById('navBtnDiagnostic');
     const navBtnRepository = document.getElementById('navBtnRepository');
+    const navBtnAccess = document.getElementById('navBtnAccess');
 
-    if (viewName === 'repository') {
+    if (viewName === 'access') {
+      // Exclusively allow the 4 co-founders only
+      if (!window.AuthGuard || !window.AuthGuard.isCoFounder()) {
+        console.warn("[Access Control] Access management is restricted to the 4 co-founders only.");
+        return;
+      }
+
+      if (heroSection) heroSection.style.display = 'none';
+      if (inputPanel) inputPanel.style.display = 'none';
+      if (resultsPanel) resultsPanel.style.display = 'none';
+      if (repoSection) repoSection.style.display = 'none';
+      if (accessSection) accessSection.style.display = 'block';
+
+      if (navBtnDiagnostic) navBtnDiagnostic.classList.remove('active');
+      if (navBtnRepository) navBtnRepository.classList.remove('active');
+      if (navBtnAccess) navBtnAccess.classList.add('active');
+
+      loadAccessView();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (viewName === 'repository') {
       // Exclusively allow the 4 co-founders only
       if (!window.AuthGuard || !window.AuthGuard.isCoFounder()) {
         console.warn("[Access Control] Access to the repository is restricted to the 4 co-founders only.");
@@ -2912,9 +3216,11 @@ DESIRED QUALIFICATIONS & COMPETENCIES
       if (heroSection) heroSection.style.display = 'none';
       if (inputPanel) inputPanel.style.display = 'none';
       if (resultsPanel) resultsPanel.style.display = 'none';
+      if (accessSection) accessSection.style.display = 'none';
       if (repoSection) repoSection.style.display = 'flex';
 
       if (navBtnDiagnostic) navBtnDiagnostic.classList.remove('active');
+      if (navBtnAccess) navBtnAccess.classList.remove('active');
       if (navBtnRepository) navBtnRepository.classList.add('active');
 
       loadRepositoryView();
@@ -2924,12 +3230,318 @@ DESIRED QUALIFICATIONS & COMPETENCIES
       if (inputPanel) inputPanel.style.display = '';
       if (resultsPanel && state.lastResult) resultsPanel.style.display = 'flex';
       if (repoSection) repoSection.style.display = 'none';
+      if (accessSection) accessSection.style.display = 'none';
 
       if (navBtnDiagnostic) navBtnDiagnostic.classList.add('active');
       if (navBtnRepository) navBtnRepository.classList.remove('active');
+      if (navBtnAccess) navBtnAccess.classList.remove('active');
 
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+  }
+
+  function renderCohortIntelligence(cohortStats) {
+    if (!cohortStats) return;
+    latestCohortStats = cohortStats;
+
+    const countColleges = document.getElementById('cohortCountColleges');
+    const countCompanies = document.getElementById('cohortCountCompanies');
+    const grid = document.getElementById('cohortCardsGrid');
+    if (!grid) return;
+
+    if (countColleges) countColleges.textContent = cohortStats.colleges.length;
+    if (countCompanies) countCompanies.textContent = cohortStats.companies.length;
+
+    const cohortList = (activeCohortType === 'college') ? cohortStats.colleges : cohortStats.companies;
+
+    if (cohortList.length === 0) {
+      grid.innerHTML = `
+        <div class="cohort-empty-card" style="grid-column: 1 / -1; padding: 28px; text-align: center; background: rgba(5, 38, 31, 0.4); border: 1px dashed rgba(212, 175, 124, 0.2); border-radius: 10px; color: var(--color-text-muted);">
+          <div style="font-size: 24px; margin-bottom: 8px;">${activeCohortType === 'college' ? '🎓' : '🏢'}</div>
+          <strong style="color: #FFF;">No ${activeCohortType === 'college' ? 'College' : 'Corporate'} Cohort Data Recorded Yet</strong>
+          <p style="font-size: 12px; margin-top: 4px;">Candidate evaluations with ${activeCohortType === 'college' ? 'college / university' : 'company / employer'} names entered in Input A will automatically be aggregated here.</p>
+        </div>
+      `;
+      return;
+    }
+
+    grid.innerHTML = cohortList.map(c => {
+      const isCollege = c.type === 'college';
+      const icon = isCollege ? '🎓' : '🏢';
+      const typeLabel = isCollege ? 'Academic Institution' : 'Corporate Enterprise';
+
+      // Domain tags
+      const domainEntries = Object.entries(c.jdDomains || {}).sort((a, b) => b[1] - a[1]);
+      const domainChips = domainEntries.slice(0, 5).map(([d, cnt]) => `
+        <span class="cohort-domain-tag">${escapeHtml(d)}: <strong>${cnt}</strong></span>
+      `).join('');
+
+      return `
+        <div class="cohort-card" data-institution="${escapeHtml(c.name)}">
+          <div class="cohort-card-header">
+            <div class="cohort-inst-info">
+              <span class="cohort-inst-icon">${icon}</span>
+              <div>
+                <div class="cohort-inst-name">${escapeHtml(c.name)}</div>
+                <div class="cohort-inst-type">${typeLabel}</div>
+              </div>
+            </div>
+            <div class="cohort-avg-score-badge" style="background: rgba(212, 175, 124, 0.15); border: 1px solid rgba(212, 175, 124, 0.35); color: var(--color-gold-light);">
+              <span style="font-size: 10px; color: var(--color-text-muted); text-transform: uppercase;">Avg Fit</span>
+              <span>${c.avgScore > 0 ? c.avgScore + '%' : '—'}</span>
+            </div>
+          </div>
+
+          <div class="cohort-metrics-row">
+            <div class="cohort-metric-item">
+              <div class="cohort-metric-val">${c.uniqueResumesCount}</div>
+              <div class="cohort-metric-lbl">Unique Resumes</div>
+            </div>
+            <div class="cohort-metric-item">
+              <div class="cohort-metric-val">${c.targetJdsCount}</div>
+              <div class="cohort-metric-lbl">Target JDs</div>
+            </div>
+            <div class="cohort-metric-item">
+              <div class="cohort-metric-val">${c.assessmentsCount}</div>
+              <div class="cohort-metric-lbl">Diagnostics</div>
+            </div>
+          </div>
+
+          <div class="cohort-breakdown">
+            <div class="cohort-breakdown-title">Candidate Alignment Distribution</div>
+            <div class="cohort-breakdown-pills">
+              <span class="cohort-pill cohort-pill-ready" title="Fit Score >= 80">Ready: <strong>${c.placementReadyCount}</strong></span>
+              <span class="cohort-pill cohort-pill-comp" title="Fit Score 65 - 79">Competitive: <strong>${c.competitiveCount}</strong></span>
+              <span class="cohort-pill cohort-pill-mod" title="Fit Score 50 - 64">Moderate: <strong>${c.moderateCount}</strong></span>
+              <span class="cohort-pill cohort-pill-dev" title="Fit Score < 50">Developing: <strong>${c.developingCount}</strong></span>
+            </div>
+          </div>
+
+          ${domainChips ? `
+            <div class="cohort-breakdown" style="margin-top: 4px;">
+              <div class="cohort-breakdown-title">Target JD Domains Uploaded</div>
+              <div class="cohort-domains-wrap">
+                ${domainChips}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function loadAccessView() {
+    const tableBody = document.getElementById('accessTableBody');
+    const statTotal = document.getElementById('accessStatTotal');
+    const statCoFounders = document.getElementById('accessStatCoFounders');
+    const statEvaluators = document.getElementById('accessStatEvaluators');
+    const tableCount = document.getElementById('accessTableCount');
+
+    if (!tableBody || !window.AuthGuard) return;
+
+    tableBody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; padding: 24px; color: var(--color-gold-light);">
+          <div class="spinner" style="margin: 0 auto 8px;"></div>
+          Loading authorized access whitelist...
+        </td>
+      </tr>
+    `;
+
+    try {
+      const allowedUsers = await window.AuthGuard.fetchAllowedUsers();
+
+      const coFounders = [
+        { email: 'upam.patra@gmail.com', name: 'Upam Patra', role: 'Co-Founder & Administrator', institution: 'My Career Company', type: 'founder' },
+        { email: 'iimonkataki@mycareercompany.com', name: 'Iimon Kataki', role: 'Co-Founder & Administrator', institution: 'My Career Company', type: 'founder' },
+        { email: 'ibonkataki@mycareercompany.com', name: 'Ibon Kataki', role: 'Co-Founder & Administrator', institution: 'My Career Company', type: 'founder' },
+        { email: 'anirbanroy@mycareercompany.com', name: 'Anirban Roy', role: 'Co-Founder & Administrator', institution: 'My Career Company', type: 'founder' }
+      ];
+
+      const totalCount = coFounders.length + allowedUsers.length;
+      if (statTotal) statTotal.textContent = totalCount;
+      if (statCoFounders) statCoFounders.textContent = coFounders.length;
+      if (statEvaluators) statEvaluators.textContent = allowedUsers.length;
+      if (tableCount) tableCount.textContent = totalCount;
+
+      let html = '';
+
+      // 1. Render Permanent Co-Founders
+      coFounders.forEach(f => {
+        const initials = f.name.split(' ').map(w => w[0]).join('').toUpperCase();
+        html += `
+          <tr class="access-row-founder">
+            <td>
+              <div class="access-user-cell">
+                <div class="access-user-avatar" style="background: rgba(212, 175, 124, 0.25); color: var(--color-gold-light);">${escapeHtml(initials)}</div>
+                <div>
+                  <div style="font-weight: 700; color: #FFF;">${escapeHtml(f.name)}</div>
+                  <div style="font-size: 11.5px; color: var(--color-gold-light); font-family: monospace;">${escapeHtml(f.email)}</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="badge-founder">Co-Founder (Owner)</span></td>
+            <td><span style="color: var(--color-text-secondary);">${escapeHtml(f.institution)}</span></td>
+            <td><span style="color: var(--color-text-muted); font-size: 11.5px;">Permanent</span></td>
+            <td><span class="status-active">● Active</span></td>
+            <td><span class="action-locked">🔒 Primary Owner</span></td>
+          </tr>
+        `;
+      });
+
+      // 2. Render Whitelisted Users
+      allowedUsers.forEach(u => {
+        const displayName = u.name || u.email.split('@')[0];
+        const initials = displayName.substring(0, 2).toUpperCase();
+        const inst = u.institution || '—';
+        const grantedDate = u.grantedAt ? new Date(u.grantedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Active';
+
+        html += `
+          <tr class="access-row-granted" data-email="${escapeHtml(u.email)}">
+            <td>
+              <div class="access-user-cell">
+                <div class="access-user-avatar" style="background: rgba(66, 133, 244, 0.2); color: #8AB4F8;">${escapeHtml(initials)}</div>
+                <div>
+                  <div style="font-weight: 700; color: #FFF;">${escapeHtml(displayName)}</div>
+                  <div style="font-size: 11.5px; color: #8AB4F8; font-family: monospace;">${escapeHtml(u.email)}</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="badge-granted">Granted User</span></td>
+            <td><span style="color: var(--color-text-secondary);">${escapeHtml(inst)}</span></td>
+            <td><span style="color: var(--color-text-muted); font-size: 11.5px;">${escapeHtml(grantedDate)}</span></td>
+            <td><span class="status-active">● Active</span></td>
+            <td>
+              <button type="button" class="btn-resend" data-action="resend-invite" data-email="${escapeHtml(u.email)}" data-name="${escapeHtml(displayName)}" data-inst="${escapeHtml(inst)}" title="Open invitation email">
+                ✉️ Invite
+              </button>
+              <button type="button" class="btn-revoke" data-action="revoke-access" data-email="${escapeHtml(u.email)}" title="Revoke access for this user">
+                Revoke
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+
+      tableBody.innerHTML = html;
+
+      // Bind Revoke buttons
+      tableBody.querySelectorAll('[data-action="revoke-access"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const email = btn.getAttribute('data-email');
+          if (confirm(`Are you sure you want to revoke access for ${email}? This user will no longer be permitted to log into the portal.`)) {
+            await window.AuthGuard.revokeUserAccess(email);
+            loadAccessView();
+          }
+        });
+      });
+
+      // Bind Resend Invite buttons (Automatically dispatch without mailto)
+      tableBody.querySelectorAll('[data-action="resend-invite"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const email = btn.getAttribute('data-email');
+          const name = btn.getAttribute('data-name');
+          const inst = btn.getAttribute('data-inst');
+
+          btn.disabled = true;
+          const origHtml = btn.innerHTML;
+          btn.innerHTML = '<span class="spinner" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle;"></span> Sending...';
+
+          try {
+            await window.AuthGuard.sendInvitationEmail(email, { name: name, institution: inst });
+            btn.innerHTML = '✓ Sent!';
+            const statusEl = document.getElementById('accessGrantStatus');
+            if (statusEl) {
+              statusEl.style.display = 'inline-flex';
+              statusEl.className = 'access-grant-status success-banner';
+              statusEl.innerHTML = `✓ <strong>Invitation Re-Dispatched:</strong> Automated email sent from <code>support@mycareercompany.com</code> to <strong>${escapeHtml(email)}</strong>.`;
+            }
+            setTimeout(() => {
+              btn.disabled = false;
+              btn.innerHTML = origHtml;
+            }, 3000);
+          } catch (err) {
+            alert('Failed to send invitation email: ' + err.message);
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+          }
+        });
+      });
+
+    } catch (err) {
+      console.error("[AccessView] Load error:", err);
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 24px; color: #FFA4A4;">
+            Failed to load access whitelist: ${escapeHtml(err.message)}
+          </td>
+        </tr>
+      `;
+    }
+  }
+
+  function openAccessInviteModal(email, name, institution) {
+    const modal = document.getElementById('accessInviteModal');
+    const recipientEmail = document.getElementById('inviteRecipientEmail');
+    const toInput = document.getElementById('inviteToInput');
+    const subjectInput = document.getElementById('inviteSubjectInput');
+    const bodyTextarea = document.getElementById('inviteBodyTextarea');
+    const resendBtn = document.getElementById('modalResendInviteAutomatedBtn');
+    if (!modal) return;
+
+    if (recipientEmail) recipientEmail.textContent = email;
+    if (toInput) toInput.value = email;
+
+    const portalUrl = 'https://www.mycareercompany.com/ResumeFitScore';
+    const recipientGreeting = name ? name : 'Colleague';
+    const instText = institution && institution !== '—' ? ` for ${institution}` : '';
+
+    const subject = `[Career Clinic] Access Granted to Resume Fit Score™ Portal${instText}`;
+    if (subjectInput) subjectInput.value = subject;
+
+    const emailBody = `Dear ${recipientGreeting},
+
+You have been granted official access to the Career Clinic — Resume Fit Score™ Portal by My Career Company.
+
+You can now sign in with this Google account (${email}) and access the Diagnostic Engine to evaluate candidate resumes against calibrated recruiter benchmarks across 28 recruitment domains.
+
+Access Link: ${portalUrl}
+
+Key Features Available to You:
+• Calibrated evaluation against verified placement benchmarks
+• Multi-format CV intake (.PDF, .DOCX, and direct text)
+• Cross-domain suitability calibration & bullet rewrites
+• Target JD correlation and competitive placement readiness scoring
+
+If you have any questions or require assistance, please reach out to the administrative team at My Career Company.
+
+Best regards,
+Career Clinic Institutional Evaluation Team
+My Career Company
+www.mycareercompany.com`;
+
+    if (bodyTextarea) bodyTextarea.value = emailBody;
+
+    if (resendBtn) {
+      resendBtn.onclick = async () => {
+        resendBtn.disabled = true;
+        resendBtn.innerHTML = '<span class="spinner" style="width: 12px; height: 12px; display: inline-block;"></span> Sending...';
+        try {
+          await window.AuthGuard.sendInvitationEmail(email, { name, institution });
+          resendBtn.innerHTML = '✓ Dispatched from support@mycareercompany.com';
+          setTimeout(() => {
+            resendBtn.disabled = false;
+            resendBtn.innerHTML = '<span class="btn-icon">✉️</span> Resend Automated Email';
+          }, 3000);
+        } catch (err) {
+          alert('Failed to send email: ' + err.message);
+          resendBtn.disabled = false;
+          resendBtn.innerHTML = '<span class="btn-icon">✉️</span> Resend Automated Email';
+        }
+      };
+    }
+
+    modal.style.display = 'flex';
   }
 
   async function loadRepositoryView() {
@@ -2948,6 +3560,8 @@ DESIRED QUALIFICATIONS & COMPETENCIES
     const filterDomain = document.getElementById('repoFilterDomain');
     const filterBand = document.getElementById('repoFilterBand');
     const filterEvaluator = document.getElementById('repoFilterEvaluator');
+    const filterAffiliation = document.getElementById('repoFilterAffiliation');
+    const filterInstitution = document.getElementById('repoFilterInstitution');
     const sortBy = document.getElementById('repoSortBy');
 
     const filters = {
@@ -2955,6 +3569,8 @@ DESIRED QUALIFICATIONS & COMPETENCIES
       domain: filterDomain ? filterDomain.value : 'all',
       band: filterBand ? filterBand.value : 'all',
       evaluator: filterEvaluator ? filterEvaluator.value : 'all',
+      institutionType: filterAffiliation ? filterAffiliation.value : 'all',
+      institution: filterInstitution ? filterInstitution.value : 'all',
       sortBy: sortBy ? sortBy.value : 'newest'
     };
 
@@ -2966,6 +3582,26 @@ DESIRED QUALIFICATIONS & COMPETENCIES
       ]);
 
       currentLoadedAssessments = assessments;
+
+      // Dynamically populate Institution Dropdown options from active data
+      if (filterInstitution) {
+        const currentVal = filterInstitution.value;
+        const instSet = new Set();
+        [...assessments, ...uniqueResumes].forEach(it => {
+          if (it.institutionName && it.institutionName.trim()) {
+            instSet.add(it.institutionName.trim());
+          }
+        });
+        const sortedInsts = Array.from(instSet).sort();
+        filterInstitution.innerHTML = '<option value="all">All Colleges &amp; Companies</option>' +
+          sortedInsts.map(inst => `<option value="${escapeHtml(inst)}" ${inst === currentVal ? 'selected' : ''}>${escapeHtml(inst)}</option>`).join('');
+      }
+
+      // Calculate & Render Cohort Intelligence Grid
+      if (window.RepositoryService && typeof window.RepositoryService.calculateCohortStats === 'function') {
+        const cohortStats = window.RepositoryService.calculateCohortStats(assessments, uniqueResumes, uniqueJds);
+        renderCohortIntelligence(cohortStats);
+      }
 
       const stats = window.RepositoryService.calculateStats(assessments, uniqueResumes, uniqueJds);
 
@@ -3423,7 +4059,7 @@ DESIRED QUALIFICATIONS & COMPETENCIES
   }
 
   function closeAllModals() {
-    ['teamNotifyModal', 'reportViewerModal', 'documentViewerModal'].forEach(id => {
+    ['teamNotifyModal', 'reportViewerModal', 'documentViewerModal', 'accessInviteModal'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.style.display = 'none';
     });
@@ -3489,16 +4125,39 @@ DESIRED QUALIFICATIONS & COMPETENCIES
         }
       });
     }
-    // Navigation switching
+
+    // Navigation switching (Diagnostic Engine vs Repository vs Access)
     const navBtnDiagnostic = document.getElementById('navBtnDiagnostic');
     const navBtnRepository = document.getElementById('navBtnRepository');
+    const navBtnAccess = document.getElementById('navBtnAccess');
     const viewInRepoBtn = document.getElementById('viewInRepoBtn');
     const repoEmptyRunBtn = document.getElementById('repoEmptyRunBtn');
 
     if (navBtnDiagnostic) navBtnDiagnostic.addEventListener('click', () => switchToView('diagnostic'));
     if (navBtnRepository) navBtnRepository.addEventListener('click', () => switchToView('repository'));
+    if (navBtnAccess) navBtnAccess.addEventListener('click', () => switchToView('access'));
     if (viewInRepoBtn) viewInRepoBtn.addEventListener('click', () => switchToView('repository'));
     if (repoEmptyRunBtn) repoEmptyRunBtn.addEventListener('click', () => switchToView('diagnostic'));
+
+    // Cohort Intelligence Type Toggles (College vs Corporate)
+    const btnCohortColleges = document.getElementById('btnCohortColleges');
+    const btnCohortCompanies = document.getElementById('btnCohortCompanies');
+
+    if (btnCohortColleges && btnCohortCompanies) {
+      btnCohortColleges.addEventListener('click', () => {
+        activeCohortType = 'college';
+        btnCohortColleges.classList.add('active');
+        btnCohortCompanies.classList.remove('active');
+        renderCohortIntelligence(latestCohortStats);
+      });
+
+      btnCohortCompanies.addEventListener('click', () => {
+        activeCohortType = 'company';
+        btnCohortCompanies.classList.add('active');
+        btnCohortColleges.classList.remove('active');
+        renderCohortIntelligence(latestCohortStats);
+      });
+    }
 
     // Toolbar Filters & Search with Debounce
     const searchInput = document.getElementById('repoSearchInput');
@@ -3523,10 +4182,87 @@ DESIRED QUALIFICATIONS & COMPETENCIES
       });
     }
 
-    ['repoFilterDomain', 'repoFilterBand', 'repoFilterEvaluator', 'repoSortBy'].forEach(id => {
+    ['repoFilterDomain', 'repoFilterBand', 'repoFilterEvaluator', 'repoFilterAffiliation', 'repoFilterInstitution', 'repoSortBy'].forEach(id => {
       const sel = document.getElementById(id);
       if (sel) sel.addEventListener('change', () => loadRepositoryView());
     });
+
+    // Access Grant Form & Whitelist Search Listeners
+    const accessGrantForm = document.getElementById('accessGrantForm');
+    const newAccessEmail = document.getElementById('newAccessEmail');
+    const newAccessName = document.getElementById('newAccessName');
+    const newAccessInstitution = document.getElementById('newAccessInstitution');
+    const btnGrantAccess = document.getElementById('btnGrantAccess');
+
+    if (accessGrantForm && newAccessEmail) {
+      accessGrantForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = newAccessEmail.value.trim().toLowerCase();
+        const name = newAccessName ? newAccessName.value.trim() : '';
+        const institution = newAccessInstitution ? newAccessInstitution.value.trim() : '';
+
+        if (!email || !email.includes('@')) {
+          alert('Please enter a valid Google email address.');
+          return;
+        }
+
+        if (btnGrantAccess) {
+          btnGrantAccess.disabled = true;
+          btnGrantAccess.innerHTML = '<span class="spinner" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle; margin-right: 6px;"></span> Granting Access &amp; Dispatching Email...';
+        }
+
+        try {
+          await window.AuthGuard.grantUserAccess(email, {
+            name: name,
+            institution: institution
+          });
+
+          // Show prominent automated email success banner in the UI
+          const grantStatus = document.getElementById('accessGrantStatus');
+          if (grantStatus) {
+            grantStatus.style.display = 'inline-flex';
+            grantStatus.className = 'access-grant-status success-banner';
+            grantStatus.innerHTML = `✓ <strong>Access Granted &amp; Email Sent:</strong> Automated invitation email sent from <code>support@mycareercompany.com</code> to <strong>${escapeHtml(email)}</strong> with direct portal access link.`;
+          }
+
+          // Clear form fields
+          newAccessEmail.value = '';
+          if (newAccessName) newAccessName.value = '';
+          if (newAccessInstitution) newAccessInstitution.value = '';
+
+          // Refresh access list
+          loadAccessView();
+        } catch (err) {
+          alert('Failed to grant access: ' + err.message);
+        } finally {
+          if (btnGrantAccess) {
+            btnGrantAccess.disabled = false;
+            btnGrantAccess.innerHTML = '<span class="btn-icon">✉️</span> Grant Access &amp; Send Invitation';
+          }
+        }
+      });
+    }
+
+    // Access table live filter
+    const accessSearchInput = document.getElementById('accessSearchInput');
+    let accessSearchDebounce = null;
+    if (accessSearchInput) {
+      accessSearchInput.addEventListener('input', () => {
+        clearTimeout(accessSearchDebounce);
+        accessSearchDebounce = setTimeout(() => {
+          const query = accessSearchInput.value.trim().toLowerCase();
+          const rows = document.querySelectorAll('#accessTableBody tr');
+          rows.forEach(r => {
+            if (!query) {
+              r.style.display = '';
+            } else {
+              const text = r.textContent.toLowerCase();
+              r.style.display = text.includes(query) ? '' : 'none';
+            }
+          });
+        }, 150);
+      });
+    }
 
     // Header Actions
     const notifyBtn = document.getElementById('repoNotifyTeamBtn');
@@ -3545,13 +4281,13 @@ DESIRED QUALIFICATIONS & COMPETENCIES
     if (refreshBtn) refreshBtn.addEventListener('click', () => loadRepositoryView());
 
     // Modal Close Buttons
-    ['modalCloseNotifyBtn', 'modalCloseReportBtn', 'modalCloseReportFooterBtn', 'modalCloseDocBtn'].forEach(id => {
+    ['modalCloseNotifyBtn', 'modalCloseReportBtn', 'modalCloseReportFooterBtn', 'modalCloseDocBtn', 'modalCloseAccessInviteBtn'].forEach(id => {
       const btn = document.getElementById(id);
       if (btn) btn.addEventListener('click', closeAllModals);
     });
 
     // Close on overlay backdrop click
-    ['teamNotifyModal', 'reportViewerModal', 'documentViewerModal'].forEach(id => {
+    ['teamNotifyModal', 'reportViewerModal', 'documentViewerModal', 'accessInviteModal'].forEach(id => {
       const overlay = document.getElementById(id);
       if (overlay) {
         overlay.addEventListener('click', (e) => {
@@ -3559,6 +4295,38 @@ DESIRED QUALIFICATIONS & COMPETENCIES
         });
       }
     });
+
+    // Access Invite Modal Copy Buttons
+    const modalCopyInviteEmailBtn = document.getElementById('modalCopyInviteEmailBtn');
+    const modalCopyPortalLinkBtn = document.getElementById('modalCopyPortalLinkBtn');
+    const inviteCopySuccessNote = document.getElementById('inviteCopySuccessNote');
+
+    if (modalCopyInviteEmailBtn) {
+      modalCopyInviteEmailBtn.addEventListener('click', () => {
+        const bodyTextarea = document.getElementById('inviteBodyTextarea');
+        if (bodyTextarea) {
+          navigator.clipboard.writeText(bodyTextarea.value).then(() => {
+            if (inviteCopySuccessNote) {
+              inviteCopySuccessNote.textContent = '✓ Message Copied!';
+              inviteCopySuccessNote.style.display = 'inline';
+              setTimeout(() => { inviteCopySuccessNote.style.display = 'none'; }, 2200);
+            }
+          });
+        }
+      });
+    }
+
+    if (modalCopyPortalLinkBtn) {
+      modalCopyPortalLinkBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText('https://www.mycareercompany.com/ResumeFitScore').then(() => {
+          if (inviteCopySuccessNote) {
+            inviteCopySuccessNote.textContent = '✓ Portal Link Copied!';
+            inviteCopySuccessNote.style.display = 'inline';
+            setTimeout(() => { inviteCopySuccessNote.style.display = 'none'; }, 2200);
+          }
+        });
+      });
+    }
 
     // Copy Email Button in Team Notify Modal
     const copyEmailBtn = document.getElementById('modalCopyEmailBtn');

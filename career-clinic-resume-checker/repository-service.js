@@ -207,12 +207,18 @@
     if (!a || !b) return false;
     if (a.id && b.id && a.id === b.id) return true;
 
-    if (a.contentHash && b.contentHash && a.contentHash === b.contentHash) return true;
-
-    // URL match
+    // URL match: If either has a URL, treat URL as the primary unique key
     const urlA = (a.url || '').toLowerCase().trim();
     const urlB = (b.url || '').toLowerCase().trim();
-    if (urlA && urlB && urlA === urlB) return true;
+    if (urlA && urlB) {
+      return urlA === urlB;
+    }
+    // A linked JD and a file upload / text paste JD are never duplicates
+    if ((urlA && !urlB) || (!urlA && urlB)) {
+      return false;
+    }
+
+    if (a.contentHash && b.contentHash && a.contentHash === b.contentHash) return true;
 
     const titleA = normalizeFileNameForComparison(a.title || a.fileName);
     const titleB = normalizeFileNameForComparison(b.title || b.fileName);
@@ -230,7 +236,9 @@
     const wordsB = Number(b.wordCount) || 0;
     const sameWordCount = wordsA > 0 && wordsB > 0 && Math.abs(wordsA - wordsB) <= 5;
 
-    if (sameTitle && (sameDomain || sameSize || sameWordCount)) {
+    // Only consider duplicate if non-generic title and (same domain or size or word count)
+    const isGenericTitle = (titleA || '').includes('customtargetjobdescription') || (titleA || '').includes('targetjobdescription');
+    if (!isGenericTitle && sameTitle && (sameDomain || sameSize || sameWordCount)) {
       return true;
     }
 
@@ -473,7 +481,13 @@
   async function recordResume(payload = {}) {
     initFirebaseServices();
     const now = new Date();
-    const { file, text = '', numPages = 1 } = payload;
+    const {
+      file,
+      text = '',
+      numPages = 1,
+      candidateType = 'college_student',
+      institutionName = ''
+    } = payload;
     const fileName = file ? file.name : (payload.fileName || 'Pasted-Resume.txt');
     const wordCount = (text.match(/\b[A-Za-z0-9'-]+\b/g) || []).length;
     const fileSizeBytes = file ? file.size : text.length;
@@ -494,6 +508,8 @@
     const resumeRecord = {
       id: canonicalId,
       candidateName: candidateName,
+      candidateType: candidateType || 'college_student',
+      institutionName: (institutionName || '').trim(),
       fileName: fileName,
       fileType: file ? (fileName.toLowerCase().endsWith('.pdf') ? 'PDF' : 'DOCX') : 'TEXT',
       fileSizeBytes: fileSizeBytes,
@@ -519,6 +535,10 @@
       // Reuse existing document ID and preserve original creation time
       resumeRecord.id = existingMatch.id;
       resumeRecord.createdAt = existingMatch.createdAt || resumeRecord.createdAt;
+      if (!resumeRecord.institutionName && existingMatch.institutionName) {
+        resumeRecord.institutionName = existingMatch.institutionName;
+        resumeRecord.candidateType = existingMatch.candidateType;
+      }
       if (!resumeRecord.fullText && existingMatch.fullText) {
         resumeRecord.fullText = existingMatch.fullText;
         resumeRecord.snippet = existingMatch.snippet;
@@ -543,7 +563,7 @@
   /**
    * RECORD UNIQUE JOB DESCRIPTION IMMEDIATELY
    * Automatically triggered when a JD is uploaded, pasted, linked, or chosen.
-   * Scans existing records by title, domain, file size, and content to prevent duplicates.
+   * Scans existing records by title, domain, file size, URL, and content to prevent duplicates.
    */
   async function recordJobDescription(payload = {}) {
     initFirebaseServices();
@@ -555,36 +575,49 @@
       domain = 'Consulting',
       subDomain = '',
       tab = 'upload',
-      url = ''
+      url = '',
+      candidateType = '',
+      institutionName = ''
     } = payload;
 
-    const fileName = file ? file.name : (title || 'Target-Job-Description.txt');
+    const urlClean = (url || '').trim();
+    const isLink = Boolean(urlClean);
+
+    // If it's a URL, compute a distinct content hash based on the URL itself
+    const fileName = file ? file.name : (title || (isLink ? 'Job-Link.txt' : 'Target-Job-Description.txt'));
     const wordCount = (text.match(/\b[A-Za-z0-9'-]+\b/g) || []).length;
-    const fileSizeBytes = file ? file.size : text.length;
-    const contentHash = generateContentHash(text, fileName || title, fileSizeBytes);
+    const fileSizeBytes = file ? file.size : (text ? text.length : (urlClean ? urlClean.length : 0));
+    const contentHash = isLink ? computeHash(`link_${urlClean.toLowerCase()}`) : generateContentHash(text, fileName || title, fileSizeBytes);
 
     const { userEmail, userName, userPhoto } = getAuthenticatedUserInfo();
 
-    const cleanTitle = (title || fileName || 'JD')
-      .replace(/\.[^/.]+$/, '')
-      .replace(/[^\w\s-]/g, '')
-      .replace(/[\s-]+/g, '_')
-      .substring(0, 30);
-
-    const canonicalId = `JD_${cleanTitle}_${contentHash}`;
+    let canonicalId;
+    if (isLink) {
+      const urlHash = computeHash(urlClean.toLowerCase());
+      canonicalId = `JD_LINK_${urlHash}`;
+    } else {
+      const cleanTitle = (title || fileName || 'JD')
+        .replace(/\.[^/.]+$/, '')
+        .replace(/[^\w\s-]/g, '')
+        .replace(/[\s-]+/g, '_')
+        .substring(0, 30);
+      canonicalId = `JD_${cleanTitle}_${contentHash}`;
+    }
 
     const jdRecord = {
       id: canonicalId,
-      title: title || (file ? file.name : 'Target Job Description'),
+      title: title || (file ? file.name : (isLink ? `Job Link: ${urlClean.substring(0, 60)}` : 'Target Job Description')),
       domain: domain || 'Consulting',
       subDomain: subDomain || '',
       fileName: file ? file.name : null,
       fileSizeBytes: fileSizeBytes,
       wordCount: wordCount,
-      tab: tab || 'upload',
-      url: url || '',
-      snippet: text ? text.substring(0, 350) : '',
-      fullText: text || '',
+      tab: tab || (isLink ? 'link' : 'upload'),
+      url: urlClean,
+      candidateType: candidateType || '',
+      institutionName: (institutionName || '').trim(),
+      snippet: text ? text.substring(0, 350) : (isLink ? urlClean : ''),
+      fullText: text || urlClean || '',
       contentHash: contentHash,
       evaluator: {
         email: userEmail,
@@ -601,6 +634,10 @@
     if (existingMatch) {
       jdRecord.id = existingMatch.id;
       jdRecord.createdAt = existingMatch.createdAt || jdRecord.createdAt;
+      if (!jdRecord.institutionName && existingMatch.institutionName) {
+        jdRecord.institutionName = existingMatch.institutionName;
+        jdRecord.candidateType = existingMatch.candidateType;
+      }
       if (!jdRecord.fullText && existingMatch.fullText) {
         jdRecord.fullText = existingMatch.fullText;
         jdRecord.snippet = existingMatch.snippet;
@@ -642,14 +679,20 @@
       jdTab = 'domain',
       jdUrl = '',
       targetRole = 'consulting',
+      candidateType = 'college_student',
+      institutionName = '',
       result = {}
     } = payload;
+
+    const cleanInstName = (institutionName || '').trim();
 
     // 1. Immediately record resume & JD into unique stores
     const recordedResume = await recordResume({
       file: resumeFile,
       text: resumeText,
-      numPages: resumeNumPages
+      numPages: resumeNumPages,
+      candidateType: candidateType,
+      institutionName: cleanInstName
     });
 
     let jdTitle = 'Custom Target Job Description';
@@ -664,6 +707,8 @@
       jdLevels = Array.isArray(jdObject.levels) ? jdObject.levels.join(' / ') : (jdObject.levels || '');
     } else if (jdFile) {
       jdTitle = jdFile.name;
+    } else if (jdTab === 'link' && jdUrl) {
+      jdTitle = payload.jdTitle || `Job Link: ${jdUrl.substring(0, 50)}`;
     } else if (jdTab === 'domain') {
       jdTitle = `${(targetRole || 'Placement').toUpperCase()} Placement Benchmark`;
     }
@@ -675,7 +720,9 @@
       domain: jdDomain,
       subDomain: jdSubDomain,
       tab: jdTab,
-      url: jdUrl
+      url: jdUrl,
+      candidateType: candidateType,
+      institutionName: cleanInstName
     });
 
     const candidateName = extractCandidateName({ displayName: userName, email: userEmail }, resumeFile, resumeText);
@@ -729,6 +776,11 @@
       `#evaluator:${evaluatorTag}`
     ];
 
+    if (cleanInstName) {
+      tags.push(`#inst:${cleanInstName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`);
+      tags.push(`#cohort:${candidateType || 'college'}`);
+    }
+
     if (jdTab === 'domain') tags.push('#institutional-jd');
     if (jdTab === 'upload') tags.push('#uploaded-jd');
     if (jdTab === 'paste') tags.push('#pasted-jd');
@@ -738,6 +790,8 @@
     const record = {
       id: recordId,
       candidateName: candidateName,
+      candidateType: candidateType || 'college_student',
+      institutionName: cleanInstName,
       createdAt: now.toISOString(),
       savedAt: Date.now(),
       formattedTime: formatReadableDateTime(now),
@@ -925,6 +979,21 @@
       });
     }
 
+    if (filters.institution && filters.institution !== 'all') {
+      const inst = filters.institution.toLowerCase().trim();
+      filtered = filtered.filter(item => {
+        const itemInst = (item.institutionName || '').toLowerCase().trim();
+        return itemInst === inst || itemInst.includes(inst);
+      });
+    }
+
+    if (filters.institutionType && filters.institutionType !== 'all') {
+      const type = filters.institutionType.toLowerCase().trim();
+      filtered = filtered.filter(item => {
+        return (item.candidateType || '').toLowerCase() === type;
+      });
+    }
+
     if (filters.sortBy) {
       const sortBy = filters.sortBy;
       if (sortBy === 'newest') filtered.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
@@ -988,7 +1057,23 @@
       records = records.filter(item => {
         return (item.candidateName || '').toLowerCase().includes(q) ||
           (item.fileName || '').toLowerCase().includes(q) ||
+          (item.institutionName || '').toLowerCase().includes(q) ||
           (item.evaluator && item.evaluator.email || '').toLowerCase().includes(q);
+      });
+    }
+
+    if (filters.institution && filters.institution !== 'all') {
+      const inst = filters.institution.toLowerCase().trim();
+      records = records.filter(item => {
+        const itemInst = (item.institutionName || '').toLowerCase().trim();
+        return itemInst === inst || itemInst.includes(inst);
+      });
+    }
+
+    if (filters.institutionType && filters.institutionType !== 'all') {
+      const type = filters.institutionType.toLowerCase().trim();
+      records = records.filter(item => {
+        return (item.candidateType || '').toLowerCase() === type;
       });
     }
 
@@ -1045,7 +1130,32 @@
       records = records.filter(item => {
         return (item.title || '').toLowerCase().includes(q) ||
           (item.domain || '').toLowerCase().includes(q) ||
+          (item.url || '').toLowerCase().includes(q) ||
+          (item.institutionName || '').toLowerCase().includes(q) ||
           (item.evaluator && item.evaluator.email || '').toLowerCase().includes(q);
+      });
+    }
+
+    if (filters.domain && filters.domain !== 'all') {
+      const dom = filters.domain.toLowerCase().trim();
+      records = records.filter(item => {
+        const itemDom = (item.domain || '').toLowerCase().trim();
+        return itemDom.includes(dom);
+      });
+    }
+
+    if (filters.institution && filters.institution !== 'all') {
+      const inst = filters.institution.toLowerCase().trim();
+      records = records.filter(item => {
+        const itemInst = (item.institutionName || '').toLowerCase().trim();
+        return itemInst === inst || itemInst.includes(inst);
+      });
+    }
+
+    if (filters.institutionType && filters.institutionType !== 'all') {
+      const type = filters.institutionType.toLowerCase().trim();
+      records = records.filter(item => {
+        return (item.candidateType || '').toLowerCase() === type;
       });
     }
 
@@ -1163,6 +1273,128 @@
       competitiveCount: compCount,
       topDomain: topDomain
     };
+  }
+
+  /**
+   * Calculate College-wise and Company-wise Cohort Intelligence
+   * Computes unique resumes count, target JDs uploaded & domain breakdown,
+   * avg fit score, placement ready (80+), competitive (65-79), moderate (50-64), developing (<50).
+   */
+  function calculateCohortStats(assessments = [], resumes = [], jds = []) {
+    const cohortsMap = new Map();
+
+    function getOrCreateCohort(rawName, defaultType = 'college') {
+      const name = (rawName || '').trim();
+      if (!name) return null;
+      const key = name.toLowerCase();
+      if (!cohortsMap.has(key)) {
+        cohortsMap.set(key, {
+          name: name,
+          type: defaultType, // 'college' or 'company'
+          uniqueResumesSet: new Set(),
+          assessmentsCount: 0,
+          totalScoreSum: 0,
+          avgScore: 0,
+          placementReadyCount: 0, // >= 80
+          competitiveCount: 0,    // 65 - 79
+          moderateCount: 0,       // 50 - 64
+          developingCount: 0,     // < 50
+          targetJdsCount: 0,
+          jdDomains: {},
+          topDomain: '—'
+        });
+      }
+      return cohortsMap.get(key);
+    }
+
+    // 1. Process Unique Resumes
+    resumes.forEach(r => {
+      const inst = (r.institutionName || '').trim();
+      if (!inst) return;
+      const type = (r.candidateType === 'working_professional') ? 'company' : 'college';
+      const c = getOrCreateCohort(inst, type);
+      if (c) {
+        c.uniqueResumesSet.add(r.id || r.candidateName || inst);
+      }
+    });
+
+    // 2. Process Assessments
+    assessments.forEach(a => {
+      const inst = (a.institutionName || '').trim();
+      if (!inst) return;
+      const type = (a.candidateType === 'working_professional') ? 'company' : 'college';
+      const c = getOrCreateCohort(inst, type);
+      if (!c) return;
+
+      c.assessmentsCount++;
+      const score = (a.report && a.report.totalScore) || 0;
+      c.totalScoreSum += score;
+
+      if (score >= 80) c.placementReadyCount++;
+      else if (score >= 65) c.competitiveCount++;
+      else if (score >= 50) c.moderateCount++;
+      else c.developingCount++;
+
+      // Track target JD from assessment
+      if (a.jobDescription) {
+        c.targetJdsCount++;
+        const dom = a.jobDescription.domain || 'Consulting';
+        c.jdDomains[dom] = (c.jdDomains[dom] || 0) + 1;
+      }
+
+      if (a.resume && a.resume.id) {
+        c.uniqueResumesSet.add(a.resume.id);
+      } else if (a.candidateName) {
+        c.uniqueResumesSet.add(a.candidateName);
+      }
+    });
+
+    // 3. Process Standalone Unique JDs with institution info
+    jds.forEach(j => {
+      const inst = (j.institutionName || '').trim();
+      if (!inst) return;
+      const type = (j.candidateType === 'working_professional') ? 'company' : 'college';
+      const c = getOrCreateCohort(inst, type);
+      if (!c) return;
+      c.targetJdsCount++;
+      const dom = j.domain || 'Consulting';
+      c.jdDomains[dom] = (c.jdDomains[dom] || 0) + 1;
+    });
+
+    const colleges = [];
+    const companies = [];
+    const allInstitutions = [];
+
+    cohortsMap.forEach(c => {
+      c.uniqueResumesCount = c.uniqueResumesSet.size;
+      c.avgScore = c.assessmentsCount > 0 ? Math.round((c.totalScoreSum / c.assessmentsCount) * 10) / 10 : 0;
+
+      let maxDomCount = 0;
+      let topDom = '—';
+      Object.entries(c.jdDomains).forEach(([dom, count]) => {
+        if (count > maxDomCount) {
+          maxDomCount = count;
+          topDom = dom;
+        }
+      });
+      c.topDomain = topDom;
+
+      delete c.uniqueResumesSet; // Remove non-serializable Set
+      allInstitutions.push(c);
+      if (c.type === 'company') {
+        companies.push(c);
+      } else {
+        colleges.push(c);
+      }
+    });
+
+    // Sort descending by unique resumes count then assessments count
+    const sorter = (a, b) => (b.uniqueResumesCount - a.uniqueResumesCount) || (b.assessmentsCount - a.assessmentsCount);
+    colleges.sort(sorter);
+    companies.sort(sorter);
+    allInstitutions.sort(sorter);
+
+    return { colleges, companies, allInstitutions };
   }
 
   /**
@@ -1390,6 +1622,7 @@ www.mycareercompany.com`;
     deleteResume: deleteResume,
     deleteJobDescription: deleteJobDescription,
     calculateStats: calculateStats,
+    calculateCohortStats: calculateCohortStats,
     exportToCsv: exportToCsv,
     exportToJson: exportToJson,
     getTeamNotificationData: getTeamNotificationData,
