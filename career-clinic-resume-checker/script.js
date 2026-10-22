@@ -661,27 +661,44 @@ SKILLS & CERTIFICATIONS
     const companyClearBtn = document.getElementById('jdCompanyClearBtn');
     const companyDropdownMenu = document.getElementById('jdCompanyDropdownMenu');
     const companyComboboxWrapper = document.getElementById('jdCompanyComboboxWrapper');
+    const changeCompanyWrap = document.getElementById('jdChangeCompanyWrap');
+    const changeCompanyBtn = document.getElementById('jdChangeCompanyBtn');
     const companySelect = document.getElementById('jdCompanySelect');
     const otherFields = document.getElementById('jdOtherCompanyFields');
     const archetypeSelect = document.getElementById('jdArchetypeSelect');
     const segmentSelect = document.getElementById('jdSegmentSelect');
     const domainSelect = document.getElementById('jdDomainSelect');
     const levelSelect = document.getElementById('jdLevelSelect');
-    const levelPillsContainer = document.getElementById('jdLevelPills');
+    const levelHint = document.getElementById('jdLevelHint');
+    const rolePillsGroup = document.getElementById('jdRolePillsGroup');
+    const rolePillsContainer = document.getElementById('jdRolePills');
     const roleSelect = document.getElementById('jdRoleSelect');
-    const roleHint = document.getElementById('jdRoleHint');
     const pasteDomainSelect = document.getElementById('targetRoleSelect');
     const jdTextInput = document.getElementById('jdTextInput');
 
     if (!domainSelect) return;
 
-    // State defaults
-    state.selectedCompanyId = state.selectedCompanyId || 'mckinsey-and-company';
+    // State defaults (calibrated against user's target benchmark)
+    state.selectedCompanyId = state.selectedCompanyId || 'goldman-sachs';
     state.selectedArchetype = state.selectedArchetype || 'AR01';
     state.selectedSegment = state.selectedSegment || '';
-    state.selectedDomainCode = state.selectedDomainCode || 'CON';
-    state.selectedLevelCode = state.selectedLevelCode || 'CAMPUS';
+    state.selectedDomainCode = state.selectedDomainCode || 'IB';
+    state.selectedLevelCode = state.selectedLevelCode || 'MID';
     state.selectedRoleId = state.selectedRoleId || '';
+
+    const LEVEL_HINTS = {
+      'CAMPUS': 'Freshers & MBA Final-Year Students. Choose by total full-time experience, not job title.',
+      'EARLY': 'Early lateral / 2–5 years experience. Choose by total full-time experience, not job title.',
+      'MID': 'Manager or senior manager. Choose by total full-time experience, not job title.',
+      'SENIOR': 'Senior Executive / CXO / P&L. Choose by total full-time experience, not job title.'
+    };
+
+    const CLASS_HINT = {
+      C: 'core hiring area',
+      I: 'in-house function',
+      A: 'closest equivalent role',
+      X: 'rarely hired — extrapolated'
+    };
 
     if (v3) {
       const allCompanies = v3.getCompanies();
@@ -691,10 +708,10 @@ SKILLS & CERTIFICATIONS
 
       // Marquee recruiters for top of list
       const marqueeIds = [
+        'goldman-sachs', 'morgan-stanley', 'jp-morgan-chase',
         'mckinsey-and-company', 'boston-consulting-group-bcg', 'bain-and-company',
         'hindustan-unilever', 'procter-and-gamble-pg', 'itc', 'nestle-india',
         'google', 'microsoft', 'amazon', 'apple',
-        'goldman-sachs', 'morgan-stanley', 'jp-morgan-chase',
         'tata-administrative-services', 'aditya-birla-group', 'reliance-industries',
         'hdfc-bank', 'icici-bank', 'kotak-mahindra-bank', 'tcs', 'infosys'
       ];
@@ -740,7 +757,7 @@ SKILLS & CERTIFICATIONS
               html += `
                 <div class="jd-combobox-option ${isSel ? 'is-selected' : ''}" data-id="${escapeHtml(found.id)}" data-name="${escapeHtml(found.name)}">
                   <span class="jd-combobox-option-title">${escapeHtml(found.name)}</span>
-                  <span class="jd-combobox-option-badge">${escapeHtml(found.sector || 'Consulting / Corporate')}</span>
+                  <span class="jd-combobox-option-badge">${escapeHtml(found.sector || 'Corporate')}</span>
                 </div>
               `;
             }
@@ -824,9 +841,13 @@ SKILLS & CERTIFICATIONS
       function selectCompany(companyId, companyName) {
         state.selectedCompanyId = companyId;
         if (companySelect) companySelect.value = companyId;
+        const displayTitle = (companyId === 'other') ? (companyName || 'Other (Unlisted Company)') : companyName;
         if (companyInput) {
-          companyInput.value = (companyId === 'other') ? (companyName || 'Other (Unlisted Company)') : companyName;
+          companyInput.value = displayTitle;
           if (companyClearBtn) companyClearBtn.style.display = companyInput.value ? 'flex' : 'none';
+        }
+        if (changeCompanyWrap) {
+          changeCompanyWrap.style.display = 'block';
         }
         if (otherFields) {
           otherFields.style.display = (companyId === 'other') ? 'grid' : 'none';
@@ -839,21 +860,33 @@ SKILLS & CERTIFICATIONS
             const primaryDom = (c.top3 && c.top3[0]) || (c.hired && c.hired[0]) || 'CON';
             state.selectedDomainCode = primaryDom;
             if (domainSelect) domainSelect.value = primaryDom;
+            if (pasteDomainSelect) {
+              const found = domains.find(d => d.code === primaryDom);
+              if (found) pasteDomainSelect.value = found.name;
+            }
           }
         }
 
         closeMenu();
         state.selectedRoleId = '';
-        updateRolesDropdown();
         updateSelectedJd(true);
       }
 
       // Initialize Combobox input placeholder and events
       if (companyInput) {
         companyInput.placeholder = "type target company name";
-        // User starts with empty input showing italic placeholder
-        companyInput.value = "";
-        if (companyClearBtn) companyClearBtn.style.display = "none";
+
+        // Initial populate from default state
+        const initialCompany = allCompanies.find(c => c.id === state.selectedCompanyId);
+        if (initialCompany) {
+          companyInput.value = initialCompany.name;
+          if (changeCompanyWrap) changeCompanyWrap.style.display = 'block';
+          if (companyClearBtn) companyClearBtn.style.display = 'flex';
+        } else {
+          companyInput.value = '';
+          if (changeCompanyWrap) changeCompanyWrap.style.display = 'none';
+          if (companyClearBtn) companyClearBtn.style.display = 'none';
+        }
 
         companyInput.addEventListener('focus', () => {
           renderCompanyMenu(companyInput.value);
@@ -898,7 +931,6 @@ SKILLS & CERTIFICATIONS
               const opt = options[highlightedIndex];
               selectCompany(opt.dataset.id, opt.dataset.name);
             } else if (options.length > 0) {
-              // Select the first matching option
               const opt = options[0];
               selectCompany(opt.dataset.id, opt.dataset.name);
             }
@@ -929,10 +961,27 @@ SKILLS & CERTIFICATIONS
           if (companyInput) {
             companyInput.value = '';
             companyClearBtn.style.display = 'none';
+            if (changeCompanyWrap) changeCompanyWrap.style.display = 'none';
             renderCompanyMenu('');
             openMenu();
             companyInput.focus();
           }
+        });
+      }
+
+      if (changeCompanyBtn) {
+        changeCompanyBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          state.selectedCompanyId = '';
+          if (companyInput) {
+            companyInput.value = '';
+            if (companyClearBtn) companyClearBtn.style.display = 'none';
+            companyInput.focus();
+          }
+          if (changeCompanyWrap) changeCompanyWrap.style.display = 'none';
+          if (otherFields) otherFields.style.display = 'none';
+          renderCompanyMenu('');
+          openMenu();
         });
       }
 
@@ -972,10 +1021,11 @@ SKILLS & CERTIFICATIONS
         const isSelected = d.code === state.selectedDomainCode ? ' selected' : '';
         return `<option value="${escapeHtml(d.code)}"${isSelected}>${escapeHtml(d.name)}</option>`;
       }).join('');
+      domainSelect.value = state.selectedDomainCode;
 
       if (pasteDomainSelect) {
         pasteDomainSelect.innerHTML = domains.map(d =>
-          `<option value="${escapeHtml(d.name)}">${escapeHtml(d.name)}</option>`
+          `<option value="${escapeHtml(d.name)}"${d.code === state.selectedDomainCode ? ' selected' : ''}>${escapeHtml(d.name)}</option>`
         ).join('');
       }
 
@@ -987,97 +1037,63 @@ SKILLS & CERTIFICATIONS
         }).join('');
         levelSelect.value = state.selectedLevelCode;
       }
-
-      // Populate Target Roles dropdown based on Company and Level
-      function updateRolesDropdown() {
-        if (!roleSelect) return;
-        try {
-          const c = (state.selectedCompanyId && state.selectedCompanyId !== 'other')
-            ? allCompanies.find(x => x.id === state.selectedCompanyId)
-            : null;
-
-          let companyDomains = [];
-          if (c) {
-            companyDomains = (c.hired && c.hired.length > 0) ? c.hired : (c.top3 && c.top3.length > 0 ? c.top3 : [state.selectedDomainCode || 'CON']);
-          } else if (state.selectedCompanyId === 'other') {
-            const arch = archetypes.find(a => a.code === state.selectedArchetype);
-            if (arch && arch.relevance) {
-              companyDomains = Object.keys(arch.relevance).filter(d => arch.relevance[d] === 'C' || arch.relevance[d] === 'I');
-            }
-            if (!companyDomains || companyDomains.length === 0) {
-              companyDomains = [state.selectedDomainCode || 'CON'];
-            }
-          } else {
-            companyDomains = [state.selectedDomainCode || 'CON'];
-          }
-
-          if (!companyDomains.includes(state.selectedDomainCode)) {
-            state.selectedDomainCode = companyDomains[0];
-            if (domainSelect) domainSelect.value = state.selectedDomainCode;
-          }
-
-          let optionsHtml = '';
-          let firstRoleObj = null;
-          let matchedSelectedRole = false;
-
-          companyDomains.forEach(dCode => {
-            try {
-              const card = v3.generate({
-                companyId: state.selectedCompanyId === 'other' ? undefined : state.selectedCompanyId,
-                archetype: state.selectedCompanyId === 'other' ? state.selectedArchetype : undefined,
-                segment: state.selectedCompanyId === 'other' ? state.selectedSegment : undefined,
-                domain: dCode,
-                level: state.selectedLevelCode
-              });
-
-              const opts = card.roleOptions || [];
-              if (opts.length > 0) {
-                if (companyDomains.length > 1) {
-                  optionsHtml += `<optgroup label="${escapeHtml(card.domainName || dCode)}">`;
-                }
-
-                opts.forEach(r => {
-                  const isSel = (state.selectedRoleId === r.id);
-                  if (isSel) matchedSelectedRole = true;
-                  if (!firstRoleObj) firstRoleObj = { ...r, domain: dCode };
-                  optionsHtml += `<option value="${escapeHtml(r.id)}" data-domain="${escapeHtml(dCode)}"${isSel ? ' selected' : ''}>${escapeHtml(r.name)} (${escapeHtml(r.title)})</option>`;
-                });
-
-                if (companyDomains.length > 1) {
-                  optionsHtml += '</optgroup>';
-                }
-              }
-            } catch (err) {}
-          });
-
-          if (optionsHtml) {
-            roleSelect.innerHTML = optionsHtml;
-            if (!matchedSelectedRole && firstRoleObj) {
-              state.selectedRoleId = firstRoleObj.id;
-              state.selectedDomainCode = firstRoleObj.domain;
-              roleSelect.value = firstRoleObj.id;
-              if (domainSelect) domainSelect.value = firstRoleObj.domain;
-            }
-            const activeOpt = roleSelect.selectedOptions[0];
-            if (roleHint && activeOpt) {
-              roleHint.textContent = `(${activeOpt.text})`;
-            }
-          }
-        } catch (err) {
-          console.warn("Role update note:", err);
-        }
+      if (levelHint) {
+        levelHint.textContent = LEVEL_HINTS[state.selectedLevelCode] || 'Choose by total full-time experience, not job title.';
       }
 
-      updateRolesDropdown();
+      // Update Role Pills dynamically for the selected Company x Domain x Level
+      function updateRolePills(card) {
+        if (!rolePillsContainer) return;
+        const opts = (card && card.roleOptions) || [];
+
+        if (opts.length <= 1) {
+          if (rolePillsGroup) rolePillsGroup.style.display = opts.length === 1 ? 'block' : 'none';
+          if (opts.length === 1) {
+            rolePillsContainer.innerHTML = `<button type="button" class="jd-role-pill active" data-role-id="${escapeHtml(opts[0].id)}" aria-pressed="true">${escapeHtml(opts[0].name)}</button>`;
+          } else {
+            rolePillsContainer.innerHTML = '';
+          }
+          return;
+        }
+
+        if (rolePillsGroup) rolePillsGroup.style.display = 'block';
+
+        const activeRoleId = state.selectedRoleId || (card.role && card.role.id) || opts[0].id;
+        state.selectedRoleId = activeRoleId;
+        if (roleSelect) roleSelect.value = activeRoleId;
+
+        rolePillsContainer.innerHTML = opts.map(r => {
+          const isAct = r.id === activeRoleId;
+          return `<button type="button" class="jd-role-pill ${isAct ? 'active' : ''}" data-role-id="${escapeHtml(r.id)}" title="${escapeHtml(r.focus || '')}" aria-pressed="${isAct ? 'true' : 'false'}">${escapeHtml(r.name)}</button>`;
+        }).join('');
+
+        rolePillsContainer.querySelectorAll('.jd-role-pill').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const roleId = btn.getAttribute('data-role-id');
+            if (!roleId || roleId === state.selectedRoleId) return;
+            state.selectedRoleId = roleId;
+            if (roleSelect) roleSelect.value = roleId;
+
+            rolePillsContainer.querySelectorAll('.jd-role-pill').forEach(p => {
+              const matches = p.getAttribute('data-role-id') === roleId;
+              p.classList.toggle('active', matches);
+              p.setAttribute('aria-pressed', matches ? 'true' : 'false');
+            });
+
+            updateSelectedJd(true);
+          });
+        });
+      }
 
       function updateSelectedJd(autoPopulateText = false) {
         try {
           const card = v3.generate({
-            companyId: state.selectedCompanyId === 'other' ? undefined : state.selectedCompanyId,
+            companyId: state.selectedCompanyId === 'other' ? undefined : (state.selectedCompanyId || 'goldman-sachs'),
             archetype: state.selectedCompanyId === 'other' ? state.selectedArchetype : undefined,
             segment: state.selectedCompanyId === 'other' ? state.selectedSegment : undefined,
-            domain: state.selectedDomainCode,
-            level: state.selectedLevelCode,
+            domain: state.selectedDomainCode || 'IB',
+            level: state.selectedLevelCode || 'MID',
             roleId: state.selectedRoleId || undefined
           });
 
@@ -1086,6 +1102,7 @@ SKILLS & CERTIFICATIONS
           state.selectedDomain = card.domainName;
           state.targetRole = card.scoring ? card.scoring.roleFamily : 'consulting';
 
+          updateRolePills(card);
           renderSnapshotCardV3(card);
           updateGeneratorButtonV3(card);
 
@@ -1108,84 +1125,81 @@ SKILLS & CERTIFICATIONS
         if (!c) { card.style.display = 'none'; return; }
         card.style.display = 'block';
 
-        const classBadges = {
-          'CORE': { label: '✓ CORE RELEVANCE', cls: 'status-v' },
-          'INTERNAL': { label: '⚙ INTERNAL FUNCTION', cls: 'status-p' },
-          'ADJACENT': { label: '⇄ ADJACENT ROLE', cls: 'status-p' },
-          'ATYPICAL': { label: '⚠ ATYPICAL / EXTRAPOLATED', cls: 'status-a' }
-        };
-        const cb = (c.relevance && classBadges[c.relevance.label]) ? classBadges[c.relevance.label] : classBadges['CORE'];
+        const classHint = (c.relevance && CLASS_HINT[c.relevance.class]) ? CLASS_HINT[c.relevance.class] : 'core hiring area';
+        const relLabel = (c.relevance && c.relevance.label) ? c.relevance.label : 'CORE';
 
         let bannerHtml = '';
         if (c.banner) {
-          bannerHtml = `
-            <div class="jd-reg-callout" style="background: rgba(212, 175, 124, 0.1); border-color: rgba(212, 175, 124, 0.35);">
-              <span class="jd-reg-icon">&#9432;</span>
-              <div><strong>Relevance Context:</strong> ${escapeHtml(c.banner)}</div>
-            </div>
-          `;
+          bannerHtml = `<div class="jd-callout-box" style="background: rgba(212, 175, 124, 0.15); border-left: 3px solid var(--color-gold-primary); margin-bottom: 8px;">${escapeHtml(c.banner)}</div>`;
         }
 
-        const cutOffText = c.eligibility?.note ? c.eligibility.note : 'Standard 60% consistency floor';
+        let respHtml = '';
+        if (Array.isArray(c.responsibilities) && c.responsibilities.length > 0) {
+          respHtml = `<ul style="margin: 0 0 8px 18px; padding: 0;">${c.responsibilities.slice(0, 5).map(r => `<li>${escapeHtml(r)}</li>`).join('')}</ul>`;
+        }
 
         let mustHavesHtml = '';
-        const mustHaves = Array.isArray(c.mustHave) ? c.mustHave : [];
-        if (mustHaves.length > 0) {
-          mustHavesHtml = `
-            <div class="jd-skills-chips-wrap">
-              <span class="jd-skills-label">Core Must-Haves:</span>
-              ${mustHaves.map(s => `<span class="jd-skill-tag" style="background: rgba(212, 175, 124, 0.16); font-weight: 600; color: #F8F6EF;">${escapeHtml(s)}</span>`).join('')}
+        if (Array.isArray(c.mustHave) && c.mustHave.length > 0) {
+          mustHavesHtml = `<p style="margin: 0 0 4px;"><b>Must-have skills:</b> ${escapeHtml(c.mustHave.join('; '))}</p>`;
+        }
+
+        let expHtml = c.experience ? `<p style="margin: 0 0 4px;"><b>Experience:</b> ${escapeHtml(c.experience)}</p>` : '';
+        let eduHtml = c.education ? `<p style="margin: 0 0 4px;"><b>Education:</b> ${escapeHtml(c.education)}</p>` : '';
+
+        let eligHtml = '';
+        if (c.eligibility) {
+          eligHtml = `<p style="margin: 0 0 4px;"><b>Academic criteria (${escapeHtml(c.eligibility.label)}):</b> ${escapeHtml(c.eligibility.note)}</p>`;
+        }
+
+        let certsHtml = '';
+        if (c.certifications) {
+          certsHtml = `<p style="margin: 0 0 4px;"><b>Certifications:</b> required — ${escapeHtml(c.certifications.required || 'None')}; preferred — ${escapeHtml(c.certifications.preferred || 'None')}</p>`;
+        }
+
+        let campusHtml = '';
+        if (Array.isArray(c.campusPresence) && c.campusPresence.length > 0) {
+          campusHtml = `<p style="margin: 0 0 4px;"><b>Recruits from (library):</b> ${escapeHtml(c.campusPresence.join(', '))}</p>`;
+        }
+
+        let condCertHtml = '';
+        if (c.certifications && Array.isArray(c.certifications.conditional) && c.certifications.conditional.length > 0) {
+          condCertHtml = `
+            <div class="jd-callout-box" style="margin: 6px 0 8px;">
+              <b>Only if your target role involves these activities:</b>
+              <ul style="margin: 4px 0 0 18px; padding: 0;">
+                ${c.certifications.conditional.map(x => `<li>${escapeHtml(x)}</li>`).join('')}
+              </ul>
             </div>
           `;
         }
 
-        let toolsHtml = '';
-        if (Array.isArray(c.tools) && c.tools.length > 0) {
-          toolsHtml = `
-            <div class="jd-skills-chips-wrap" style="margin-top: 4px;">
-              <span class="jd-skills-label">Tools &amp; Stack:</span>
-              ${c.tools.slice(0, 6).map(t => `<span class="jd-skill-tag">${escapeHtml(t)}</span>`).join('')}
-            </div>
-          `;
+        let flagsHtml = '';
+        if (Array.isArray(c.flags) && c.flags.length > 0) {
+          flagsHtml = c.flags.map(f => `<p class="jd-flag-line" style="margin: 0 0 4px;">FLAG: ${escapeHtml(f)}</p>`).join('');
         }
 
-        let regHtml = '';
-        if (c.certifications?.conditional && c.certifications.conditional.length > 0) {
-          regHtml = `
-            <div class="jd-reg-callout">
-              <span class="jd-reg-icon">&#9888;</span>
-              <div><strong>Regulated Sub-Area Certifications:</strong> ${escapeHtml(c.certifications.conditional.join('; '))}</div>
-            </div>
-          `;
-        }
+        let disclaimerHtml = c.disclaimer ? `<p class="jd-disclaimer-note" style="margin-top: 8px;">${escapeHtml(c.disclaimer)}</p>` : '';
 
         card.innerHTML = `
           <div class="jd-benchmark-header">
             <div class="jd-benchmark-title-wrap">
               <div class="jd-benchmark-role-title">${escapeHtml(c.title)}</div>
-              <div class="jd-benchmark-path">${escapeHtml(c.companyName)} &bull; ${escapeHtml(c.sector)} &bull; ${escapeHtml(c.domainName)} (${escapeHtml(c.levelLabel)})</div>
-            </div>
-            <div class="jd-badges-row">
-              <span class="jd-status-badge ${cb.cls}">${cb.label}</span>
+              <div class="jd-benchmark-path">${escapeHtml(c.companyName)} · ${escapeHtml(c.domainName)} — ${escapeHtml(c.levelLabel)} (${escapeHtml(c.experienceBand)}) · ${escapeHtml(relLabel)}: ${escapeHtml(classHint)}</div>
             </div>
           </div>
-
-          <div class="jd-benchmark-meta-chips">
-            <span class="jd-meta-chip">&#127970; <strong>Target:</strong> ${escapeHtml(c.companyName)}</span>
-            <span class="jd-meta-chip">&#127891; <strong>Level:</strong> ${escapeHtml(c.levelLabel)} (${escapeHtml(c.experienceBand)})</span>
-            <span class="jd-meta-chip">&#9878; <strong>Criteria:</strong> ${escapeHtml(cutOffText.slice(0, 75))}${cutOffText.length > 75 ? '...' : ''}</span>
-            ${c.locations ? `<span class="jd-meta-chip">&#128205; ${escapeHtml(c.locations)}</span>` : ''}
-          </div>
-
-          <div class="jd-benchmark-summary" title="${escapeHtml(c.summary)}">${escapeHtml(c.summary)}</div>
-
-          ${bannerHtml}
-          ${regHtml}
-          ${mustHavesHtml}
-          ${toolsHtml}
-
-          <div style="margin-top: 8px; font-size: 10px; color: var(--color-text-muted); font-style: italic; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 6px;">
-            ${escapeHtml(c.disclaimer)}
+          <div class="jd-benchmark-body">
+            ${bannerHtml}
+            <p style="margin: 0 0 8px;">${escapeHtml(c.summary)}</p>
+            ${respHtml}
+            ${mustHavesHtml}
+            ${expHtml}
+            ${eduHtml}
+            ${eligHtml}
+            ${certsHtml}
+            ${campusHtml}
+            ${condCertHtml}
+            ${flagsHtml}
+            ${disclaimerHtml}
           </div>
         `;
       }
@@ -1204,7 +1218,6 @@ SKILLS & CERTIFICATIONS
             otherFields.style.display = (state.selectedCompanyId === 'other') ? 'grid' : 'none';
           }
           state.selectedRoleId = '';
-          updateRolesDropdown();
           updateSelectedJd(true);
         });
       }
@@ -1214,7 +1227,6 @@ SKILLS & CERTIFICATIONS
           state.selectedArchetype = archetypeSelect.value;
           updateSegments();
           state.selectedRoleId = '';
-          updateRolesDropdown();
           updateSelectedJd(true);
         });
       }
@@ -1233,52 +1245,16 @@ SKILLS & CERTIFICATIONS
           if (found) pasteDomainSelect.value = found.name;
         }
         state.selectedRoleId = '';
-        updateRolesDropdown();
         updateSelectedJd(true);
       });
 
       if (levelSelect) {
         levelSelect.addEventListener('change', () => {
           state.selectedLevelCode = levelSelect.value;
-          if (levelPillsContainer) {
-            levelPillsContainer.querySelectorAll('.jd-level-pill').forEach(p => {
-              if (p.getAttribute('data-level') === state.selectedLevelCode) p.classList.add('active');
-              else p.classList.remove('active');
-            });
+          if (levelHint) {
+            levelHint.textContent = LEVEL_HINTS[state.selectedLevelCode] || 'Choose by total full-time experience, not job title.';
           }
           state.selectedRoleId = '';
-          updateRolesDropdown();
-          updateSelectedJd(true);
-        });
-      }
-
-      if (levelPillsContainer) {
-        levelPillsContainer.addEventListener('click', (e) => {
-          const pill = e.target.closest('.jd-level-pill');
-          if (!pill) return;
-          const lvlCode = pill.getAttribute('data-level');
-          if (!lvlCode) return;
-          levelPillsContainer.querySelectorAll('.jd-level-pill').forEach(p => p.classList.remove('active'));
-          pill.classList.add('active');
-          state.selectedLevelCode = lvlCode;
-          if (levelSelect) levelSelect.value = lvlCode;
-          state.selectedRoleId = '';
-          updateRolesDropdown();
-          updateSelectedJd(true);
-        });
-      }
-
-      if (roleSelect) {
-        roleSelect.addEventListener('change', () => {
-          state.selectedRoleId = roleSelect.value;
-          const opt = roleSelect.selectedOptions[0];
-          if (opt && opt.dataset.domain) {
-            state.selectedDomainCode = opt.dataset.domain;
-            if (domainSelect) domainSelect.value = opt.dataset.domain;
-          }
-          if (roleHint && opt) {
-            roleHint.textContent = `(${opt.text})`;
-          }
           updateSelectedJd(true);
         });
       }

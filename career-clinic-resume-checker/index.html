@@ -348,17 +348,14 @@
 
           <!-- JD Tabs -->
           <div class="mini-tabs" role="tablist">
-            <button type="button" class="mini-tab" id="tabJdUpload" role="tab" aria-selected="false">
-              &#128196; Upload JD (.pdf/.docx)
+            <button type="button" class="mini-tab active" id="tabJdDomain" role="tab" aria-selected="true">
+              Choose company, domain &amp; level
             </button>
             <button type="button" class="mini-tab" id="tabJdLink" role="tab" aria-selected="false">
-              &#128279; JD Link (URL)
+              Share a JD link
             </button>
-            <button type="button" class="mini-tab active" id="tabJdDomain" role="tab" aria-selected="true">
-              &#127919; Domain Selection
-            </button>
-            <button type="button" class="mini-tab" id="tabJdPaste" role="tab" aria-selected="false">
-              &#9997; Paste Custom JD
+            <button type="button" class="mini-tab" id="tabJdUpload" role="tab" aria-selected="false">
+              Upload or paste a JD
             </button>
           </div>
 
@@ -419,10 +416,10 @@
           <div class="intake-tab-body active" id="jdDomainSection">
             <div class="paste-container">
 
-              <!-- Target Company Selection (v3 Database: 835 Companies + Other) -->
+              <!-- 1. Target Company Selection -->
               <div class="form-group jd-cascading-row-full">
                 <label for="jdCompanyInput" class="form-label">
-                  Target Company: <span class="required-star">*</span>
+                  Target company <span class="required-star">*</span>
                 </label>
                 <div class="jd-combobox-wrapper" id="jdCompanyComboboxWrapper">
                   <div class="jd-combobox-input-wrap">
@@ -440,7 +437,10 @@
                   <!-- Dropdown Menu containing 835 Companies + Other -->
                   <div class="jd-combobox-menu" id="jdCompanyDropdownMenu" role="listbox" style="display: none;"></div>
                 </div>
-                <!-- Hidden select / storage for backward compatibility -->
+                <div class="jd-change-company-wrap" id="jdChangeCompanyWrap" style="display: none; margin-top: 5px;">
+                  <button type="button" class="btn-link-action" id="jdChangeCompanyBtn">Change company</button>
+                </div>
+                <!-- Hidden select for backward compatibility -->
                 <select id="jdCompanySelect" style="display: none;" aria-hidden="true"></select>
               </div>
 
@@ -448,7 +448,7 @@
               <div id="jdOtherCompanyFields" class="jd-other-grid" style="display: none;">
                 <div class="form-group">
                   <label for="jdArchetypeSelect" class="form-label">
-                    Company Type / Archetype: <span class="required-star">*</span>
+                    What type of company is it? <span class="required-star">*</span>
                   </label>
                   <div class="select-wrapper">
                     <select id="jdArchetypeSelect" class="form-select">
@@ -458,7 +458,7 @@
                 </div>
                 <div class="form-group">
                   <label for="jdSegmentSelect" class="form-label">
-                    Sub-Segment / Focus Area:
+                    Business segment (optional):
                   </label>
                   <div class="select-wrapper">
                     <select id="jdSegmentSelect" class="form-select">
@@ -468,37 +468,49 @@
                 </div>
               </div>
 
-              <!-- Filter by Career Level Pills -->
-              <div class="jd-level-pills-container">
-                <div class="jd-level-label">
-                  <span>&#9878; Quick Career Level Filter:</span>
-                </div>
-                <div class="jd-level-pills" id="jdLevelPills" role="radiogroup" aria-label="Career Level Filter">
-                  <button type="button" class="jd-level-pill active" data-level="CAMPUS">Fresher (0–2 yrs)</button>
-                  <button type="button" class="jd-level-pill" data-level="EARLY">Early (2–5 yrs)</button>
-                  <button type="button" class="jd-level-pill" data-level="MID">Mid (5–10 yrs)</button>
-                  <button type="button" class="jd-level-pill" data-level="SENIOR">Senior (10+ yrs)</button>
-                </div>
-              </div>
-
-              <!-- Hidden Domain & Level inputs for state compatibility -->
-              <select id="jdDomainSelect" style="display: none;" aria-hidden="true"></select>
-              <select id="jdLevelSelect" style="display: none;" aria-hidden="true"></select>
-
-              <!-- Target Role Selection (from 236 Calibrated Roles) -->
-              <div class="form-group jd-cascading-row-full" id="jdRoleSelectGroup">
-                <label for="jdRoleSelect" class="form-label">
-                  Target Role / Functional Track: <span class="required-star">*</span>
-                  <span class="field-hint" id="jdRoleHint">(Featured role auto-calibrated by company affinity)</span>
+              <!-- 2. Target Domain Dropdown -->
+              <div class="form-group jd-cascading-row-full">
+                <label for="jdDomainSelect" class="form-label">
+                  Target domain <span class="required-star">*</span>
                 </label>
                 <div class="select-wrapper">
-                  <select id="jdRoleSelect" class="form-select">
-                    <!-- Dynamically populated based on Domain & Level -->
+                  <select id="jdDomainSelect" class="form-select">
+                    <!-- Dynamically populated from 28 domains -->
                   </select>
                 </div>
               </div>
 
-              <!-- Selected Role Snapshot Card -->
+              <!-- 3. Career Level Dropdown -->
+              <div class="form-group jd-cascading-row-full">
+                <label for="jdLevelSelect" class="form-label">
+                  Career level <span class="required-star">*</span>
+                </label>
+                <div class="select-wrapper">
+                  <select id="jdLevelSelect" class="form-select">
+                    <option value="CAMPUS">Fresher (0–2 years)</option>
+                    <option value="EARLY">Early Lateral (2–5 years)</option>
+                    <option value="MID" selected>Mid (5–10 years)</option>
+                    <option value="SENIOR">Senior Executive (10+ years)</option>
+                  </select>
+                </div>
+                <p class="field-hint" id="jdLevelHint" style="margin-top: 6px; font-size: 12.5px; color: var(--color-text-muted);">
+                  Manager or senior manager. Choose by total full-time experience, not job title.
+                </p>
+              </div>
+
+              <!-- 4. Role Selection (Interactive Pills) -->
+              <div class="form-group jd-cascading-row-full" id="jdRolePillsGroup">
+                <label class="form-label" style="margin-bottom: 6px; display: block;">
+                  Role
+                </label>
+                <div class="jd-role-pills" id="jdRolePills" role="radiogroup" aria-label="Role Selection">
+                  <!-- Dynamically populated role pill buttons -->
+                </div>
+                <!-- Hidden select for form compatibility -->
+                <select id="jdRoleSelect" style="display: none;" aria-hidden="true"></select>
+              </div>
+
+              <!-- 5. Selected Role Snapshot Card -->
               <div id="jdBenchmarkCard" class="jd-benchmark-card">
                 <!-- Dynamically rendered role snapshot -->
               </div>
