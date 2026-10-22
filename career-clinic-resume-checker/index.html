@@ -31,7 +31,7 @@
   <base href="/ResumeFitScore/">
 
   <!-- Application Stylesheet -->
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20261022-v3b">
 </head>
 
 <body>
@@ -421,20 +421,27 @@
 
               <!-- Target Company Selection (v3 Database: 835 Companies + Other) -->
               <div class="form-group jd-cascading-row-full">
-                <div class="jd-label-with-search">
-                  <label for="jdCompanySelect" class="form-label">
-                    Target Company: <span class="required-star">*</span>
-                  </label>
-                  <div class="company-quick-filter-wrap">
-                    <input type="text" id="jdCompanySearchInput" class="form-input-text form-input-compact"
-                      placeholder="🔍 Search 835 companies (e.g. McKinsey, HUL, Google, TAS)..." autocomplete="off">
+                <label for="jdCompanyInput" class="form-label">
+                  Target Company: <span class="required-star">*</span>
+                </label>
+                <div class="jd-combobox-wrapper" id="jdCompanyComboboxWrapper">
+                  <div class="jd-combobox-input-wrap">
+                    <span class="jd-combobox-icon">&#128269;</span>
+                    <input type="text" id="jdCompanyInput" class="form-input-text jd-combobox-input"
+                      placeholder="type target company name" autocomplete="off" spellcheck="false"
+                      aria-label="Target Company" aria-autocomplete="list" aria-controls="jdCompanyDropdownMenu">
+                    <button type="button" class="jd-combobox-clear-btn" id="jdCompanyClearBtn" aria-label="Clear target company" title="Clear input" style="display: none;" tabindex="-1">&times;</button>
+                    <button type="button" class="jd-combobox-toggle-btn" id="jdCompanyToggleBtn" aria-label="Show company list" title="Browse companies" tabindex="-1">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </button>
                   </div>
+                  <!-- Dropdown Menu containing 835 Companies + Other -->
+                  <div class="jd-combobox-menu" id="jdCompanyDropdownMenu" role="listbox" style="display: none;"></div>
                 </div>
-                <div class="select-wrapper">
-                  <select id="jdCompanySelect" class="form-select">
-                    <!-- Dynamically populated from 835 Companies + Other -->
-                  </select>
-                </div>
+                <!-- Hidden select / storage for backward compatibility -->
+                <select id="jdCompanySelect" style="display: none;" aria-hidden="true"></select>
               </div>
 
               <!-- Unlisted Company Configuration (Shown when 'Other' selected) -->
@@ -1320,13 +1327,13 @@
   </footer>
 
   <!-- Auth Guard & Email Whitelist Protection -->
-  <script src="auth-guard.js"></script>
+  <script src="auth-guard.js?v=20261022-v3b"></script>
 
   <!-- Application Logic & Firebase Repository Service -->
-  <script src="jd-database.js"></script>
-  <script src="jd-database-v3.js"></script>
-  <script src="repository-service.js"></script>
-  <script src="script.js"></script>
+  <script src="jd-database.js?v=20261022-v3b"></script>
+  <script src="jd-database-v3.js?v=20261022-v3b"></script>
+  <script src="repository-service.js?v=20261022-v3b"></script>
+  <script src="script.js?v=20261022-v3b"></script>
 </body>
 
 </html>

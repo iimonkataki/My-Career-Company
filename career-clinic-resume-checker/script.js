@@ -656,8 +656,12 @@ SKILLS & CERTIFICATIONS
     const v2 = window.JD_DATABASE;
     if (!v3 && !v2) return;
 
+    const companyInput = document.getElementById('jdCompanyInput');
+    const companyToggleBtn = document.getElementById('jdCompanyToggleBtn');
+    const companyClearBtn = document.getElementById('jdCompanyClearBtn');
+    const companyDropdownMenu = document.getElementById('jdCompanyDropdownMenu');
+    const companyComboboxWrapper = document.getElementById('jdCompanyComboboxWrapper');
     const companySelect = document.getElementById('jdCompanySelect');
-    const companySearchInput = document.getElementById('jdCompanySearchInput');
     const otherFields = document.getElementById('jdOtherCompanyFields');
     const archetypeSelect = document.getElementById('jdArchetypeSelect');
     const segmentSelect = document.getElementById('jdSegmentSelect');
@@ -695,69 +699,238 @@ SKILLS & CERTIFICATIONS
         'hdfc-bank', 'icici-bank', 'kotak-mahindra-bank', 'tcs', 'infosys'
       ];
 
-      function renderCompanyDropdown(filterText = '') {
-        if (!companySelect) return;
-        const q = filterText.trim().toLowerCase();
-        let filtered = allCompanies;
-        if (q) {
-          filtered = allCompanies.filter(c =>
-            c.name.toLowerCase().includes(q) ||
-            (c.sector && c.sector.toLowerCase().includes(q)) ||
-            c.id.toLowerCase().includes(q)
-          );
-        }
+      let highlightedIndex = -1;
 
+      function openMenu() {
+        if (!companyDropdownMenu || !companyComboboxWrapper) return;
+        companyDropdownMenu.style.display = 'block';
+        companyComboboxWrapper.classList.add('is-open');
+        if (companyInput) companyInput.setAttribute('aria-expanded', 'true');
+      }
+
+      function closeMenu() {
+        if (!companyDropdownMenu || !companyComboboxWrapper) return;
+        companyDropdownMenu.style.display = 'none';
+        companyComboboxWrapper.classList.remove('is-open');
+        if (companyInput) companyInput.setAttribute('aria-expanded', 'false');
+        highlightedIndex = -1;
+      }
+
+      function renderCompanyMenu(filterText = '') {
+        if (!companyDropdownMenu) return;
+        const q = (filterText || '').trim().toLowerCase();
         let html = '';
-        html += '<option value="other"' + (state.selectedCompanyId === 'other' ? ' selected' : '') + '>⭐ — Other (Unlisted Company / Specific Type) —</option>';
+
+        // Option 1: Unlisted / Other Company (Always accessible)
+        const isOtherSel = state.selectedCompanyId === 'other';
+        html += `
+          <div class="jd-combobox-option is-other ${isOtherSel ? 'is-selected' : ''}" data-id="other" data-name="Other (Unlisted Company)">
+            <span class="jd-combobox-option-title">&#11088; Other (Unlisted Company / Specific Type)</span>
+            <span class="jd-combobox-option-badge">Custom</span>
+          </div>
+        `;
 
         if (!q) {
-          html += '<optgroup label="🌟 Featured & Marquee Recruiters">';
+          // Marquee / Featured
+          html += '<div class="jd-combobox-group-header">&#127775; Featured & Marquee Recruiters</div>';
           marqueeIds.forEach(id => {
             const found = allCompanies.find(c => c.id === id);
             if (found) {
-              const sel = (state.selectedCompanyId === found.id) ? ' selected' : '';
-              html += `<option value="${escapeHtml(found.id)}"${sel}>${escapeHtml(found.name)} (${escapeHtml(found.sector)})</option>`;
+              const isSel = (state.selectedCompanyId === found.id);
+              html += `
+                <div class="jd-combobox-option ${isSel ? 'is-selected' : ''}" data-id="${escapeHtml(found.id)}" data-name="${escapeHtml(found.name)}">
+                  <span class="jd-combobox-option-title">${escapeHtml(found.name)}</span>
+                  <span class="jd-combobox-option-badge">${escapeHtml(found.sector || 'Consulting / Corporate')}</span>
+                </div>
+              `;
             }
           });
-          html += '</optgroup>';
-        }
 
-        const groups = {};
-        filtered.forEach(c => {
-          if (!q && marqueeIds.includes(c.id)) return;
-          const sec = c.sector || 'General Corporate';
-          if (!groups[sec]) groups[sec] = [];
-          groups[sec].push(c);
-        });
-
-        const sortedSectors = Object.keys(groups).sort();
-        sortedSectors.forEach(sec => {
-          html += `<optgroup label="${escapeHtml(sec)} (${groups[sec].length})">`;
-          groups[sec].sort((a, b) => a.name.localeCompare(b.name)).forEach(c => {
-            const sel = (state.selectedCompanyId === c.id) ? ' selected' : '';
-            html += `<option value="${escapeHtml(c.id)}"${sel}>${escapeHtml(c.name)}</option>`;
+          // All companies grouped by Sector
+          const groups = {};
+          allCompanies.forEach(c => {
+            if (marqueeIds.includes(c.id)) return;
+            const sec = c.sector || 'General Corporate';
+            if (!groups[sec]) groups[sec] = [];
+            groups[sec].push(c);
           });
-          html += '</optgroup>';
-        });
 
-        companySelect.innerHTML = html;
+          const sortedSectors = Object.keys(groups).sort();
+          sortedSectors.forEach(sec => {
+            html += `<div class="jd-combobox-group-header">${escapeHtml(sec)} (${groups[sec].length})</div>`;
+            groups[sec].sort((a, b) => a.name.localeCompare(b.name)).forEach(c => {
+              const isSel = (state.selectedCompanyId === c.id);
+              html += `
+                <div class="jd-combobox-option ${isSel ? 'is-selected' : ''}" data-id="${escapeHtml(c.id)}" data-name="${escapeHtml(c.name)}">
+                  <span class="jd-combobox-option-title">${escapeHtml(c.name)}</span>
+                  <span class="jd-combobox-option-badge">${escapeHtml(sec)}</span>
+                </div>
+              `;
+            });
+          });
+        } else {
+          // Filtered list based on typed query
+          const filtered = allCompanies.filter(c =>
+            c.name.toLowerCase().includes(q) ||
+            (c.sector && c.sector.toLowerCase().includes(q)) ||
+            c.id.toLowerCase().includes(q) ||
+            (c.industry && c.industry.toLowerCase().includes(q))
+          );
 
-        if (state.selectedCompanyId !== 'other') {
-          const exists = filtered.some(c => c.id === state.selectedCompanyId);
-          if (!exists && filtered.length > 0) {
-            state.selectedCompanyId = filtered[0].id;
-            companySelect.value = state.selectedCompanyId;
+          if (filtered.length === 0) {
+            html += `
+              <div class="jd-combobox-empty">
+                <div>No listed company matches "<strong>${escapeHtml(filterText)}</strong>"</div>
+                <div style="margin-top:4px; font-size:11px; color:var(--color-text-muted);">You can configure this company as an Unlisted Company:</div>
+                <button type="button" class="jd-combobox-empty-btn" id="jdSelectOtherCustomBtn">
+                  &#11088; Select "Other" for ${escapeHtml(filterText)}
+                </button>
+              </div>
+            `;
+          } else {
+            html += `<div class="jd-combobox-group-header">&#128269; Matching Recruiters (${filtered.length})</div>`;
+            filtered.forEach(c => {
+              const isSel = (state.selectedCompanyId === c.id);
+              html += `
+                <div class="jd-combobox-option ${isSel ? 'is-selected' : ''}" data-id="${escapeHtml(c.id)}" data-name="${escapeHtml(c.name)}">
+                  <span class="jd-combobox-option-title">${escapeHtml(c.name)}</span>
+                  <span class="jd-combobox-option-badge">${escapeHtml(c.sector || 'Corporate')}</span>
+                </div>
+              `;
+            });
           }
         }
+
+        companyDropdownMenu.innerHTML = html;
+
+        // Attach click listeners to all options
+        const options = companyDropdownMenu.querySelectorAll('.jd-combobox-option');
+        options.forEach(opt => {
+          opt.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectCompany(opt.dataset.id, opt.dataset.name);
+          });
+        });
+
+        const customOtherBtn = companyDropdownMenu.querySelector('#jdSelectOtherCustomBtn');
+        if (customOtherBtn) {
+          customOtherBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            selectCompany('other', filterText || 'Other (Unlisted Company)');
+          });
+        }
       }
 
-      renderCompanyDropdown();
+      function selectCompany(companyId, companyName) {
+        state.selectedCompanyId = companyId;
+        if (companySelect) companySelect.value = companyId;
+        if (companyInput) {
+          companyInput.value = (companyId === 'other') ? (companyName || 'Other (Unlisted Company)') : companyName;
+          if (companyClearBtn) companyClearBtn.style.display = companyInput.value ? 'flex' : 'none';
+        }
+        if (otherFields) {
+          otherFields.style.display = (companyId === 'other') ? 'grid' : 'none';
+        }
+        closeMenu();
+        state.selectedRoleId = '';
+        updateRolesDropdown();
+        updateSelectedJd(true);
+      }
 
-      if (companySearchInput) {
-        companySearchInput.addEventListener('input', (e) => {
-          renderCompanyDropdown(e.target.value);
+      // Initialize Combobox input placeholder and events
+      if (companyInput) {
+        companyInput.placeholder = "type target company name";
+        // User starts with empty input showing italic placeholder
+        companyInput.value = "";
+        if (companyClearBtn) companyClearBtn.style.display = "none";
+
+        companyInput.addEventListener('focus', () => {
+          renderCompanyMenu(companyInput.value);
+          openMenu();
+        });
+
+        companyInput.addEventListener('input', () => {
+          if (companyClearBtn) companyClearBtn.style.display = companyInput.value ? 'flex' : 'none';
+          renderCompanyMenu(companyInput.value);
+          openMenu();
+        });
+
+        companyInput.addEventListener('keydown', (e) => {
+          const options = companyDropdownMenu ? companyDropdownMenu.querySelectorAll('.jd-combobox-option') : [];
+          if (!options || options.length === 0) return;
+
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            if (!companyComboboxWrapper.classList.contains('is-open')) {
+              openMenu();
+              return;
+            }
+            highlightedIndex = (highlightedIndex + 1) % options.length;
+            options.forEach((opt, idx) => {
+              opt.classList.toggle('is-highlighted', idx === highlightedIndex);
+              if (idx === highlightedIndex) opt.scrollIntoView({ block: 'nearest' });
+            });
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (!companyComboboxWrapper.classList.contains('is-open')) {
+              openMenu();
+              return;
+            }
+            highlightedIndex = (highlightedIndex - 1 + options.length) % options.length;
+            options.forEach((opt, idx) => {
+              opt.classList.toggle('is-highlighted', idx === highlightedIndex);
+              if (idx === highlightedIndex) opt.scrollIntoView({ block: 'nearest' });
+            });
+          } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (highlightedIndex >= 0 && highlightedIndex < options.length) {
+              const opt = options[highlightedIndex];
+              selectCompany(opt.dataset.id, opt.dataset.name);
+            } else if (options.length > 0) {
+              // Select the first matching option
+              const opt = options[0];
+              selectCompany(opt.dataset.id, opt.dataset.name);
+            }
+          } else if (e.key === 'Escape') {
+            closeMenu();
+          }
         });
       }
+
+      if (companyToggleBtn) {
+        companyToggleBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (companyComboboxWrapper && companyComboboxWrapper.classList.contains('is-open')) {
+            closeMenu();
+          } else {
+            renderCompanyMenu(companyInput ? companyInput.value : '');
+            openMenu();
+            if (companyInput) companyInput.focus();
+          }
+        });
+      }
+
+      if (companyClearBtn) {
+        companyClearBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (companyInput) {
+            companyInput.value = '';
+            companyClearBtn.style.display = 'none';
+            renderCompanyMenu('');
+            openMenu();
+            companyInput.focus();
+          }
+        });
+      }
+
+      // Close dropdown when clicking outside
+      document.addEventListener('click', (e) => {
+        if (companyComboboxWrapper && !companyComboboxWrapper.contains(e.target)) {
+          closeMenu();
+        }
+      });
 
       if (archetypeSelect) {
         archetypeSelect.innerHTML = archetypes.map(a =>

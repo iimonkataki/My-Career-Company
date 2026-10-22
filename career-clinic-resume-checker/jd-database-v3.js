@@ -5,13 +5,18 @@
  * Pre-compiled for instant client-side execution in www.mycareercompany.com/ResumeFitScore
  */
 (function (root, factory) {
+  var exported = factory();
+  if (typeof globalThis !== 'undefined') {
+    globalThis.JD_DATABASE_V3 = exported;
+  }
+  if (typeof window !== 'undefined') {
+    window.JD_DATABASE_V3 = exported;
+  }
+  if (typeof module === 'object' && module && module.exports) {
+    module.exports = exported;
+  }
   if (typeof define === 'function' && define.amd) {
-    define([], factory);
-  } else if (typeof module === 'object' && module.exports) {
-    module.exports = factory();
-  } else {
-    var g = typeof globalThis !== 'undefined' ? globalThis : (typeof window !== 'undefined' ? window : (typeof self !== 'undefined' ? self : root || {}));
-    g.JD_DATABASE_V3 = factory();
+    define([], function () { return exported; });
   }
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
