@@ -3,3 +3,7 @@ cloudflared.exe
 *.log
 node_modules/
 .DS_Store
+
+# Next.js & build artifacts
+.next/
+*.tsbuildinfo

@@ -20,7 +20,9 @@ const MIME_TYPES = {
   '.woff': 'font/woff',
   '.woff2': 'font/woff2',
   '.ttf': 'font/ttf',
-  '.pdf': 'application/pdf'
+  '.pdf': 'application/pdf',
+  '.md': 'text/markdown; charset=utf-8',
+  '.markdown': 'text/markdown; charset=utf-8'
 };
 
 function startServer(port) {
@@ -28,6 +30,25 @@ function startServer(port) {
     try {
       const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
       let pathname = decodeURIComponent(parsedUrl.pathname);
+
+      // Direct download endpoint for Master Ecosystem Context File
+      if (pathname.toLowerCase() === '/download-context' || pathname.toLowerCase() === '/download' || pathname.toLowerCase() === '/resumefitscore/download-context') {
+        const targetPath = path.join(BASE_DIR, 'MY_CAREER_COMPANY_MASTER_ECOSYSTEM_CONTEXT.md');
+        fs.readFile(targetPath, (err, content) => {
+          if (err) {
+            res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+            res.end('Context file not found');
+            return;
+          }
+          res.writeHead(200, {
+            'Content-Type': 'text/markdown; charset=utf-8',
+            'Content-Disposition': 'attachment; filename="MY_CAREER_COMPANY_MASTER_ECOSYSTEM_CONTEXT.md"',
+            'Access-Control-Allow-Origin': '*'
+          });
+          res.end(content);
+        });
+        return;
+      }
 
       // Redirect /ResumeFitScore to /ResumeFitScore/
       if (pathname.toLowerCase() === '/resumefitscore') {
