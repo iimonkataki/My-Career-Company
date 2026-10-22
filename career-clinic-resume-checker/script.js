@@ -1033,7 +1033,9 @@ SKILLS & CERTIFICATIONS
       if (levelSelect) {
         levelSelect.innerHTML = levels.map(lvl => {
           const isSelected = lvl.code === state.selectedLevelCode ? ' selected' : '';
-          return `<option value="${escapeHtml(lvl.code)}"${isSelected}>${escapeHtml(lvl.label)} (${escapeHtml(lvl.band)})</option>`;
+          const cleanLabel = (lvl.label || '').replace(/\s*\([^)]*\)/g, '').trim();
+          const displayLabel = cleanLabel ? `${cleanLabel} (${lvl.band})` : (lvl.band || lvl.code);
+          return `<option value="${escapeHtml(lvl.code)}"${isSelected}>${escapeHtml(displayLabel)}</option>`;
         }).join('');
         levelSelect.value = state.selectedLevelCode;
       }
@@ -1287,7 +1289,9 @@ SKILLS & CERTIFICATIONS
     if (levelSelect) {
       levelSelect.innerHTML = levels.map(lvl => {
         const isSelected = lvl.code === (state.selectedLevelCode || 'CAMPUS') ? 'selected' : '';
-        return `<option value="${escapeHtml(lvl.code)}" ${isSelected}>${escapeHtml(lvl.label)} (${escapeHtml(lvl.band)})</option>`;
+        const cleanLabel = (lvl.label || '').replace(/\s*\([^)]*\)/g, '').trim();
+        const displayLabel = cleanLabel ? `${cleanLabel} (${lvl.band})` : (lvl.band || lvl.code);
+        return `<option value="${escapeHtml(lvl.code)}" ${isSelected}>${escapeHtml(displayLabel)}</option>`;
       }).join('');
       levelSelect.value = state.selectedLevelCode || 'CAMPUS';
     }
@@ -3722,9 +3726,13 @@ DESIRED QUALIFICATIONS & COMPETENCIES
     const isCoFounder = window.AuthGuard && window.AuthGuard.isCoFounder && window.AuthGuard.isCoFounder();
     const countPill = document.getElementById('headerRepoCount');
     const repoTab = document.getElementById('navBtnRepository');
+    const headerNav = document.getElementById('headerNav');
 
     if (repoTab) {
       repoTab.style.display = isCoFounder ? 'inline-flex' : 'none';
+    }
+    if (headerNav) {
+      headerNav.classList.toggle('single-tab', !isCoFounder);
     }
 
     if (!isCoFounder || !countPill || !window.RepositoryService) return;

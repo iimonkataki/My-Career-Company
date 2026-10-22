@@ -149,10 +149,10 @@ ${cleanTranspiled}
 
   function getLevelsList() {
     return [
-      { code: "CAMPUS", label: "Fresher (0–2 yrs)", band: "0–2 years", hint: "Freshers & MBA Final-Year Students" },
-      { code: "EARLY", label: "Early (2–5 yrs)", band: "2–5 years", hint: "Early lateral / 2–5 years experience" },
-      { code: "MID", label: "Mid (5–10 yrs)", band: "5–10 years", hint: "Mid Management / 5–10 years experience" },
-      { code: "SENIOR", label: "Senior (10+ yrs)", band: "10+ years", hint: "Senior Executive / CXO / P&L" }
+      { code: "CAMPUS", label: "Fresher", band: "0–2 years", hint: "Freshers & MBA Final-Year Students" },
+      { code: "EARLY", label: "Early", band: "2–5 years", hint: "Early lateral / 2–5 years experience" },
+      { code: "MID", label: "Mid", band: "5–10 years", hint: "Mid Management / 5–10 years experience" },
+      { code: "SENIOR", label: "Senior", band: "10+ years", hint: "Senior Executive / CXO / P&L" }
     ];
   }
 

@@ -233,6 +233,8 @@
     if (repoTab) repoTab.style.display = 'none';
     const accessTab = document.getElementById('navBtnAccess');
     if (accessTab) accessTab.style.display = 'none';
+    const headerNav = document.getElementById('headerNav');
+    if (headerNav) headerNav.classList.add('single-tab');
     const viewInRepoBtn = document.getElementById('viewInRepoBtn');
     if (viewInRepoBtn) viewInRepoBtn.style.display = 'none';
     const accessSection = document.getElementById('accessSection');
@@ -261,6 +263,8 @@
     if (repoTab) repoTab.style.display = 'none';
     const accessTab = document.getElementById('navBtnAccess');
     if (accessTab) accessTab.style.display = 'none';
+    const headerNav = document.getElementById('headerNav');
+    if (headerNav) headerNav.classList.add('single-tab');
     const viewInRepoBtn = document.getElementById('viewInRepoBtn');
     if (viewInRepoBtn) viewInRepoBtn.style.display = 'none';
     const accessSection = document.getElementById('accessSection');
@@ -275,6 +279,7 @@
     // Exclusively show repository tab and access tab ONLY to the 4 co-founders
     const repoTab = document.getElementById('navBtnRepository');
     const accessTab = document.getElementById('navBtnAccess');
+    const headerNav = document.getElementById('headerNav');
     const viewInRepoBtn = document.getElementById('viewInRepoBtn');
     const repoSection = document.getElementById('repositorySection');
     const accessSection = document.getElementById('accessSection');
@@ -284,6 +289,9 @@
     }
     if (accessTab) {
       accessTab.style.display = userIsCoFounder ? 'inline-flex' : 'none';
+    }
+    if (headerNav) {
+      headerNav.classList.toggle('single-tab', !userIsCoFounder);
     }
     if (viewInRepoBtn) {
       viewInRepoBtn.style.display = userIsCoFounder ? 'inline-flex' : 'none';
