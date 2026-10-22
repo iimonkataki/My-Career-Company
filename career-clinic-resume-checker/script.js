@@ -831,6 +831,17 @@ SKILLS & CERTIFICATIONS
         if (otherFields) {
           otherFields.style.display = (companyId === 'other') ? 'grid' : 'none';
         }
+
+        // Auto-calibrate domain to the company's primary hiring domain
+        if (companyId !== 'other') {
+          const c = allCompanies.find(x => x.id === companyId);
+          if (c) {
+            const primaryDom = (c.top3 && c.top3[0]) || (c.hired && c.hired[0]) || 'CON';
+            state.selectedDomainCode = primaryDom;
+            if (domainSelect) domainSelect.value = primaryDom;
+          }
+        }
+
         closeMenu();
         state.selectedRoleId = '';
         updateRolesDropdown();
@@ -977,29 +988,79 @@ SKILLS & CERTIFICATIONS
         levelSelect.value = state.selectedLevelCode;
       }
 
-      // Populate Target Roles dropdown based on Company, Domain, and Level
+      // Populate Target Roles dropdown based on Company and Level
       function updateRolesDropdown() {
         if (!roleSelect) return;
         try {
-          const tempCard = v3.generate({
-            companyId: state.selectedCompanyId === 'other' ? undefined : state.selectedCompanyId,
-            archetype: state.selectedCompanyId === 'other' ? state.selectedArchetype : undefined,
-            segment: state.selectedCompanyId === 'other' ? state.selectedSegment : undefined,
-            domain: state.selectedDomainCode,
-            level: state.selectedLevelCode
+          const c = (state.selectedCompanyId && state.selectedCompanyId !== 'other')
+            ? allCompanies.find(x => x.id === state.selectedCompanyId)
+            : null;
+
+          let companyDomains = [];
+          if (c) {
+            companyDomains = (c.hired && c.hired.length > 0) ? c.hired : (c.top3 && c.top3.length > 0 ? c.top3 : [state.selectedDomainCode || 'CON']);
+          } else if (state.selectedCompanyId === 'other') {
+            const arch = archetypes.find(a => a.code === state.selectedArchetype);
+            if (arch && arch.relevance) {
+              companyDomains = Object.keys(arch.relevance).filter(d => arch.relevance[d] === 'C' || arch.relevance[d] === 'I');
+            }
+            if (!companyDomains || companyDomains.length === 0) {
+              companyDomains = [state.selectedDomainCode || 'CON'];
+            }
+          } else {
+            companyDomains = [state.selectedDomainCode || 'CON'];
+          }
+
+          if (!companyDomains.includes(state.selectedDomainCode)) {
+            state.selectedDomainCode = companyDomains[0];
+            if (domainSelect) domainSelect.value = state.selectedDomainCode;
+          }
+
+          let optionsHtml = '';
+          let firstRoleObj = null;
+          let matchedSelectedRole = false;
+
+          companyDomains.forEach(dCode => {
+            try {
+              const card = v3.generate({
+                companyId: state.selectedCompanyId === 'other' ? undefined : state.selectedCompanyId,
+                archetype: state.selectedCompanyId === 'other' ? state.selectedArchetype : undefined,
+                segment: state.selectedCompanyId === 'other' ? state.selectedSegment : undefined,
+                domain: dCode,
+                level: state.selectedLevelCode
+              });
+
+              const opts = card.roleOptions || [];
+              if (opts.length > 0) {
+                if (companyDomains.length > 1) {
+                  optionsHtml += `<optgroup label="${escapeHtml(card.domainName || dCode)}">`;
+                }
+
+                opts.forEach(r => {
+                  const isSel = (state.selectedRoleId === r.id);
+                  if (isSel) matchedSelectedRole = true;
+                  if (!firstRoleObj) firstRoleObj = { ...r, domain: dCode };
+                  optionsHtml += `<option value="${escapeHtml(r.id)}" data-domain="${escapeHtml(dCode)}"${isSel ? ' selected' : ''}>${escapeHtml(r.name)} (${escapeHtml(r.title)})</option>`;
+                });
+
+                if (companyDomains.length > 1) {
+                  optionsHtml += '</optgroup>';
+                }
+              }
+            } catch (err) {}
           });
 
-          const options = tempCard.roleOptions || [];
-          if (options.length > 0) {
-            roleSelect.innerHTML = options.map((r, i) => {
-              const isSel = (state.selectedRoleId && state.selectedRoleId === r.id) || (!state.selectedRoleId && i === 0);
-              return `<option value="${escapeHtml(r.id)}"${isSel ? ' selected' : ''}>${escapeHtml(r.name)} (${escapeHtml(r.title)})</option>`;
-            }).join('');
-
-            const selectedRoleObj = options.find(r => r.id === roleSelect.value) || options[0];
-            state.selectedRoleId = selectedRoleObj.id;
-            if (roleHint) {
-              roleHint.textContent = selectedRoleObj.focus ? `Focus: ${selectedRoleObj.focus}` : '(Featured role auto-calibrated by affinity)';
+          if (optionsHtml) {
+            roleSelect.innerHTML = optionsHtml;
+            if (!matchedSelectedRole && firstRoleObj) {
+              state.selectedRoleId = firstRoleObj.id;
+              state.selectedDomainCode = firstRoleObj.domain;
+              roleSelect.value = firstRoleObj.id;
+              if (domainSelect) domainSelect.value = firstRoleObj.domain;
+            }
+            const activeOpt = roleSelect.selectedOptions[0];
+            if (roleHint && activeOpt) {
+              roleHint.textContent = `(${activeOpt.text})`;
             }
           }
         } catch (err) {
@@ -1210,6 +1271,14 @@ SKILLS & CERTIFICATIONS
       if (roleSelect) {
         roleSelect.addEventListener('change', () => {
           state.selectedRoleId = roleSelect.value;
+          const opt = roleSelect.selectedOptions[0];
+          if (opt && opt.dataset.domain) {
+            state.selectedDomainCode = opt.dataset.domain;
+            if (domainSelect) domainSelect.value = opt.dataset.domain;
+          }
+          if (roleHint && opt) {
+            roleHint.textContent = `(${opt.text})`;
+          }
           updateSelectedJd(true);
         });
       }
