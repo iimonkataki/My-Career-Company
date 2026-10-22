@@ -12,7 +12,11 @@
       "**/*.exe",
       "**/node_modules/**",
       "**/functions/**",
-      "**/*.md"
+      "**/*.md",
+      "test/**",
+      "tools/**",
+      "docs/**",
+      "RFS_v3/**"
     ],
     "cleanUrls": true,
     "trailingSlash": false,
@@ -104,6 +108,26 @@
       {
         "source": "/ResumeFitScore/favicon.png",
         "destination": "/career-clinic-resume-checker/favicon.png"
+      },
+      {
+        "source": "/ResumeFitScore/fit-engine-v3.js",
+        "destination": "/career-clinic-resume-checker/fit-engine-v3.js"
+      },
+      {
+        "source": "/ResumeFitScore/rfs-v3-bridge.js",
+        "destination": "/career-clinic-resume-checker/rfs-v3-bridge.js"
+      },
+      {
+        "source": "/ResumeFitScore/data/rfs-v3-content.js",
+        "destination": "/career-clinic-resume-checker/data/rfs-v3-content.js"
+      },
+      {
+        "source": "/ResumeFitScore/data/rfs-v3-companies.js",
+        "destination": "/career-clinic-resume-checker/data/rfs-v3-companies.js"
+      },
+      {
+        "source": "/ResumeFitScore/data/rfs-v3-schools.js",
+        "destination": "/career-clinic-resume-checker/data/rfs-v3-schools.js"
       },
       {
         "source": "/ResumeFitScore",

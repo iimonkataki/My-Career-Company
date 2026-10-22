@@ -14,7 +14,11 @@
       "**/node_modules/**",
       "functions/**",
       "cloudflared.exe",
-      "*.md"
+      "*.md",
+      "test/**",
+      "tools/**",
+      "docs/**",
+      "RFS_v3/**"
     ],
     "redirects": [
       {
@@ -63,6 +67,26 @@
       {
         "source": "/ResumeFitScore/favicon.png",
         "destination": "/favicon.png"
+      },
+      {
+        "source": "/ResumeFitScore/fit-engine-v3.js",
+        "destination": "/fit-engine-v3.js"
+      },
+      {
+        "source": "/ResumeFitScore/rfs-v3-bridge.js",
+        "destination": "/rfs-v3-bridge.js"
+      },
+      {
+        "source": "/ResumeFitScore/data/rfs-v3-content.js",
+        "destination": "/data/rfs-v3-content.js"
+      },
+      {
+        "source": "/ResumeFitScore/data/rfs-v3-companies.js",
+        "destination": "/data/rfs-v3-companies.js"
+      },
+      {
+        "source": "/ResumeFitScore/data/rfs-v3-schools.js",
+        "destination": "/data/rfs-v3-schools.js"
       },
       {
         "source": "/ResumeFitScore",

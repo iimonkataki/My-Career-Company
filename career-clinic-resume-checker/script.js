@@ -2399,8 +2399,10 @@ DESIRED QUALIFICATIONS & COMPETENCIES
     resultsPanel.style.display = 'flex';
 
     // Target Domain Metadata
-    const targetRoleKey = state.targetRole || 'consulting';
-    const roleMeta = DOMAIN_METADATA[targetRoleKey] || DOMAIN_METADATA['consulting'];
+    const targetRoleKey = result.targetRoleKey || state.targetRole || 'consulting';
+    const roleMeta = (result.v3 && window.RFSv3Bridge)
+      ? window.RFSv3Bridge.roleMeta(result)                       // JD-, level- and resume-specific certs & projects
+      : (DOMAIN_METADATA[targetRoleKey] || DOMAIN_METADATA['consulting']);
 
     // 1. Prominently Highlight Target Domain Banner based on JD
     const targetDomainBannerTitle = document.getElementById('targetDomainBannerTitle');
@@ -2564,6 +2566,8 @@ DESIRED QUALIFICATIONS & COMPETENCIES
             default:
               realDetail = `Exceeds corporate screening benchmark with strong placement compliance.`;
           }
+
+          if (s.detail) realDetail = escapeHtml(s.detail);
 
           item.innerHTML = `
             <span class="strength-bullet">&#10003;</span>
@@ -2761,19 +2765,27 @@ DESIRED QUALIFICATIONS & COMPETENCIES
       }
 
       if (suitabilityRecruiterBox) {
-        const isSynergy = topDom.key === targetDomKey;
-        if (isSynergy) {
-          suitabilityRecruiterBox.className = 'suitability-recruiter-box synergy';
-          suitabilityRecruiterBox.innerHTML = `
-            <div class="insight-lead">&#127919; <strong>Recruiter Strategic Insight &bull; High Profile Synergy:</strong></div>
-            <p>Your resume's natural competency density aligns with your chosen target vertical (<strong>${escapeHtml(targetDom.label)}</strong> at <strong>${targetDom.score}%</strong>). Implement the high-impact priority fixes above to maximize your Day-0 shortlist conversion.</p>
-          `;
+        const ins = ds.insight;
+        if (ins) {
+          const cls = ins.kind === 'SYNERGY' ? 'synergy' : 'pivot';
+          const lead = { SYNERGY: 'High Profile Synergy', ADJACENT: 'Adjacent Domain Strength', PIVOT: 'Pivot Alert', DEVELOPING: 'Developing Fit' }[ins.kind];
+          suitabilityRecruiterBox.className = 'suitability-recruiter-box ' + cls;
+          suitabilityRecruiterBox.innerHTML = `<div class="insight-lead">&#127919; <strong>Recruiter Strategic Insight &bull; ${lead}:</strong></div><p>${escapeHtml(ins.message)} (${escapeHtml(ins.label)}, confidence ${escapeHtml(ds.confidence || '')}).</p>`;
         } else {
-          suitabilityRecruiterBox.className = 'suitability-recruiter-box pivot';
-          suitabilityRecruiterBox.innerHTML = `
-            <div class="insight-lead">&#128161; <strong>Recruiter Strategic Insight &bull; Cross-Domain Bridging:</strong></div>
-            <p>Your resume currently exhibits highest natural affinity for <strong>${topDom.icon} ${escapeHtml(topDom.label)} (${topDom.score}%)</strong>, whereas your target role is <strong>${targetDom.icon} ${escapeHtml(targetDom.label)} (${targetDom.score}%)</strong>. To strengthen your competitive standing for ${escapeHtml(targetDom.shortLabel)}, incorporate the suggested certifications, capstone initiatives, and missing domain keywords outlined above into your project descriptions.</p>
-          `;
+          const isSynergy = topDom.key === targetDomKey;
+          if (isSynergy) {
+            suitabilityRecruiterBox.className = 'suitability-recruiter-box synergy';
+            suitabilityRecruiterBox.innerHTML = `
+              <div class="insight-lead">&#127919; <strong>Recruiter Strategic Insight &bull; High Profile Synergy:</strong></div>
+              <p>Your resume's natural competency density aligns with your chosen target vertical (<strong>${escapeHtml(targetDom.label)}</strong> at <strong>${targetDom.score}%</strong>). Implement the high-impact priority fixes above to maximize your Day-0 shortlist conversion.</p>
+            `;
+          } else {
+            suitabilityRecruiterBox.className = 'suitability-recruiter-box pivot';
+            suitabilityRecruiterBox.innerHTML = `
+              <div class="insight-lead">&#128161; <strong>Recruiter Strategic Insight &bull; Cross-Domain Bridging:</strong></div>
+              <p>Your resume currently exhibits highest natural affinity for <strong>${topDom.icon} ${escapeHtml(topDom.label)} (${topDom.score}%)</strong>, whereas your target role is <strong>${targetDom.icon} ${escapeHtml(targetDom.label)} (${targetDom.score}%)</strong>. To strengthen your competitive standing for ${escapeHtml(targetDom.shortLabel)}, incorporate the suggested certifications, capstone initiatives, and missing domain keywords outlined above into your project descriptions.</p>
+            `;
+          }
         }
       }
     }
@@ -2887,7 +2899,7 @@ DESIRED QUALIFICATIONS & COMPETENCIES
 
           if (state.extractedText && state.extractedText.length >= 30) {
             textToAnalyze = state.extractedText;
-            numPages = state.fileNumPages || 1;
+            numPages = state.fileNumPages;
           } else if (fileName.endsWith('.pdf')) {
             showLoading("Extracting digital text layers from PDF...");
             const pdfResult = await parsePdfFile(state.fileArrayBuffer, true);
@@ -3006,7 +3018,19 @@ DESIRED QUALIFICATIONS & COMPETENCIES
       showLoading("Scoring against institutional placement benchmarks...");
       await new Promise(resolve => setTimeout(resolve, 400));
 
-      const diagnosticResult = scoreResume(textToAnalyze, numPages, state.targetRole, jdTextToAnalyze);
+      let diagnosticResult;
+      try {
+        diagnosticResult = window.RFSv3Bridge.score({
+          text: textToAnalyze, numPages: numPages,
+          candidateType: state.candidateType, institutionName: state.institutionName,
+          jdTab: state.jdTab, jdObject: state.currentJdObject, jdText: jdTextToAnalyze,
+          jdTitle: jdCustomTitle, jdUrl: state.jdUrl
+        });
+        state.targetRole = diagnosticResult.targetRoleKey;
+      } catch (e) {
+        console.warn('[RFS v3] falling back to legacy engine:', e);
+        diagnosticResult = scoreResume(textToAnalyze, numPages, state.targetRole, jdTextToAnalyze);
+      }
       hideLoading();
       renderResults(diagnosticResult);
 
@@ -4547,7 +4571,7 @@ www.mycareercompany.com`;
           <div class="priority-fix-card">
             <div class="fix-num-badge">PRIORITY 0${i + 1}</div>
             <div class="fix-content">
-              <div class="fix-title">${escapeHtml(f.name)} (${f.loss} pts lost)</div>
+              <div class="fix-title">${escapeHtml(f.name || f.dimensionName)}${f.loss != null ? ' (' + f.loss + ' pts lost)' : ''}</div>
               <div class="fix-desc">${f.advice || ''}</div>
             </div>
           </div>
@@ -4568,7 +4592,7 @@ www.mycareercompany.com`;
       </div>
 
       <div style="margin-bottom: 24px;">
-        <h4 style="font-size: 15px; color: var(--color-gold-primary); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.04em;">Evaluation Vectors (8 Dimensions)</h4>
+        <h4 style="font-size: 15px; color: var(--color-gold-primary); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.04em;">Evaluation Vectors (${(rep.dimensions || []).length} Dimensions)</h4>
         <div class="dimension-bars-list">
           ${dimsHtml}
         </div>

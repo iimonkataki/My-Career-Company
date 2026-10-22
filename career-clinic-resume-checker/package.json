@@ -2,7 +2,7 @@
   "name": "mcc-resumechecker",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
+  "type": "commonjs",
   "scripts": {
     "dev": "next dev",
     "jd:extract:v3": "node scripts/extract-jd-database-v3.mjs && node scripts/build-client-jd-v3.mjs",

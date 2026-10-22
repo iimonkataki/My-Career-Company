@@ -1,0 +1,950 @@
+
+=== FIT SCORE: current production code vs v3 ===
+Resume                Target JD                 Current  Cur D4/10 v3   v3 band     v3 bullet strength
+R1_IIM_FRESHER_MKT    MKT-CAMPUS                86       3         89   STRONG      85%
+R1_IIM_FRESHER_MKT    CON-CAMPUS                81       3         77   STRONG      88%
+R1_IIM_FRESHER_MKT    FIN-CAMPUS                83       3         69   MODERATE    88%
+R1_IIM_FRESHER_MKT    J1_ABM_FMCG               81       3         90   STRONG      85%
+R1_IIM_FRESHER_MKT    J5_MT_SALES_FMCG          83       3         71   MODERATE    86%
+R2_TIER3_FRESHER_FIN  FIN-CAMPUS                45       0         49   NEEDS WORK  43%
+R2_TIER3_FRESHER_FIN  MKT-CAMPUS                44       0         36   NEEDS WORK  40%
+R2_TIER3_FRESHER_FIN  J3_CREDIT_ANALYST_NBFC    47       0         57   MODERATE    43%
+R3_EARLY_IT_TO_PM     PM-EARLY                  78       0         74   MODERATE    64%
+R3_EARLY_IT_TO_PM     BA-EARLY                  73       0         62   MODERATE    66%
+R3_EARLY_IT_TO_PM     ITS-EARLY                 72       0         62   MODERATE    51%
+R3_EARLY_IT_TO_PM     J4_PRODUCT_ANALYST_GROWTH 80       0         78   STRONG      66%
+R4_MID_SALES          SAL-MID                   73       5         85   STRONG      94%
+R4_MID_SALES          MKT-MID                   66       5         62   MODERATE    95%
+R4_MID_SALES          SAL-CAMPUS                76       5         68   MODERATE    94%
+R4_MID_SALES          J5_MT_SALES_FMCG          74       5         72   MODERATE    95%
+R4_MID_SALES          J8_QCOMM_CATEGORY         69       5         60   MODERATE    95%
+R5_SENIOR_HR          HR-SENIOR                 66       3         85   STRONG      85%
+R5_SENIOR_HR          HR-MID                    71       3         84   STRONG      85%
+R5_SENIOR_HR          GM-SENIOR                 66       3         60   MODERATE    91%
+R6_XLRI_HR_FRESHER    HR-CAMPUS                 74       0         73   MODERATE    90%
+R6_XLRI_HR_FRESHER    MKT-CAMPUS                66       0         59   MODERATE    90%
+R6_XLRI_HR_FRESHER    CON-CAMPUS                67       0         59   MODERATE    88%
+R6_XLRI_HR_FRESHER    LEG-CAMPUS                66       0         54   NEEDS WORK  90%
+R6_XLRI_HR_FRESHER    J6_ESG_ANALYST            67       0         55   MODERATE    90%
+
+SD across all pairs — current: 11.0 | v3: 13.1
+Same resume, different JDs (max−min) — current: 5, 3, 8, 10, 5, 8 | v3: 21, 21, 16, 25, 25, 19
+Current D4 (action verbs) values: 3 3 3 3 3 0 0 0 0 0 0 0 5 5 5 5 5 3 3 3 0 0 0 0 0  (out of 10)
+
+=== JD DOMAIN DETECTION: current vs v3 ===
+J1_ABM_FMCG                           current → marketing      | v3 → MKT · HIGH · level CAMPUS [entry-level title]
+J2_DIGITAL_TRANSFORMATION_CONSULTANT  current → consulting     | v3 → CON · HIGH · level EARLY [2–5 years required]
+J3_CREDIT_ANALYST_NBFC                current → finance        | v3 → FIN · HIGH · level CAMPUS [campus/fresher wording]
+J4_PRODUCT_ANALYST_GROWTH             current → analytics      | v3 → PM (+BA) · MEDIUM · level CAMPUS [1–3 years required]
+J5_MT_SALES_FMCG                      current → genman         | v3 → SAL · HIGH · level CAMPUS [campus/fresher wording]
+J6_ESG_ANALYST                        current → operations     | v3 → ESG · HIGH · level CAMPUS [campus/fresher wording]
+J7_HOSPITAL_OPS                       current → operations     | v3 → HCM (+OPS) · MEDIUM · level MID [5–8 years required]
+J8_QCOMM_CATEGORY                     current → analytics      | v3 → ECM · HIGH · level EARLY [2–4 years required]
+
+=== RESUME DOMAIN SUITABILITY (top 3): current vs v3 ===
+R1_IIM_FRESHER_MKT    current: analytics 40 | marketing 34 | cons v3: MKT 86 | CON 50 | BA 46 · conf HIGH
+R2_TIER3_FRESHER_FIN  current: consulting 20 | finance 20 | marke v3: FIN 82 | SAL 55 | IB 34 · conf HIGH
+R3_EARLY_IT_TO_PM     current: product 81 | analytics 37 | consul v3: PM 78 | ITS 72 | BA 48 · conf MEDIUM
+R4_MID_SALES          current: sales 34 | consulting 20 | finance v3: SAL 86 | MKT 25 | HR 13 · conf HIGH
+R5_SENIOR_HR          current: hr 56 | consulting 20 | finance 20 v3: HR 90 | SAL 12 | GM 12 · conf HIGH
+R6_XLRI_HR_FRESHER    current: analytics 31 | hr 28 | consulting  v3: HR 88 | MKT 41 | SAL 33 · conf HIGH
+
+──────── R1_IIM_FRESHER_MKT × MKT-CAMPUS → 89 STRONG | JD MKT/CAMPUS | user CAMPUS
+   V1 JD Skill & Must-Have Match                     14.4/21.7   66%
+   V2 Role & Domain Alignment                        4.4/4.9     89%
+   V3 Experience & Level Fit                         11.9/11.9   100%
+   V4 Quantified Impact                              11.9/13.8   86%
+   V5 Bullet Strength (Action / Result-First)        8.4/9.8     85%
+   V6 Leadership, PoR & Achievements                 13.6/13.6   100%
+   V7 Education & Credentials                        7.5/7.5     100%
+   V8 Structure, Sections & Contact                  6.9/6.9     100%
+   V9 Length & Bullet Discipline                     4.9/4.9     100%
+   V10 ATS Parse Health                              4.9/4.9     100%
+   Suitability: SYNERGY — Direct alignment: your internships & projects, MBA specialisation, clubs & competitions point to Marketing. Career-switch pattern detected: past roles in IT & Systems, MBA signals point to Marketing.
+   CERT Meta Blueprint – Digital Marketing Associate — Listed as preferred for MKT-CAMPUS (≈USD 99 (verify), 2–3 weeks)
+   CERT HubSpot Inbound / Content Marketing — Listed as preferred for MKT-CAMPUS (Free, 1 week)
+   CERT SQL for analytics (with a public query portfolio) — Listed as preferred for MKT-CAMPUS (Free–low, 2–3 weeks)
+   PROJECT Consumer research study (n ≥ 100 + 2 FGDs) translated into a positioning recommendation — Core Marketing proof-of-work for Campus-level roles
+   PROJECT Category deep-dive: price-pack architecture and share estimate for an FMCG category (retail audit of 30 outlets) — Core Marketing proof-of-work for Campus-level roles
+   PROJECT Live ₹5–10k performance campaign for a D2C brand or campus venture (CTR, CAC, ROAS reported) — Core Marketing proof-of-work for Campus-level roles
+   COMPETITION HUL L.I.M.E. — Aug–Sep (1st-year MBA) · Open to MBA/PGDM students
+   COMPETITION L'Oréal Brandstorm — Oct–Mar · Open to MBA/PGDM students
+   REWRITE [STRONG_VERB]
+      before: Identified 3 white-space consumer segments via 120 consumer interviews and 2 FGDs across 4 Tier-2 cities
+      after:  Identified 3 white-space consumer segments via 120 consumer interviews and 2 FGDs across 4 Tier-2 cities, with insights adopted in the [brand] [pack / price / channel] plan
+      result-first: Insights adopted in the [brand] [pack / price] plan by identifying 3 white-space consumer segments via 120 consumer interviews and 2 FGDs across 4 Tier-2 cities
+   REWRITE [NO_VERB]
+      before: Consumer behaviour study on quick-commerce adoption (n=210) using regression analysis in SPSS
+      after:  Conducted consumer behaviour study on quick-commerce adoption (n=210) using regression analysis in SPSS, driving [X]% [share / sales / engagement] uplift for [brand]
+      result-first: [X]% [share / sales] uplift for [brand] by conducting consumer behaviour study on quick-commerce adoption (n=210) using regression analysis in SPSS
+      note: If you owned the outcome, a stronger Marketing verb: Launched / Repositioned / Activated.
+   REWRITE [NO_VERB]
+      before: Market-entry strategy for a D2C coffee brand in South India: bottom-up market sizing of ₹420 Cr and GTM plan
+      after:  Developed Market-entry strategy for a D2C coffee brand in South India: bottom-up market sizing of ₹420 Cr and GTM plan
+      note: Metric kept as written; the line now opens with what you did.
+
+──────── R1_IIM_FRESHER_MKT × CON-CAMPUS → 77 STRONG | JD CON/CAMPUS | user CAMPUS
+   V1 JD Skill & Must-Have Match                     9.3/20.8    44%
+   V2 Role & Domain Alignment                        1.4/4.7     29%
+   V3 Experience & Level Fit                         6.9/10.4    66%
+   V4 Quantified Impact                              13.1/14.6   90%
+   V5 Bullet Strength (Action / Result-First)        8.3/9.5     88%
+   V6 Leadership, PoR & Achievements                 14.2/14.2   100%
+   V7 Education & Credentials                        7.9/9.8     81%
+   V8 Structure, Sections & Contact                  6.6/6.6     100%
+   V9 Length & Bullet Discipline                     4.7/4.7     100%
+   V10 ATS Parse Health                              4.7/4.7     100%
+   Suitability: DEVELOPING — Consulting evidence is still thin across titles, internships and bullets. Prioritise the fixes and projects below. Career-switch pattern detected: past roles in IT & Systems, MBA signals point to Marketing.
+   FIX 01 [INTERNSHIP_FRAMING +2.1] Reframe your Marico internship toward Consulting
+        why: For Campus roles the summer internship is the main experience signal. Yours currently reads as brand management intern parachute advansed rather than Consulting.
+        do:  Lead the internship block with its most Consulting-relevant result, add a one-line project objective, and name the JD terms you genuinely used (e.g. powerpoint).
+   FIX 02 [TITLE_ALIGN +1.8] Signal the target role in your headline
+        why: Recruiters read title and company first. None of your current titles reads as Consulting for "Associate".
+        do:  Add a one-line headline under your name: "MBA (Marketing) · Consulting track · Structured problem solving · Excel". Keep your formal job titles unchanged.
+   FIX 03 [JD_EVIDENCE +1.7] Prove PowerPoint, Data analysis inside a bullet
+        why: Associate lists must-haves that appear only in your Skills section. Recruiter keyword search and the shortlisting panel both look for them in experience lines.
+        do:  Add the tool or skill where you actually used it, for example in: "Automated weekly client MIS reporting in Excel VBA, cutting preparation time by 60% for a UK retail client". Name it and attach the outcome.
+   FIX 04 [CERT_GAP +1.6] Add a JD-valued credential: Lean Six Sigma Green Belt (ISI / QAI / KPMG India)
+        why: Listed as preferred for CON-CAMPUS. At Campus level an in-progress credential with a date ("exam booked: Dec 2026") is a credible signal.
+        do:  Start it this month and list it with a status and date. Cost ₹17,700 (ISI Delhi) – ₹23,600 (KPMG India), about 3–6 days + project.
+   CERT Lean Six Sigma Green Belt (ISI / QAI / KPMG India) — Listed as preferred for CON-CAMPUS (₹17,700 (ISI Delhi) – ₹23,600 (KPMG India), 3–6 days + project)
+   CERT SQL for analytics (with a public query portfolio) — Listed as preferred for CON-CAMPUS (Free–low, 2–3 weeks)
+   CERT IIBA ECBA — Listed as preferred for CON-CAMPUS (USD 395 incl. first-year membership, 4–8 weeks)
+   PROJECT Pro-bono strategy sprint for an NGO or MSME (problem → recommendations → adoption) — Builds evidence for Structured problem solving, Stakeholder management, Data analysis (missing, or only in your skills list)
+   PROJECT Market-entry or cost-diagnostic case for an Indian company (10-slide deck, bottom-up sizing) — Builds evidence for Structured problem solving, PowerPoint, Financial modelling (missing, or only in your skills list)
+   COMPETITION Accenture B-School Challenge — Jul–Aug · Open to MBA/PGDM students
+   COMPETITION Aditya Birla Group Stratos — Jul–Aug (invite-only B-schools) · Invite-only B-schools; check with your PlaceCom
+   REWRITE [NO_VERB]
+      before: Consumer behaviour study on quick-commerce adoption (n=210) using regression analysis in SPSS
+      after:  Conducted consumer behaviour study on quick-commerce adoption (n=210) using regression analysis in SPSS, synthesising [N] interviews into [N] recommendations adopted by [client]
+      result-first: [N] recommendations adopted by [client] by conducting consumer behaviour study on quick-commerce adoption (n=210) using regression analysis in SPSS
+      note: If you owned the outcome, a stronger Consulting verb: Diagnosed / Structured / Sized.
+   REWRITE [NO_VERB]
+      before: Market-entry strategy for a D2C coffee brand in South India: bottom-up market sizing of ₹420 Cr and GTM plan
+      after:  Developed Market-entry strategy for a D2C coffee brand in South India: bottom-up market sizing of ₹420 Cr and GTM plan
+      note: Metric kept as written; the line now opens with what you did.
+   REWRITE [NEUTRAL]
+      before: Placement Committee Member: coordinated with 40+ recruiters for summer placements
+      after:  Placement Committee Member: Coordinated with 40+ recruiters for summer placements, informing a [client] decision worth ₹[X] Cr
+      result-first: Placement Committee Member: ₹[X] Cr [client] decision informed by coordinating with 40+ recruiters for summer placements
+      note: If you owned the outcome, a stronger Consulting verb: Diagnosed / Structured / Sized.
+
+──────── R1_IIM_FRESHER_MKT × FIN-CAMPUS → 69 MODERATE | JD FIN/CAMPUS | user CAMPUS
+   V1 JD Skill & Must-Have Match                     4.3/23.4    18%
+   V2 Role & Domain Alignment                        0.9/4.8     18%
+   V3 Experience & Level Fit                         9/10.6      85%
+   V4 Quantified Impact                              10.9/12.2   90%
+   V5 Bullet Strength (Action / Result-First)        8.5/9.7     88%
+   V6 Leadership, PoR & Achievements                 11.6/11.6   100%
+   V7 Education & Credentials                        7.1/11.3    63%
+   V8 Structure, Sections & Contact                  6.8/6.8     100%
+   V9 Length & Bullet Discipline                     4.8/4.8     100%
+   V10 ATS Parse Health                              4.8/4.8     100%
+   Suitability: PIVOT — Pivot alert: your profile reads Marketing (86) more than Finance (30). Either target Marketing roles or build Finance evidence first (see projects & certifications). Career-switch pattern detected: past roles in IT & Systems, MBA signals point to Marketing.
+   FIX 01 [MUST_HAVE_GAP +2] Close the must-have gap: Financial statement analysis & Financial modelling
+        why: These are must-haves for Management Trainee – Finance (Finance · Campus) and nothing in your resume shows them. A must-have gap is the most common reason for a no-shortlist at this level.
+        do:  If you have done this in an internship, live project or course project, add one bullet that shows it with a result. If not, use the project or certification cards below to build the evidence before applying.
+   FIX 02 [CERT_GAP +1.8] Add a JD-valued credential: CFA Level I (candidate)
+        why: Listed as preferred for FIN-CAMPUS. At Campus level an in-progress credential with a date ("exam booked: Dec 2026") is a credible signal.
+        do:  Start it this month and list it with a status and date. Cost USD 1,140 early / 1,490 standard, about ~300 hrs.
+   FIX 03 [TITLE_ALIGN +1.8] Signal the target role in your headline
+        why: Recruiters read title and company first. None of your current titles reads as Finance for "Management Trainee – Finance".
+        do:  Add a one-line headline under your name: "MBA (Marketing) · Finance track · Excel · Mis". Keep your formal job titles unchanged.
+   CERT CFA Level I (candidate) — Listed as preferred for FIN-CAMPUS (USD 1,140 early / 1,490 standard, ~300 hrs)
+   CERT Python for data analysis (pandas) with a notebook portfolio — Listed as preferred for FIN-CAMPUS (Free–low, 3–5 weeks)
+   CERT NISM Series XV – Research Analyst — Closes your JD gap in Equity research & Financial statement analysis (₹1,500 incl. GST, 2–4 weeks)
+   PROJECT Credit appraisal of a listed MSME/NBFC borrower (CMA-style note, ratio & cash-flow analysis) — Builds evidence for Credit appraisal, Financial statement analysis, Accounting (missing, or only in your skills list)
+   PROJECT 3-statement + DCF model of a Nifty 100 company with a 2-page investment memo — Builds evidence for Financial modelling, Valuation, Financial statement analysis (missing, or only in your skills list)
+   PROJECT FP&A rebuild: budget-vs-actual and rolling forecast for a family business or club — Builds evidence for FP&A, Variance analysis (missing, or only in your skills list)
+   COMPETITION Aditya Birla Group Stratos — Jul–Aug (invite-only B-schools) · Invite-only B-schools; check with your PlaceCom
+   COMPETITION American Express Campus Challenge — Varies · Listed campuses; check if yours is on the list
+   REWRITE [NO_VERB]
+      before: Consumer behaviour study on quick-commerce adoption (n=210) using regression analysis in SPSS
+      after:  Conducted consumer behaviour study on quick-commerce adoption (n=210) using regression analysis in SPSS, surveying [N] investors to recommend [product / channel] changes
+      result-first: [Recommendation] adopted from a [N]-respondent study by conducting consumer behaviour study on quick-commerce adoption (n=210) using regression analysis in SPSS
+      note: If you owned the outcome, a stronger Finance verb: Valued / Modelled / Underwrote.
+   REWRITE [NEUTRAL]
+      before: Placement Committee Member: coordinated with 40+ recruiters for summer placements
+      after:  Placement Committee Member: Coordinated with 40+ recruiters for summer placements, covering ₹[X] Cr of [exposure]
+      result-first: Placement Committee Member: ₹[X] Cr of [exposure] reviewed by coordinating with 40+ recruiters for summer placements
+      note: If you owned the outcome, a stronger Finance verb: Valued / Modelled / Underwrote.
+
+──────── R1_IIM_FRESHER_MKT × J1_ABM_FMCG → 90 STRONG | JD MKT/CAMPUS | user CAMPUS
+   V1 JD Skill & Must-Have Match                     15.2/21.7   70%
+   V2 Role & Domain Alignment                        4.4/4.9     89%
+   V3 Experience & Level Fit                         11.9/11.9   100%
+   V4 Quantified Impact                              11.9/13.8   86%
+   V5 Bullet Strength (Action / Result-First)        8.4/9.8     85%
+   V6 Leadership, PoR & Achievements                 13.6/13.6   100%
+   V7 Education & Credentials                        7.5/7.5     100%
+   V8 Structure, Sections & Contact                  6.9/6.9     100%
+   V9 Length & Bullet Discipline                     4.9/4.9     100%
+   V10 ATS Parse Health                              4.9/4.9     100%
+   Suitability: SYNERGY — Direct alignment: your internships & projects, MBA specialisation, clubs & competitions point to Marketing. Career-switch pattern detected: past roles in IT & Systems, MBA signals point to Marketing.
+   FIX 01 [JD_EVIDENCE +1.6] Prove Brand management, Analytics, Data analysis inside a bullet
+        why: Assistant Brand Manager – Home Care lists keywords that appear only in your Skills section. Recruiter keyword search and the shortlisting panel both look for them in experience lines.
+        do:  Add the tool or skill where you actually used it, for example in: "Identified 3 white-space consumer segments via 120 consumer interviews and 2 FGDs across 4 Tier-2 cities". Name it and attach the outcome.
+   CERT Meta Blueprint – Digital Marketing Associate — Listed as preferred for this JD (≈USD 99 (verify), 2–3 weeks)
+   CERT HubSpot Inbound / Content Marketing — Listed as preferred for this JD (Free, 1 week)
+   CERT Tableau Desktop Foundations — Closes your JD gap in Data analysis (≈USD 100 (verify), 2–4 weeks)
+   PROJECT Live ₹5–10k performance campaign for a D2C brand or campus venture (CTR, CAC, ROAS reported) — Builds evidence for Marketing analytics (missing, or only in your skills list)
+   PROJECT Consumer research study (n ≥ 100 + 2 FGDs) translated into a positioning recommendation — Core Marketing proof-of-work for Campus-level roles
+   PROJECT Category deep-dive: price-pack architecture and share estimate for an FMCG category (retail audit of 30 outlets) — Core Marketing proof-of-work for Campus-level roles
+   COMPETITION HUL L.I.M.E. — Aug–Sep (1st-year MBA) · Open to MBA/PGDM students
+   COMPETITION L'Oréal Brandstorm — Oct–Mar · Open to MBA/PGDM students
+   REWRITE [STRONG_VERB]
+      before: Identified 3 white-space consumer segments via 120 consumer interviews and 2 FGDs across 4 Tier-2 cities
+      after:  Identified 3 white-space consumer segments via 120 consumer interviews and 2 FGDs across 4 Tier-2 cities, with insights adopted in the [brand] [pack / price / channel] plan
+      result-first: Insights adopted in the [brand] [pack / price] plan by identifying 3 white-space consumer segments via 120 consumer interviews and 2 FGDs across 4 Tier-2 cities
+   REWRITE [NO_VERB]
+      before: Consumer behaviour study on quick-commerce adoption (n=210) using regression analysis in SPSS
+      after:  Conducted consumer behaviour study on quick-commerce adoption (n=210) using regression analysis in SPSS, driving [X]% [share / sales / engagement] uplift for [brand]
+      result-first: [X]% [share / sales] uplift for [brand] by conducting consumer behaviour study on quick-commerce adoption (n=210) using regression analysis in SPSS
+      note: If you owned the outcome, a stronger Marketing verb: Launched / Repositioned / Activated.
+   REWRITE [NO_VERB]
+      before: Market-entry strategy for a D2C coffee brand in South India: bottom-up market sizing of ₹420 Cr and GTM plan
+      after:  Developed Market-entry strategy for a D2C coffee brand in South India: bottom-up market sizing of ₹420 Cr and GTM plan
+      note: Metric kept as written; the line now opens with what you did.
+
+──────── R1_IIM_FRESHER_MKT × J5_MT_SALES_FMCG → 71 MODERATE | JD SAL/CAMPUS | user CAMPUS
+   V1 JD Skill & Must-Have Match                     1.9/21.3    9%
+   V2 Role & Domain Alignment                        1.1/4.8     23%
+   V3 Experience & Level Fit                         9.9/11.7    85%
+   V4 Quantified Impact                              15.2/17.6   86%
+   V5 Bullet Strength (Action / Result-First)        8.3/9.7     86%
+   V6 Leadership, PoR & Achievements                 11.6/11.6   100%
+   V7 Education & Credentials                        7/7         100%
+   V8 Structure, Sections & Contact                  6.8/6.8     100%
+   V9 Length & Bullet Discipline                     4.8/4.8     100%
+   V10 ATS Parse Health                              4.8/4.8     100%
+   Suitability: PIVOT — Pivot alert: your profile reads Marketing (86) more than Sales (39). Either target Marketing roles or build Sales evidence first (see projects & certifications). Career-switch pattern detected: past roles in IT & Systems, MBA signals point to Marketing.
+   FIX 01 [MUST_HAVE_GAP +5.4] Close the must-have gap: Target achievement & Negotiation
+        why: These are must-haves for Management Trainee – Sales (Campus 2027) (Sales · Campus) and nothing in your resume shows them. A must-have gap is the most common reason for a no-shortlist at this level.
+        do:  If you have done this in an internship, live project or course project, add one bullet that shows it with a result. If not, use the project or certification cards below to build the evidence before applying.
+   FIX 02 [TITLE_ALIGN +1.8] Signal the target role in your headline
+        why: Recruiters read title and company first. None of your current titles reads as Sales for "Management Trainee – Sales (Campus 2027)".
+        do:  Add a one-line headline under your name: "MBA (Marketing) · Sales track". Keep your formal job titles unchanged.
+   FIX 03 [JD_EVIDENCE +1.4] Prove Data analysis inside a bullet
+        why: Management Trainee – Sales (Campus 2027) lists keywords that appear only in your Skills section. Recruiter keyword search and the shortlisting panel both look for them in experience lines.
+        do:  Add the tool or skill where you actually used it, for example in: "Automated weekly client MIS reporting in Excel VBA, cutting preparation time by 60% for a UK retail client". Name it and attach the outcome.
+   CERT Salesforce Certified Administrator — Listed as preferred for this JD (≈USD 200 (verify), 4–6 weeks)
+   CERT HubSpot Inbound / Content Marketing — Listed as preferred for this JD (Free, 1 week)
+   CERT Microsoft PL-300 Power BI Data Analyst — Closes your JD gap in Data analysis & Sales analytics (≈₹4,865 + GST (verify), 4–6 weeks)
+   PROJECT Live B2B lead-generation sprint for a startup (pipeline, conversion, CRM) — Builds evidence for Negotiation, Target achievement (missing, or only in your skills list)
+   PROJECT Beat-plan / territory redesign for 30–50 outlets with a distributor ROI analysis — Builds evidence for Territory management, Sales analytics, Distribution (missing, or only in your skills list)
+   COMPETITION HUL L.I.M.E. — Aug–Sep (1st-year MBA) · Open to MBA/PGDM students
+   COMPETITION Axis Bank / BFSI campus case challenges — Varies · Listed campuses; check if yours is on the list
+   REWRITE [NO_VERB]
+      before: Consumer behaviour study on quick-commerce adoption (n=210) using regression analysis in SPSS
+      after:  Conducted consumer behaviour study on quick-commerce adoption (n=210) using regression analysis in SPSS, growing [territory / account] revenue by [X]% YoY
+      result-first: [X]% YoY revenue growth by conducting consumer behaviour study on quick-commerce adoption (n=210) using regression analysis in SPSS
+      note: If you owned the outcome, a stronger Sales verb: Closed / Grew / Expanded.
+   REWRITE [NEUTRAL]
+      before: Placement Committee Member: coordinated with 40+ recruiters for summer placements
+      after:  Placement Committee Member: Coordinated with 40+ recruiters for summer placements, delivering [outcome: X% / ₹X L] for [team / client]
+      result-first: Placement Committee Member: [Outcome: X% / ₹X L] for [team / client] by coordinating with 40+ recruiters for summer placements
+      note: If you owned the outcome, a stronger Sales verb: Closed / Grew / Expanded.
+
+──────── R2_TIER3_FRESHER_FIN × FIN-CAMPUS → 49 NEEDS WORK | JD FIN/CAMPUS | user CAMPUS
+   V1 JD Skill & Must-Have Match                     5.7/23.4    25%
+   V2 Role & Domain Alignment                        3.9/4.8     80%
+   V3 Experience & Level Fit                         8.2/10.6    78%
+   V4 Quantified Impact                              0/12.2      0%
+   V5 Bullet Strength (Action / Result-First)        4.1/9.7     43%
+   V6 Leadership, PoR & Achievements                 4/11.6      34%
+   V7 Education & Credentials                        9.1/11.3    81%
+   V8 Structure, Sections & Contact                  6.2/6.8     91%
+   V9 Length & Bullet Discipline                     3.5/4.8     73%
+   V10 ATS Parse Health                              4.3/4.8     90%
+   Suitability: SYNERGY — Direct alignment: your internships & projects, MBA specialisation, undergraduate degree point to Finance.
+   FIX 01 [QUANTIFY +8] Put a number on your internship bullets
+        why: Campus shortlists for Finance compare outcomes, not activities. 100% of your JD-relevant bullets have no outcome metric.
+        do:  Rewrite "Worked on preparing reports of loan applications in excel." and "Helped the credit team in analysing balance sheets of small business customers." with one of: portfolio or loan book (₹ Cr), TAT cut (days), variance closed (%), forecast accuracy (%), NPAs flagged, close cycle (days). Use only numbers you can prove.
+   FIX 02 [LEADERSHIP_SCOPE +3.3] Add scale to your position of responsibility
+        why: Finance recruiters at Campus level look for leadership spikes and competition results.
+        do:  Quantify "Member of the cultural committee.": team size, budget (₹), reach / participants and the outcome. If you were a member, name your specific contribution.
+   FIX 03 [WEAK_OPENERS +3.2] 6 bullets open with passive phrasing
+        why: "responsible for", "worked on", "helped" read as attendance, not ownership. Panels skim the first 3–4 words of each line.
+        do:  Lead with the action you owned or the result, e.g. Valued, Modelled, Underwrote, Appraised. Start with: "Responsible for collecting documents from customers for loan processing.". See the rewrites below.
+   FIX 04 [MUST_HAVE_GAP +2] Close the must-have gap: Financial modelling & Valuation
+        why: These are must-haves for Management Trainee – Finance (Finance · Campus) and nothing in your resume shows them. A must-have gap is the most common reason for a no-shortlist at this level.
+        do:  If you have done this in an internship, live project or course project, add one bullet that shows it with a result. If not, use the project or certification cards below to build the evidence before applying.
+   CERT CFA Level I (candidate) — Listed as preferred for FIN-CAMPUS (USD 1,140 early / 1,490 standard, ~300 hrs)
+   CERT Python for data analysis (pandas) with a notebook portfolio — Listed as preferred for FIN-CAMPUS (Free–low, 3–5 weeks)
+   CERT NISM Series XV – Research Analyst — Closes your JD gap in Equity research & Valuation (₹1,500 incl. GST, 2–4 weeks)
+   PROJECT FP&A rebuild: budget-vs-actual and rolling forecast for a family business or club — Builds evidence for FP&A, Variance analysis (missing, or only in your skills list)
+   PROJECT 3-statement + DCF model of a Nifty 100 company with a 2-page investment memo — Builds evidence for Financial modelling, Valuation (missing, or only in your skills list)
+   PROJECT Credit appraisal of a listed MSME/NBFC borrower (CMA-style note, ratio & cash-flow analysis) — Builds evidence for Credit appraisal, Accounting (missing, or only in your skills list)
+   COMPETITION American Express Campus Challenge — Varies · Listed campuses; check if yours is on the list
+   COMPETITION Axis Bank / BFSI campus case challenges — Varies · Listed campuses; check if yours is on the list
+   REWRITE [WEAK]
+      before: Worked on preparing reports of loan applications in excel.
+      after:  Prepared reports of loan applications in excel, saving [X] analyst-hours per [week] in [MIS / reporting]
+      result-first: [X] analyst-hours saved per [week] by preparing reports of loan applications in excel
+      note: If you owned the outcome, a stronger Finance verb: Valued / Modelled / Underwrote.
+   REWRITE [WEAK]
+      before: Helped the credit team in analysing balance sheets of small business customers.
+      after:  Analysed balance sheets of small business customers for the credit team, across a ₹[X] Cr [loan book / portfolio] of [N] clients
+      result-first: ₹[X] Cr [portfolio] covered by analysing balance sheets of small business customers for the credit team
+      note: Ownership check: keep "Supported…" if this was mainly someone else's work. Overclaiming fails PlaceCom verification and interviews.
+   REWRITE [STRONG_VERB]
+      before: Project on Ratio analysis of Tata Motors for 5 years.
+      after:  Conducted ratio analysis of Tata Motors for 5 years, supporting a ₹[X] Cr [credit / investment / pricing] decision
+      result-first: ₹[X] Cr [credit / investment] decision supported by conducting ratio analysis of Tata Motors for 5 years
+      note: If you owned the outcome, a stronger Finance verb: Valued / Modelled / Underwrote.
+
+──────── R2_TIER3_FRESHER_FIN × MKT-CAMPUS → 36 NEEDS WORK | JD MKT/CAMPUS | user CAMPUS
+   V1 JD Skill & Must-Have Match                     1/21.7      4%
+   V2 Role & Domain Alignment                        0.7/4.9     15%
+   V3 Experience & Level Fit                         5.1/11.9    43%
+   V4 Quantified Impact                              0/13.8      0%
+   V5 Bullet Strength (Action / Result-First)        4/9.8       40%
+   V6 Leadership, PoR & Achievements                 4.6/13.6    34%
+   V7 Education & Credentials                        6.1/7.5     81%
+   V8 Structure, Sections & Contact                  6.3/6.9     91%
+   V9 Length & Bullet Discipline                     3.6/4.9     73%
+   V10 ATS Parse Health                              4.4/4.9     90%
+   Suitability: PIVOT — Pivot alert: your profile reads Finance (82) more than Marketing (25). Either target Finance roles or build Marketing evidence first (see projects & certifications).
+   FIX 01 [QUANTIFY +6] Put a number on your internship bullets
+        why: Campus shortlists for Marketing compare outcomes, not activities. 100% of your JD-relevant bullets have no outcome metric.
+        do:  Rewrite "Worked on preparing reports of loan applications in excel." and "Responsible for collecting documents from customers for loan processing." with one of: sales or share uplift, reach / CTR / ROAS, CAC change, trial or penetration, consumer sample size, campaign budget (₹). Use only numbers you can prove.
+   FIX 02 [LEADERSHIP_SCOPE +3.9] Add scale to your position of responsibility
+        why: Marketing recruiters at Campus level look for leadership spikes and competition results.
+        do:  Quantify "Member of the cultural committee.": team size, budget (₹), reach / participants and the outcome. If you were a member, name your specific contribution.
+   FIX 03 [WEAK_OPENERS +3.3] 6 bullets open with passive phrasing
+        why: "responsible for", "worked on", "helped" read as attendance, not ownership. Panels skim the first 3–4 words of each line.
+        do:  Lead with the action you owned or the result, e.g. Launched, Repositioned, Activated, Drove. Start with: "Responsible for collecting documents from customers for loan processing.". See the rewrites below.
+   FIX 04 [MUST_HAVE_GAP +2.3] Close the must-have gap: Marketing strategy & Consumer insights
+        why: These are must-haves for Assistant Brand Manager (Marketing · Campus) and nothing in your resume shows them. A must-have gap is the most common reason for a no-shortlist at this level.
+        do:  If you have done this in an internship, live project or course project, add one bullet that shows it with a result. If not, use the project or certification cards below to build the evidence before applying.
+   CERT Google Ads + GA4 certifications (Skillshop) — Listed as preferred for MKT-CAMPUS (Free, 1–2 weeks)
+   CERT Meta Blueprint – Digital Marketing Associate — Listed as preferred for MKT-CAMPUS (≈USD 99 (verify), 2–3 weeks)
+   CERT HubSpot Inbound / Content Marketing — Listed as preferred for MKT-CAMPUS (Free, 1 week)
+   PROJECT Category deep-dive: price-pack architecture and share estimate for an FMCG category (retail audit of 30 outlets) — Builds evidence for Consumer insights, Marketing strategy (missing, or only in your skills list)
+   PROJECT Live ₹5–10k performance campaign for a D2C brand or campus venture (CTR, CAC, ROAS reported) — Builds evidence for Digital marketing, Campaign management, Marketing analytics (missing, or only in your skills list)
+   PROJECT Consumer research study (n ≥ 100 + 2 FGDs) translated into a positioning recommendation — Builds evidence for Consumer insights, Marketing strategy (missing, or only in your skills list)
+   COMPETITION HUL L.I.M.E. — Aug–Sep (1st-year MBA) · Open to MBA/PGDM students
+   COMPETITION L'Oréal Brandstorm — Oct–Mar · Open to MBA/PGDM students
+   REWRITE [WEAK]
+      before: Worked on preparing reports of loan applications in excel.
+      after:  Prepared reports of loan applications in excel, driving [X]% [share / sales / engagement] uplift for [brand]
+      result-first: [X]% [share / sales] uplift for [brand] by preparing reports of loan applications in excel
+      note: If you owned the outcome, a stronger Marketing verb: Launched / Repositioned / Activated.
+   REWRITE [WEAK]
+      before: Responsible for collecting documents from customers for loan processing.
+      after:  Collected documents from customers for loan processing, delivering [outcome: X% / ₹X L / N units] for [team / client]
+      result-first: [Outcome: X% / ₹X L] for [team / client] by collecting documents from customers for loan processing
+      note: If you owned the outcome, a stronger Marketing verb: Launched / Repositioned / Activated.
+   REWRITE [WEAK]
+      before: Worked on a project regarding consumer preference for mutual funds.
+      after:  Analysed consumer preference for mutual funds, insights from [N] consumers shaped the [pack / price / channel] decision for [brand]
+      result-first: Insights adopted in the [brand] [pack / price] plan by analysing consumer preference for mutual funds
+
+──────── R2_TIER3_FRESHER_FIN × J3_CREDIT_ANALYST_NBFC → 57 MODERATE | JD FIN/CAMPUS | user CAMPUS
+   V1 JD Skill & Must-Have Match                     13.7/23.4   59%
+   V2 Role & Domain Alignment                        3.9/4.8     80%
+   V3 Experience & Level Fit                         8.2/10.6    78%
+   V4 Quantified Impact                              0/12.2      0%
+   V5 Bullet Strength (Action / Result-First)        4.1/9.7     43%
+   V6 Leadership, PoR & Achievements                 4/11.6      34%
+   V7 Education & Credentials                        9.1/11.3    81%
+   V8 Structure, Sections & Contact                  6.2/6.8     91%
+   V9 Length & Bullet Discipline                     3.5/4.8     73%
+   V10 ATS Parse Health                              4.3/4.8     90%
+   Suitability: SYNERGY — Direct alignment: your internships & projects, MBA specialisation, undergraduate degree point to Finance.
+   FIX 01 [QUANTIFY +8] Put a number on your internship bullets
+        why: Campus shortlists for Finance compare outcomes, not activities. 100% of your JD-relevant bullets have no outcome metric.
+        do:  Rewrite "Worked on preparing reports of loan applications in excel." and "Helped the credit team in analysing balance sheets of small business customers." with one of: portfolio or loan book (₹ Cr), TAT cut (days), variance closed (%), forecast accuracy (%), NPAs flagged, close cycle (days). Use only numbers you can prove.
+   FIX 02 [LEADERSHIP_SCOPE +3.3] Add scale to your position of responsibility
+        why: Finance recruiters at Campus level look for leadership spikes and competition results.
+        do:  Quantify "Member of the cultural committee.": team size, budget (₹), reach / participants and the outcome. If you were a member, name your specific contribution.
+   FIX 03 [WEAK_OPENERS +3.2] 6 bullets open with passive phrasing
+        why: "responsible for", "worked on", "helped" read as attendance, not ownership. Panels skim the first 3–4 words of each line.
+        do:  Lead with the action you owned or the result, e.g. Valued, Modelled, Underwrote, Appraised. Start with: "Responsible for collecting documents from customers for loan processing.". See the rewrites below.
+   FIX 04 [JD_EVIDENCE +2.2] Prove Accounting inside a bullet
+        why: Credit Analyst – SME Lending lists must-haves that appear only in your Skills section. Recruiter keyword search and the shortlisting panel both look for them in experience lines.
+        do:  Add the tool or skill where you actually used it, for example in: "Worked on preparing reports of loan applications in excel.". Name it and attach the outcome.
+   CERT CFA Level I (candidate) — Listed as preferred for this JD (USD 1,140 early / 1,490 standard, ~300 hrs)
+   CERT Financial modelling & valuation course with a published model — Closes your JD gap in Financial modelling & Valuation (Low (₹0–5k), 3–4 weeks)
+   CERT SAP Certified Associate (FICO / MM / SD as relevant) — Closes your JD gap in Accounting (Varies (verify with SAP), 4–8 weeks)
+   PROJECT FP&A rebuild: budget-vs-actual and rolling forecast for a family business or club — Builds evidence for FP&A, Variance analysis (missing, or only in your skills list)
+   PROJECT 3-statement + DCF model of a Nifty 100 company with a 2-page investment memo — Builds evidence for Financial modelling, Valuation (missing, or only in your skills list)
+   PROJECT Credit appraisal of a listed MSME/NBFC borrower (CMA-style note, ratio & cash-flow analysis) — Builds evidence for Credit appraisal, Accounting (missing, or only in your skills list)
+   COMPETITION American Express Campus Challenge — Varies · Listed campuses; check if yours is on the list
+   COMPETITION Axis Bank / BFSI campus case challenges — Varies · Listed campuses; check if yours is on the list
+   REWRITE [WEAK]
+      before: Worked on preparing reports of loan applications in excel.
+      after:  Prepared reports of loan applications in excel, saving [X] analyst-hours per [week] in [MIS / reporting]
+      result-first: [X] analyst-hours saved per [week] by preparing reports of loan applications in excel
+      note: If you owned the outcome, a stronger Finance verb: Valued / Modelled / Underwrote.
+   REWRITE [WEAK]
+      before: Helped the credit team in analysing balance sheets of small business customers.
+      after:  Analysed balance sheets of small business customers for the credit team, across a ₹[X] Cr [loan book / portfolio] of [N] clients
+      result-first: ₹[X] Cr [portfolio] covered by analysing balance sheets of small business customers for the credit team
+      note: Ownership check: keep "Supported…" if this was mainly someone else's work. Overclaiming fails PlaceCom verification and interviews.
+   REWRITE [STRONG_VERB]
+      before: Project on Ratio analysis of Tata Motors for 5 years.
+      after:  Conducted ratio analysis of Tata Motors for 5 years, supporting a ₹[X] Cr [credit / investment / pricing] decision
+      result-first: ₹[X] Cr [credit / investment] decision supported by conducting ratio analysis of Tata Motors for 5 years
+      note: If you owned the outcome, a stronger Finance verb: Valued / Modelled / Underwrote.
+
+──────── R3_EARLY_IT_TO_PM × PM-EARLY → 74 MODERATE | JD PM/EARLY | user EARLY
+   V1 JD Skill & Must-Have Match                     19.7/26.7   74%
+   V2 Role & Domain Alignment                        7.5/10.6    71%
+   V3 Experience & Level Fit                         9.7/9.7     100%
+   V4 Quantified Impact                              11.3/14.5   78%
+   V5 Bullet Strength (Action / Result-First)        5.6/8.7     64%
+   V6 Leadership, PoR & Achievements                 0/9.7       0%
+   V7 Education & Credentials                        5.7/5.7     100%
+   V8 Structure, Sections & Contact                  5.8/5.8     100%
+   V9 Length & Bullet Discipline                     4.8/4.8     100%
+   V10 ATS Parse Health                              3.9/3.9     100%
+   Suitability: SYNERGY — Direct alignment: your internships & projects, MBA specialisation, experience bullets point to Product Management.
+   FIX 01 [LEADERSHIP_SCOPE +5.1] Show ownership scope in each role
+        why: Product Management recruiters at Early level look for evidence that you owned a workstream and guided others.
+        do:  State what you owned: the feature or module you owned, engineers / squads you worked with, launch decisions you made, plus people you guided (1–3 is normal at this level) and any promotion with dates, e.g. in "Responsible for writing user stories and coordinating sprint planning with 3 scrum teams".
+   FIX 02 [JD_EVIDENCE +1.5] Prove Product management, Jira, Figma inside a bullet
+        why: Product Manager lists keywords that appear only in your Skills section. Recruiter keyword search and the shortlisting panel both look for them in experience lines.
+        do:  Add the tool or skill where you actually used it, for example in: "Responsible for writing user stories and coordinating sprint planning with 3 scrum teams". Name it and attach the outcome.
+   FIX 03 [WEAK_OPENERS +1.4] 3 bullets open with passive phrasing
+        why: "worked on", "responsible for", "assisted" read as attendance, not ownership. Panels skim the first 3–4 words of each line.
+        do:  Lead with the action you owned or the result, e.g. Shipped, Prioritised, Defined, Tested. Start with: "Worked on backend APIs for a UPI payments module used by a large private bank". See the rewrites below.
+   FIX 04 [MUST_HAVE_GAP +1.2] Close the must-have gap: User research
+        why: These are must-haves for Product Manager (Product Management · Early) and nothing in your resume shows them. A must-have gap is the most common reason for a no-shortlist at this level.
+        do:  If you have owned this, add one bullet per role with its scale and outcome (volume, ₹, %, compliance result). If it sits with another team, name your part in it. Otherwise flag it as a development area before applying.
+   CERT Microsoft PL-300 Power BI Data Analyst — Recognised Product Management credential that recruiters filter on (≈₹4,865 + GST (verify), 4–6 weeks)
+   PROJECT Product teardown + PRD for a feature in an Indian app (problem, metrics, wireframes) — Builds evidence for User research, Roadmap prioritisation (missing, or only in your skills list)
+   PROJECT SQL funnel analysis on a public dataset with an experiment design — Core Product Management proof-of-work for Campus-level roles
+   COMPETITION Institute-level case & product competitions (Unstop) — Jan–Mar wave (1st-years) · Open to MBA/PGDM students
+   REWRITE [WEAK]
+      before: Responsible for writing user stories and coordinating sprint planning with 3 scrum teams
+      after:  Wrote user stories and coordinated sprint planning with 3 scrum teams, shipping [N] releases on schedule
+      result-first: [N] on-time releases by writing user stories and coordinating sprint planning with 3 scrum teams
+   REWRITE [STRONG_VERB]
+      before: Built SQL dashboards in Mixpanel tracking DAU, retention and funnel drop-offs
+      after:  Built SQL dashboards in Mixpanel tracking DAU, retention and funnel drop-offs, shipped to [N] users with [X]% adoption in [T] weeks
+      result-first: [X]% adoption in [T] weeks by building SQL dashboards in Mixpanel tracking DAU, retention and funnel drop-offs
+   REWRITE [STRONG_VERB]
+      before: Defined PRD for a credit-line feature after 25 merchant interviews; prioritised using RICE
+      after:  Defined PRD for a credit-line feature after 25 merchant interviews; prioritised using RICE — [X] pp [activation / retention] lift
+      result-first: [X] pp [activation / retention] lift by defining PRD for a credit-line feature after 25 merchant interviews; prioritised using RICE
+
+──────── R3_EARLY_IT_TO_PM × BA-EARLY → 62 MODERATE | JD BA/EARLY | user EARLY
+   V1 JD Skill & Must-Have Match                     11.5/28.4   41%
+   V2 Role & Domain Alignment                        6.2/9.5     66%
+   V3 Experience & Level Fit                         9.5/9.5     100%
+   V4 Quantified Impact                              10.2/14.2   72%
+   V5 Bullet Strength (Action / Result-First)        5/7.7       66%
+   V6 Leadership, PoR & Achievements                 0/9.5       0%
+   V7 Education & Credentials                        5.1/7.3     71%
+   V8 Structure, Sections & Contact                  5.7/5.7     100%
+   V9 Length & Bullet Discipline                     4.7/4.7     100%
+   V10 ATS Parse Health                              3.8/3.8     100%
+   Suitability: DEVELOPING — Business Analytics evidence is still thin across titles, internships and bullets. Prioritise the fixes and projects below.
+   FIX 01 [LEADERSHIP_SCOPE +5] Show ownership scope in each role
+        why: Business Analytics recruiters at Early level look for evidence that you owned a workstream and guided others.
+        do:  State what you owned: dashboards or models you owned and the stakeholders who used them, plus people you guided (1–3 is normal at this level) and any promotion with dates, e.g. in "Built SQL dashboards in Mixpanel tracking DAU, retention and funnel drop-offs".
+   FIX 02 [MUST_HAVE_GAP +2.9] Close the must-have gap: Excel & Statistics
+        why: These are must-haves for Senior Analyst (Business Analytics · Early) and nothing in your resume shows them. A must-have gap is the most common reason for a no-shortlist at this level.
+        do:  If you have owned this, add one bullet per role with its scale and outcome (volume, ₹, %, compliance result). If it sits with another team, name your part in it. Otherwise flag it as a development area before applying.
+   FIX 03 [QUANTIFY +2.1] Put a number on your most relevant work bullets
+        why: Business Analytics screens at Early level compare outcomes, not activities. 53% of your JD-relevant bullets have no outcome metric.
+        do:  Rewrite "Built SQL dashboards in Mixpanel tracking DAU, retention and funnel drop-offs" and "Worked on backend APIs for a UPI payments module used by a large private bank" with one of: hours saved per week, model accuracy, ₹ impact of decision, dashboard users, data latency cut. Use only numbers you can prove.
+   FIX 04 [CERT_GAP +1.4] Add a JD-valued credential: Microsoft PL-300 Power BI Data Analyst
+        why: Listed as preferred for BA-EARLY. It strengthens the credentials line recruiters filter on.
+        do:  Start it this month and list it with a status and date. Cost ≈₹4,865 + GST (verify), about 4–6 weeks.
+   CERT Microsoft PL-300 Power BI Data Analyst — Listed as preferred for BA-EARLY (≈₹4,865 + GST (verify), 4–6 weeks)
+   CERT IIBA ECBA — Listed as preferred for BA-EARLY (USD 395 incl. first-year membership, 4–8 weeks)
+   CERT Tableau Desktop Foundations — Closes your JD gap in Dashboarding & Tableau (≈USD 100 (verify), 2–4 weeks)
+   PROJECT Churn or demand-forecast model in Python with a business write-up — Builds evidence for Python, Statistics, Machine learning (missing, or only in your skills list)
+   PROJECT End-to-end SQL + Power BI dashboard on public data (RBI / MoSPI / Kaggle retail) tied to one decision — Builds evidence for Dashboarding, Statistics, Excel (missing, or only in your skills list)
+   COMPETITION Accenture B-School Challenge — Jul–Aug · Open to MBA/PGDM students
+   COMPETITION American Express Campus Challenge — Varies · Listed campuses; check if yours is on the list
+   REWRITE [STRONG_VERB]
+      before: Built SQL dashboards in Mixpanel tracking DAU, retention and funnel drop-offs
+      after:  Built SQL dashboards in Mixpanel tracking DAU, retention and funnel drop-offs, informing a [decision] worth ₹[X] L for [team]
+      result-first: ₹[X] L [decision] informed by building SQL dashboards in Mixpanel tracking DAU, retention and funnel drop-offs
+   REWRITE [WEAK]
+      before: Worked on backend APIs for a UPI payments module used by a large private bank
+      after:  Built backend APIs for a UPI payments module used by a large private bank, delivering [outcome: X% / ₹X L / N units] for [team / client]
+      result-first: [Outcome: X% / ₹X L] for [team / client] by building backend APIs for a UPI payments module used by a large private bank
+   REWRITE [WEAK]
+      before: Assisted the product owner in preparing release notes and UAT plans
+      after:  Prepared release notes and UAT plans for the product owner, informing a [decision] worth ₹[X] L for [team]
+      result-first: ₹[X] L [decision] informed by preparing release notes and UAT plans for the product owner
+      note: If you owned the outcome, a stronger Business Analytics verb: Built / Automated / Modelled. Ownership check: keep "Supported…" if this was mainly someone else's work. Overclaiming fails PlaceCom verification and interviews.
+
+──────── R3_EARLY_IT_TO_PM × ITS-EARLY → 62 MODERATE | JD ITS/EARLY | user EARLY
+   V1 JD Skill & Must-Have Match                     10.9/28.4   39%
+   V2 Role & Domain Alignment                        8.7/9.5     92%
+   V3 Experience & Level Fit                         9.5/9.5     100%
+   V4 Quantified Impact                              10.2/14.2   72%
+   V5 Bullet Strength (Action / Result-First)        3.9/7.7     51%
+   V6 Leadership, PoR & Achievements                 0/9.5       0%
+   V7 Education & Credentials                        4.4/7.3     60%
+   V8 Structure, Sections & Contact                  5.7/5.7     100%
+   V9 Length & Bullet Discipline                     4.7/4.7     100%
+   V10 ATS Parse Health                              3.8/3.8     100%
+   Suitability: SYNERGY — Direct alignment: your job titles, employers, experience bullets point to IT & Systems.
+   FIX 01 [LEADERSHIP_SCOPE +5] Show ownership scope in each role
+        why: IT & Systems recruiters at Early level look for evidence that you owned a workstream and guided others.
+        do:  State what you owned: dashboards or models you owned and the stakeholders who used them, plus people you guided (1–3 is normal at this level) and any promotion with dates, e.g. in "Responsible for writing user stories and coordinating sprint planning with 3 scrum teams".
+   FIX 02 [MUST_HAVE_GAP +2.7] Close the must-have gap: ERP & Project management
+        why: These are must-haves for IT Consultant (IT & Systems · Early) and nothing in your resume shows them. A must-have gap is the most common reason for a no-shortlist at this level.
+        do:  If you have owned this, add one bullet per role with its scale and outcome (volume, ₹, %, compliance result). If it sits with another team, name your part in it. Otherwise flag it as a development area before applying.
+   FIX 03 [WEAK_OPENERS +2.4] 3 bullets open with passive phrasing
+        why: "worked on", "responsible for", "assisted" read as attendance, not ownership. Panels skim the first 3–4 words of each line.
+        do:  Lead with the action you owned or the result, e.g. Built, Automated, Modelled, Segmented. Start with: "Worked on backend APIs for a UPI payments module used by a large private bank". See the rewrites below.
+   FIX 04 [QUANTIFY +1.6] Put a number on your most relevant work bullets
+        why: IT & Systems screens at Early level compare outcomes, not activities. 48% of your JD-relevant bullets have no outcome metric.
+        do:  Rewrite "Assisted the product owner in preparing release notes and UAT plans" and "Built SQL dashboards in Mixpanel tracking DAU, retention and funnel drop-offs" with one of: go-live delivered, users onboarded, defects reduced, uptime %, process time cut, modules implemented. Use only numbers you can prove.
+   CERT SAP Certified Associate (FICO / MM / SD as relevant) — Listed as preferred for ITS-EARLY (Varies (verify with SAP), 4–8 weeks)
+   CERT IIBA ECBA — Listed as preferred for ITS-EARLY (USD 395 incl. first-year membership, 4–8 weeks)
+   CERT PMI CAPM — Closes your JD gap in Project management (≈USD 225 member / 300 non-member (verify), 4–6 weeks)
+   PROJECT ERP process mapping and requirements document (BRD/FRD) for an SME function — Builds evidence for Process mapping, ERP (missing, or only in your skills list)
+   PROJECT UAT plan and test cases for a live campus or NGO system rollout — Builds evidence for Project management (missing, or only in your skills list)
+   COMPETITION Accenture B-School Challenge — Jul–Aug · Open to MBA/PGDM students
+   REWRITE [WEAK]
+      before: Assisted the product owner in preparing release notes and UAT plans
+      after:  Prepared release notes and UAT plans for the product owner, informing a [decision] worth ₹[X] L for [team]
+      result-first: ₹[X] L [decision] informed by preparing release notes and UAT plans for the product owner
+      note: If you owned the outcome, a stronger IT & Systems verb: Built / Automated / Modelled. Ownership check: keep "Supported…" if this was mainly someone else's work. Overclaiming fails PlaceCom verification and interviews.
+   REWRITE [WEAK]
+      before: Responsible for writing user stories and coordinating sprint planning with 3 scrum teams
+      after:  Wrote user stories and coordinated sprint planning with 3 scrum teams, delivering [outcome: X% / ₹X L] for [team / client]
+      result-first: [Outcome: X% / ₹X L] for [team / client] by writing user stories and coordinating sprint planning with 3 scrum teams
+   REWRITE [STRONG_VERB]
+      before: Built SQL dashboards in Mixpanel tracking DAU, retention and funnel drop-offs
+      after:  Built SQL dashboards in Mixpanel tracking DAU, retention and funnel drop-offs, informing a [decision] worth ₹[X] L for [team]
+      result-first: ₹[X] L [decision] informed by building SQL dashboards in Mixpanel tracking DAU, retention and funnel drop-offs
+
+──────── R3_EARLY_IT_TO_PM × J4_PRODUCT_ANALYST_GROWTH → 78 STRONG | JD PM/CAMPUS | user EARLY
+   V1 JD Skill & Must-Have Match                     24.7/24.7   100%
+   V2 Role & Domain Alignment                        4.9/5.4     91%
+   V3 Experience & Level Fit                         9.1/10.7    85%
+   V4 Quantified Impact                              10.5/13.7   77%
+   V5 Bullet Strength (Action / Result-First)        6.5/9.8     66%
+   V6 Leadership, PoR & Achievements                 0/11.7      0%
+   V7 Education & Credentials                        7.5/7.5     100%
+   V8 Structure, Sections & Contact                  5.1/6.8     74%
+   V9 Length & Bullet Discipline                     4.9/4.9     100%
+   V10 ATS Parse Health                              4.9/4.9     100%
+   Suitability: SYNERGY — Direct alignment: your internships & projects, MBA specialisation, experience bullets point to Product Management.
+   FIX 01 [LEADERSHIP_SCOPE +6.1] Add a Positions of Responsibility / achievements block
+        why: Product Management recruiters at Campus level look for leadership spikes and competition results.
+        do:  List 2–3 PoRs, competitions or ranks with scale (team size, participants, ranking out of N). Campus shortlists use them as tie-breakers.
+   FIX 02 [STRUCTURE +1.4] Add the missing sections: projects / por, achievements / extracurricular / por
+        why: Campus CVs are read bucket by bucket (Academics, Internships, Projects/PoR, Achievements).
+        do:  Create clearly labelled headings for projects / por, achievements / extracurricular / por and move existing content under them.
+   FIX 03 [QUANTIFY +1.4] Put a number on your most relevant work bullets
+        why: Campus shortlists for Product Management compare outcomes, not activities. 49% of your JD-relevant bullets have no outcome metric.
+        do:  Rewrite "Built SQL dashboards in Mixpanel tracking DAU, retention and funnel drop-offs" and "Worked on backend APIs for a UPI payments module used by a large private bank" with one of: users (DAU/MAU), adoption or activation %, retention / D30, conversion lift (pp), features shipped, NPS. Use only numbers you can prove.
+   FIX 04 [WEAK_OPENERS +1.3] 3 bullets open with passive phrasing
+        why: "worked on", "responsible for", "assisted" read as attendance, not ownership. Panels skim the first 3–4 words of each line.
+        do:  Lead with the action you owned or the result, e.g. Shipped, Prioritised, Defined, Tested. Start with: "Worked on backend APIs for a UPI payments module used by a large private bank". See the rewrites below.
+   CERT Python for data analysis (pandas) with a notebook portfolio — Listed as preferred for this JD (Free–low, 3–5 weeks)
+   CERT IIBA ECBA — Listed as preferred for this JD (USD 395 incl. first-year membership, 4–8 weeks)
+   CERT Google Data Analytics Certificate (SQL, R, Tableau) — Closes your JD gap in Statistics (≈USD 20/month (Coursera), 3–6 months)
+   PROJECT Churn or demand-forecast model in Python with a business write-up — Builds evidence for Python, Statistics (missing, or only in your skills list)
+   PROJECT End-to-end SQL + Power BI dashboard on public data (RBI / MoSPI / Kaggle retail) tied to one decision — Builds evidence for Statistics (missing, or only in your skills list)
+   PROJECT Category P&L and unit-economics teardown for a quick-commerce or marketplace category — Core E-commerce proof-of-work for Campus-level roles
+   COMPETITION Accenture B-School Challenge — Jul–Aug · Open to MBA/PGDM students
+   COMPETITION American Express Campus Challenge — Varies · Listed campuses; check if yours is on the list
+   REWRITE [STRONG_VERB]
+      before: Built SQL dashboards in Mixpanel tracking DAU, retention and funnel drop-offs
+      after:  Built SQL dashboards in Mixpanel tracking DAU, retention and funnel drop-offs, shipped to [N] users with [X]% adoption in [T] weeks
+      result-first: [X]% adoption in [T] weeks by building SQL dashboards in Mixpanel tracking DAU, retention and funnel drop-offs
+   REWRITE [WEAK]
+      before: Worked on backend APIs for a UPI payments module used by a large private bank
+      after:  Built backend APIs for a UPI payments module used by a large private bank, lifting [activation / retention] by [X] pp for [N] users
+      result-first: [X] pp [activation / retention] lift by building backend APIs for a UPI payments module used by a large private bank
+   REWRITE [WEAK]
+      before: Assisted the product owner in preparing release notes and UAT plans
+      after:  Prepared release notes and UAT plans for the product owner, shipping [N] releases on schedule across [N] sprints
+      result-first: [N] on-time releases by preparing release notes and UAT plans for the product owner
+      note: If you owned the outcome, a stronger Product Management verb: Shipped / Prioritised / Defined. Ownership check: keep "Supported…" if this was mainly someone else's work. Overclaiming fails PlaceCom verification and interviews.
+
+──────── R4_MID_SALES × SAL-MID → 85 STRONG | JD SAL/MID | user MID
+   V1 JD Skill & Must-Have Match                     13.2/21     63%
+   V2 Role & Domain Alignment                        11.5/11.5   100%
+   V3 Experience & Level Fit                         12.6/12.6   100%
+   V4 Quantified Impact                              16.7/18.6   90%
+   V5 Bullet Strength (Action / Result-First)        7.2/7.6     94%
+   V6 Leadership, PoR & Achievements                 6.3/10.5    60%
+   V7 Education & Credentials                        3.2/3.8     85%
+   V8 Structure, Sections & Contact                  5.7/5.7     100%
+   V9 Length & Bullet Discipline                     4.8/4.8     100%
+   V10 ATS Parse Health                              3.8/3.8     100%
+   Suitability: SYNERGY — Direct alignment: your job titles, employers, experience bullets point to Sales.
+   FIX 01 [JD_EVIDENCE +1.5] Prove CRM, Key account management, Salesforce inside a bullet
+        why: Regional Sales Manager lists must-haves that appear only in your Skills section. Recruiter keyword search and the shortlisting panel both look for them in experience lines.
+        do:  Add the tool or skill where you actually used it, for example in: "Negotiated annual schemes with top 40 dealers, improving collection efficiency to 97%". Name it and attach the outcome.
+   CERT Microsoft PL-300 Power BI Data Analyst — Closes your JD gap in Power BI (≈₹4,865 + GST (verify), 4–6 weeks)
+   PROJECT Lead (or document) one cross-functional initiative with a named budget, team size and a before/after metric — Your resume does not yet evidence Channel sales & B2B, which Regional Sales Manager asks for. Use a real initiative to show it.
+   REWRITE [STRONG_VERB]
+      before: Managed 26 distributors and redesigned beat plans covering 8,000 outlets
+      after:  Managed 26 distributors and redesigned beat plans covering 8,000 outlets, delivering [X]% of a ₹[Y] Cr target (rank [n] of [N])
+      result-first: [X]% of a ₹[Y] Cr target; rank [n] of [N] by managing 26 distributors and redesigning beat plans covering 8,000 outlets
+   REWRITE [STRONG_VERB]
+      before: Led a 42-member team of ASMs and sales officers across 9 depots and 1,100 dealers
+      after:  Led a 42-member team of ASMs and sales officers across 9 depots and 1,100 dealers, taking team attainment to [X]% of a ₹[Y] Cr target
+      result-first: [X]% team attainment of a ₹[Y] Cr target by leading a 42-member team of ASMs and sales officers across 9 depots and 1,100 dealers
+
+──────── R4_MID_SALES × MKT-MID → 62 MODERATE | JD MKT/MID | user MID
+   V1 JD Skill & Must-Have Match                     0.6/21.5    3%
+   V2 Role & Domain Alignment                        1.7/11.8    15%
+   V3 Experience & Level Fit                         12.9/12.9   100%
+   V4 Quantified Impact                              13.7/14.7   93%
+   V5 Bullet Strength (Action / Result-First)        7.5/7.8     95%
+   V6 Leadership, PoR & Achievements                 7.4/12.4    60%
+   V7 Education & Credentials                        3.5/4.2     85%
+   V8 Structure, Sections & Contact                  5.9/5.9     100%
+   V9 Length & Bullet Discipline                     4.9/4.9     100%
+   V10 ATS Parse Health                              3.9/3.9     100%
+   Suitability: PIVOT — Pivot alert: your profile reads Sales (86) more than Marketing (25). Either target Sales roles or build Marketing evidence first (see projects & certifications).
+   FIX 01 [TITLE_ALIGN +4.4] Signal the target role in your headline
+        why: Recruiters read title and company first. None of your current titles reads as Marketing for "Senior Brand Manager".
+        do:  Add a one-line headline under your name: "8 yrs · Marketing". Keep your formal job titles unchanged.
+   FIX 02 [MUST_HAVE_GAP +2.3] Close the must-have gap: Marketing strategy & Consumer insights
+        why: These are must-haves for Senior Brand Manager (Marketing · Mid) and nothing in your resume shows them. A must-have gap is the most common reason for a no-shortlist at this level.
+        do:  If you have owned this, add one bullet per role with its scale and outcome (volume, ₹, %, compliance result). If it sits with another team, name your part in it. Otherwise flag it as a development area before applying.
+   PROJECT Lead (or document) one cross-functional initiative with a named budget, team size and a before/after metric — Your resume does not yet evidence Marketing strategy & Consumer insights, which Senior Brand Manager asks for. Use a real initiative to show it.
+
+──────── R4_MID_SALES × SAL-CAMPUS → 68 MODERATE | JD SAL/CAMPUS | user MID
+   V1 JD Skill & Must-Have Match                     13.4/21.3   63%
+   V2 Role & Domain Alignment                        4.8/4.8     100%
+   V3 Experience & Level Fit                         5.3/11.7    45%
+   V4 Quantified Impact                              15.8/17.6   90%
+   V5 Bullet Strength (Action / Result-First)        9.1/9.7     94%
+   V6 Leadership, PoR & Achievements                 0.9/11.6    8%
+   V7 Education & Credentials                        5.6/7       81%
+   V8 Structure, Sections & Contact                  5/6.8       74%
+   V9 Length & Bullet Discipline                     3.6/4.8     75%
+   V10 ATS Parse Health                              4.8/4.8     100%
+   GATE OVERQUALIFIED: Your 8.4 years of experience is far above this campus-level JD. Score capped at 72; benchmark against a Mid-level JD instead.
+   ADVISORY OVERQUALIFIED: Your experience is well above this JD's band (2 yrs max). Recruiters may screen you out as over-qualified. Consider the SAL-MID benchmark.
+   Suitability: SYNERGY — Direct alignment: your job titles, employers, experience bullets point to Sales.
+   FIX 01 [LEADERSHIP_SCOPE +5.4] Add a Positions of Responsibility / achievements block
+        why: Sales recruiters at Campus level look for leadership spikes and competition results.
+        do:  List 2–3 PoRs, competitions or ranks with scale (team size, participants, ranking out of N). Campus shortlists use them as tie-breakers.
+   FIX 02 [JD_EVIDENCE +1.5] Prove CRM, Key account management, Salesforce inside a bullet
+        why: Sales Management Trainee lists must-haves that appear only in your Skills section. Recruiter keyword search and the shortlisting panel both look for them in experience lines.
+        do:  Add the tool or skill where you actually used it, for example in: "Negotiated annual schemes with top 40 dealers, improving collection efficiency to 97%". Name it and attach the outcome.
+   FIX 03 [STRUCTURE +1.4] Add the missing sections: projects / por, achievements / extracurricular / por
+        why: Campus CVs are read bucket by bucket (Academics, Internships, Projects/PoR, Achievements).
+        do:  Create clearly labelled headings for projects / por, achievements / extracurricular / por and move existing content under them.
+   FIX 04 [CERT_GAP +1.3] Add a JD-valued credential: Microsoft PL-300 Power BI Data Analyst
+        why: Closes your JD gap in Power BI. At Campus level an in-progress credential with a date ("exam booked: Dec 2026") is a credible signal.
+        do:  Start it this month and list it with a status and date. Cost ≈₹4,865 + GST (verify), about 4–6 weeks.
+   CERT Microsoft PL-300 Power BI Data Analyst — Closes your JD gap in Power BI (≈₹4,865 + GST (verify), 4–6 weeks)
+   PROJECT Lead (or document) one cross-functional initiative with a named budget, team size and a before/after metric — Your resume does not yet evidence Channel sales & B2B, which Sales Management Trainee asks for. Use a real initiative to show it.
+   REWRITE [STRONG_VERB]
+      before: Managed 26 distributors and redesigned beat plans covering 8,000 outlets
+      after:  Managed 26 distributors and redesigned beat plans covering 8,000 outlets, delivering [X]% of a ₹[Y] Cr target (rank [n] of [N])
+      result-first: [X]% of a ₹[Y] Cr target; rank [n] of [N] by managing 26 distributors and redesigning beat plans covering 8,000 outlets
+   REWRITE [STRONG_VERB]
+      before: Led a 42-member team of ASMs and sales officers across 9 depots and 1,100 dealers
+      after:  Led a 42-member team of ASMs and sales officers across 9 depots and 1,100 dealers, taking team attainment to [X]% of a ₹[Y] Cr target
+      result-first: [X]% team attainment of a ₹[Y] Cr target by leading a 42-member team of ASMs and sales officers across 9 depots and 1,100 dealers
+
+──────── R4_MID_SALES × J5_MT_SALES_FMCG → 72 MODERATE | JD SAL/CAMPUS | user MID
+   V1 JD Skill & Must-Have Match                     21.3/21.3   100%
+   V2 Role & Domain Alignment                        4.8/4.8     100%
+   V3 Experience & Level Fit                         5.3/11.7    45%
+   V4 Quantified Impact                              15.8/17.6   90%
+   V5 Bullet Strength (Action / Result-First)        9.1/9.7     95%
+   V6 Leadership, PoR & Achievements                 0.9/11.6    8%
+   V7 Education & Credentials                        5.6/7       81%
+   V8 Structure, Sections & Contact                  5/6.8       74%
+   V9 Length & Bullet Discipline                     3.6/4.8     75%
+   V10 ATS Parse Health                              4.8/4.8     100%
+   GATE OVERQUALIFIED: Your 8.4 years of experience is far above this campus-level JD. Score capped at 72; benchmark against a Mid-level JD instead.
+   ADVISORY OVERQUALIFIED: Your experience is well above this JD's band (2 yrs max). Recruiters may screen you out as over-qualified. Consider the SAL-MID benchmark.
+   Suitability: SYNERGY — Direct alignment: your job titles, employers, experience bullets point to Sales.
+   FIX 01 [LEADERSHIP_SCOPE +5.4] Add a Positions of Responsibility / achievements block
+        why: Sales recruiters at Campus level look for leadership spikes and competition results.
+        do:  List 2–3 PoRs, competitions or ranks with scale (team size, participants, ranking out of N). Campus shortlists use them as tie-breakers.
+   FIX 02 [STRUCTURE +1.4] Add the missing sections: projects / por, achievements / extracurricular / por
+        why: Campus CVs are read bucket by bucket (Academics, Internships, Projects/PoR, Achievements).
+        do:  Create clearly labelled headings for projects / por, achievements / extracurricular / por and move existing content under them.
+   FIX 03 [CERT_GAP +1.3] Add a JD-valued credential: Microsoft PL-300 Power BI Data Analyst
+        why: Closes your JD gap in Data analysis. At Campus level an in-progress credential with a date ("exam booked: Dec 2026") is a credible signal.
+        do:  Start it this month and list it with a status and date. Cost ≈₹4,865 + GST (verify), about 4–6 weeks.
+   FIX 04 [LENGTH +1] Cut to 1 page
+        why: Your CV runs 2 page(s); the norm at Campus level is 1 page.
+        do:  Drop low-relevance lines (hobbies, generic skills, school-level activities) and keep bullets to one or two lines.
+   CERT Microsoft PL-300 Power BI Data Analyst — Closes your JD gap in Data analysis (≈₹4,865 + GST (verify), 4–6 weeks)
+   PROJECT Lead (or document) one cross-functional initiative with a named budget, team size and a before/after metric — Your resume does not yet evidence Data analysis & DMS, which Management Trainee – Sales (Campus 2027) asks for. Use a real initiative to show it.
+   REWRITE [STRONG_VERB]
+      before: Led a 42-member team of ASMs and sales officers across 9 depots and 1,100 dealers
+      after:  Led a 42-member team of ASMs and sales officers across 9 depots and 1,100 dealers, taking team attainment to [X]% of a ₹[Y] Cr target
+      result-first: [X]% team attainment of a ₹[Y] Cr target by leading a 42-member team of ASMs and sales officers across 9 depots and 1,100 dealers
+   REWRITE [STRONG_VERB]
+      before: Managed 26 distributors and redesigned beat plans covering 8,000 outlets
+      after:  Managed 26 distributors and redesigned beat plans covering 8,000 outlets, delivering [X]% of a ₹[Y] Cr target (rank [n] of [N])
+      result-first: [X]% of a ₹[Y] Cr target; rank [n] of [N] by managing 26 distributors and redesigning beat plans covering 8,000 outlets
+
+──────── R4_MID_SALES × J8_QCOMM_CATEGORY → 60 MODERATE | JD ECM/EARLY | user MID
+   V1 JD Skill & Must-Have Match                     0/23.1      0%
+   V2 Role & Domain Alignment                        0/9.6       0%
+   V3 Experience & Level Fit                         10.6/10.6   100%
+   V4 Quantified Impact                              17.5/18.7   93%
+   V5 Bullet Strength (Action / Result-First)        8.2/8.6     95%
+   V6 Leadership, PoR & Achievements                 6.7/9.6     70%
+   V7 Education & Credentials                        3.8/5.4     71%
+   V8 Structure, Sections & Contact                  5.8/5.8     100%
+   V9 Length & Bullet Discipline                     3.6/4.8     75%
+   V10 ATS Parse Health                              3.8/3.8     100%
+   ADVISORY OVERQUALIFIED: Your experience is well above this JD's band (4 yrs max). Recruiters may screen you out as over-qualified. Consider the ECM-MID benchmark.
+   Suitability: PIVOT — Pivot alert: your profile reads Sales (86) more than E-commerce (0). Either target Sales roles or build E-commerce evidence first (see projects & certifications).
+   FIX 01 [MUST_HAVE_GAP +3.6] Close the must-have gap: Financial acumen & Unit economics
+        why: These are must-haves for Category Manager – Quick Commerce (Personal Care) (E-commerce · Early) and nothing in your resume shows them. A must-have gap is the most common reason for a no-shortlist at this level.
+        do:  If you have owned this, add one bullet per role with its scale and outcome (volume, ₹, %, compliance result). If it sits with another team, name your part in it. Otherwise flag it as a development area before applying.
+   FIX 02 [TITLE_ALIGN +3.6] Signal the target role in your headline
+        why: Recruiters read title and company first. None of your current titles reads as E-commerce for "Category Manager – Quick Commerce (Personal Care)".
+        do:  Add a one-line headline under your name: "8 yrs · E-commerce". Keep your formal job titles unchanged.
+   FIX 03 [CERT_GAP +1.1] Add a JD-valued credential: Microsoft PL-300 Power BI Data Analyst
+        why: Closes your JD gap in Dashboarding & E-commerce analytics. It strengthens the credentials line recruiters filter on.
+        do:  Start it this month and list it with a status and date. Cost ≈₹4,865 + GST (verify), about 4–6 weeks.
+   FIX 04 [LENGTH +1] Cut to 1 page
+        why: Your CV runs 2 page(s); the norm at Early level is 1 page.
+        do:  Drop low-relevance lines (hobbies, generic skills, school-level activities) and keep bullets to one or two lines.
+   CERT Microsoft PL-300 Power BI Data Analyst — Closes your JD gap in Dashboarding & E-commerce analytics (≈₹4,865 + GST (verify), 4–6 weeks)
+   PROJECT Lead (or document) one cross-functional initiative with a named budget, team size and a before/after metric — Your resume does not yet evidence Financial acumen & Unit economics, which Category Manager – Quick Commerce (Personal Care) asks for. Use a real initiative to show it.
+
+──────── R5_SENIOR_HR × HR-SENIOR → 85 STRONG | JD HR/SENIOR | user SENIOR
+   V1 JD Skill & Must-Have Match                     10.3/19.5   53%
+   V2 Role & Domain Alignment                        13.7/13.7   100%
+   V3 Experience & Level Fit                         11.7/11.7   100%
+   V4 Quantified Impact                              13/14.7     88%
+   V5 Bullet Strength (Action / Result-First)        5.8/6.8     85%
+   V6 Leadership, PoR & Achievements                 11/14.6     75%
+   V7 Education & Credentials                        4.3/4.3     100%
+   V8 Structure, Sections & Contact                  5.9/5.9     100%
+   V9 Length & Bullet Discipline                     4.9/4.9     100%
+   V10 ATS Parse Health                              3.9/3.9     100%
+   Suitability: SYNERGY — Direct alignment: your job titles, employers, experience bullets point to Human Resources.
+   FIX 01 [MUST_HAVE_GAP +0.9] Close the must-have gap: HR analytics
+        why: These are must-haves for CHRO (Human Resources · Senior) and nothing in your resume shows them. A must-have gap is the most common reason for a no-shortlist at this level.
+        do:  If you have owned this, add one bullet per role with its scale and outcome (volume, ₹, %, compliance result). If it sits with another team, name your part in it. Otherwise flag it as a development area before applying.
+   PROJECT Frame a flagship transformation with P&L / function scope, board or CXO visibility and a multi-year outcome — Your resume does not yet evidence HR analytics & Recruitment, which CHRO asks for. Use a real initiative to show it.
+   REWRITE [STRONG_VERB]
+      before: Managed industrial relations and resolved 140+ grievances with zero escalations to labour courts
+      after:  Managed industrial relations and resolved 140+ grievances with zero escalations to labour courts, reaching [N] employees with [X]% completion / adoption
+      result-first: [X]% lower [early attrition] by managing industrial relations and resolving 140+ grievances with zero escalations to labour courts
+   REWRITE [STRONG_VERB]
+      before: Designed and rolled out a new performance management framework (KRAs, calibration) for 18 grades
+      after:  Designed and rolled out a new performance management framework (KRAs, calibration) for 18 grades, reducing [attrition / time-to-fill] by [X]%
+      result-first: [X]% lower [attrition / time-to-fill] by designing and rolled out a new performance management framework (KRAs, calibration) for 18 grades
+   REWRITE [NO_VERB]
+      before: HRBP for a 2,400-employee BFSI vertical; cut time-to-fill from 52 to 34 days
+      after:  Ran HRBP for a 2,400-employee BFSI vertical; cut time-to-fill from 52 to 34 days
+      note: Metric kept as written; the line now opens with what you did.
+
+──────── R5_SENIOR_HR × HR-MID → 84 STRONG | JD HR/MID | user SENIOR
+   V1 JD Skill & Must-Have Match                     11.4/21.5   53%
+   V2 Role & Domain Alignment                        11.7/11.7   100%
+   V3 Experience & Level Fit                         11.7/11.7   100%
+   V4 Quantified Impact                              13/14.7     88%
+   V5 Bullet Strength (Action / Result-First)        6.6/7.8     85%
+   V6 Leadership, PoR & Achievements                 9.3/12.4    75%
+   V7 Education & Credentials                        5.4/5.4     100%
+   V8 Structure, Sections & Contact                  5.9/5.9     100%
+   V9 Length & Bullet Discipline                     4.9/4.9     100%
+   V10 ATS Parse Health                              3.9/3.9     100%
+   ADVISORY OVERQUALIFIED: Your experience is well above this JD's band (10 yrs max). Recruiters may screen you out as over-qualified. Consider the HR-SENIOR benchmark.
+   Suitability: SYNERGY — Direct alignment: your job titles, employers, experience bullets point to Human Resources.
+   FIX 01 [MUST_HAVE_GAP +1] Close the must-have gap: HR analytics
+        why: These are must-haves for HR Manager (Human Resources · Mid) and nothing in your resume shows them. A must-have gap is the most common reason for a no-shortlist at this level.
+        do:  If you have owned this, add one bullet per role with its scale and outcome (volume, ₹, %, compliance result). If it sits with another team, name your part in it. Otherwise flag it as a development area before applying.
+   PROJECT Frame a flagship transformation with P&L / function scope, board or CXO visibility and a multi-year outcome — Your resume does not yet evidence HR analytics & Recruitment, which HR Manager asks for. Use a real initiative to show it.
+   REWRITE [STRONG_VERB]
+      before: Managed industrial relations and resolved 140+ grievances with zero escalations to labour courts
+      after:  Managed industrial relations and resolved 140+ grievances with zero escalations to labour courts, reaching [N] employees with [X]% completion / adoption
+      result-first: [X]% lower [early attrition] by managing industrial relations and resolving 140+ grievances with zero escalations to labour courts
+   REWRITE [STRONG_VERB]
+      before: Designed and rolled out a new performance management framework (KRAs, calibration) for 18 grades
+      after:  Designed and rolled out a new performance management framework (KRAs, calibration) for 18 grades, reducing [attrition / time-to-fill] by [X]%
+      result-first: [X]% lower [attrition / time-to-fill] by designing and rolled out a new performance management framework (KRAs, calibration) for 18 grades
+   REWRITE [NO_VERB]
+      before: HRBP for a 2,400-employee BFSI vertical; cut time-to-fill from 52 to 34 days
+      after:  Ran HRBP for a 2,400-employee BFSI vertical; cut time-to-fill from 52 to 34 days
+      note: Metric kept as written; the line now opens with what you did.
+
+──────── R5_SENIOR_HR × GM-SENIOR → 60 MODERATE | JD GM/SENIOR | user SENIOR
+   V1 JD Skill & Must-Have Match                     2.3/19.6    11%
+   V2 Role & Domain Alignment                        0.9/12.4    7%
+   V3 Experience & Level Fit                         7.9/11.8    67%
+   V4 Quantified Impact                              13/14.7     88%
+   V5 Bullet Strength (Action / Result-First)        6.3/6.9     91%
+   V6 Leadership, PoR & Achievements                 12/16       75%
+   V7 Education & Credentials                        3.3/3.9     85%
+   V8 Structure, Sections & Contact                  5.9/5.9     100%
+   V9 Length & Bullet Discipline                     4.9/4.9     100%
+   V10 ATS Parse Health                              3.9/3.9     100%
+   Suitability: PIVOT — Pivot alert: your profile reads Human Resources (90) more than General Management (12). Either target Human Resources roles or build General Management evidence first (see projects & certifications).
+   FIX 01 [TITLE_ALIGN +4.6] Signal the target role in your headline
+        why: Recruiters read title and company first. None of your current titles reads as General Management for "Business Unit Head".
+        do:  Add a one-line headline under your name: "13 yrs · General Management · Financial acumen". Keep your formal job titles unchanged.
+   FIX 02 [MUST_HAVE_GAP +1.9] Close the must-have gap: Strategic analysis & Programme management
+        why: These are must-haves for Business Unit Head (General Management · Senior) and nothing in your resume shows them. A must-have gap is the most common reason for a no-shortlist at this level.
+        do:  If you have owned this, add one bullet per role with its scale and outcome (volume, ₹, %, compliance result). If it sits with another team, name your part in it. Otherwise flag it as a development area before applying.
+   CERT PMP — Closes your JD gap in Programme management (≈USD 405 member / 575 non-member (verify), 2–3 months)
+   PROJECT Frame a flagship transformation with P&L / function scope, board or CXO visibility and a multi-year outcome — Your resume does not yet evidence Strategic analysis & Programme management, which Business Unit Head asks for. Use a real initiative to show it.
+   REWRITE [STRONG_VERB]
+      before: Managed industrial relations and resolved 140+ grievances with zero escalations to labour courts
+      after:  Managed industrial relations and resolved 140+ grievances with zero escalations to labour courts, delivering [initiative] across [N] [functions / sites] [X]% under budget
+      result-first: Delivered [X]% under budget by managing industrial relations and resolving 140+ grievances with zero escalations to labour courts
+
+──────── R6_XLRI_HR_FRESHER × HR-CAMPUS → 73 MODERATE | JD HR/CAMPUS | user CAMPUS
+   V1 JD Skill & Must-Have Match                     9.1/21.4    42%
+   V2 Role & Domain Alignment                        4.7/4.9     97%
+   V3 Experience & Level Fit                         7.5/10.7    70%
+   V4 Quantified Impact                              11.2/13.6   83%
+   V5 Bullet Strength (Action / Result-First)        8.8/9.7     90%
+   V6 Leadership, PoR & Achievements                 8.6/13.4    64%
+   V7 Education & Credentials                        7.8/9.6     81%
+   V8 Structure, Sections & Contact                  6.2/6.8     91%
+   V9 Length & Bullet Discipline                     4.9/4.9     100%
+   V10 ATS Parse Health                              4.1/4.9     85%
+   Suitability: SYNERGY — Direct alignment: your internships & projects, MBA specialisation, clubs & competitions point to Human Resources.
+   FIX 01 [MUST_HAVE_GAP +1.9] Close the must-have gap: Performance management & Labour law
+        why: These are must-haves for HR Management Trainee (Human Resources · Campus) and nothing in your resume shows them. A must-have gap is the most common reason for a no-shortlist at this level.
+        do:  If you have done this in an internship, live project or course project, add one bullet that shows it with a result. If not, use the project or certification cards below to build the evidence before applying.
+   FIX 02 [CERT_GAP +1.6] Add a JD-valued credential: Microsoft PL-300 Power BI Data Analyst
+        why: Listed as preferred for HR-CAMPUS. At Campus level an in-progress credential with a date ("exam booked: Dec 2026") is a credible signal.
+        do:  Start it this month and list it with a status and date. Cost ≈₹4,865 + GST (verify), about 4–6 weeks.
+   FIX 03 [JD_EVIDENCE +1.5] Prove HR analytics, Darwinbox, Excel inside a bullet
+        why: HR Management Trainee lists must-haves that appear only in your Skills section. Recruiter keyword search and the shortlisting panel both look for them in experience lines.
+        do:  Add the tool or skill where you actually used it, for example in: "Redesigned campus hiring funnel for 3 factories, cutting time-to-offer from 41 to 27 days". Name it and attach the outcome.
+   CERT Microsoft PL-300 Power BI Data Analyst — Listed as preferred for HR-CAMPUS (≈₹4,865 + GST (verify), 4–6 weeks)
+   CERT SHRM-CP — Listed as preferred for HR-CAMPUS (USD 399 member / 499 non-member, 80–120 hrs)
+   CERT HR analytics course with an attrition-dashboard project — Closes your JD gap in HR analytics (Low, 3–4 weeks)
+   PROJECT Competency/KRA framework and appraisal design for an SME — Builds evidence for Performance management, Labour law (missing, or only in your skills list)
+   PROJECT Attrition-driver analysis (survey n ≥ 50) with a retention plan and HR dashboard — Builds evidence for HR analytics, Employee relations (missing, or only in your skills list)
+   PROJECT Campus/lateral hiring funnel redesign for a startup (sourcing → offer, time-to-fill) — Builds evidence for HR analytics (missing, or only in your skills list)
+   COMPETITION HUL L.I.M.E. — Aug–Sep (1st-year MBA) · Open to MBA/PGDM students
+   COMPETITION ITC Interrobang — Aug–Oct (listed campuses) · Listed campuses; check if yours is on the list
+   REWRITE [STRONG_VERB]
+      before: Created an onboarding playbook adopted across 2 sites for 150 new hires
+      after:  Created an onboarding playbook adopted across 2 sites for 150 new hires, cutting time-to-fill from [X] to [Y] days
+      result-first: Time-to-fill cut from [X] to [Y] days by creating an onboarding playbook adopted across 2 sites for 150 new hires
+
+──────── R6_XLRI_HR_FRESHER × MKT-CAMPUS → 59 MODERATE | JD MKT/CAMPUS | user CAMPUS
+   V1 JD Skill & Must-Have Match                     0.6/21.7    3%
+   V2 Role & Domain Alignment                        1.2/4.9     24%
+   V3 Experience & Level Fit                         8.3/11.9    70%
+   V4 Quantified Impact                              11.4/13.8   83%
+   V5 Bullet Strength (Action / Result-First)        8.8/9.8     90%
+   V6 Leadership, PoR & Achievements                 8.7/13.6    64%
+   V7 Education & Credentials                        4.7/7.5     63%
+   V8 Structure, Sections & Contact                  6.3/6.9     91%
+   V9 Length & Bullet Discipline                     4.9/4.9     100%
+   V10 ATS Parse Health                              4.2/4.9     85%
+   Suitability: PIVOT — Pivot alert: your profile reads Human Resources (88) more than Marketing (41). Either target Human Resources roles or build Marketing evidence first (see projects & certifications).
+   FIX 01 [MUST_HAVE_GAP +2.3] Close the must-have gap: Marketing strategy & Consumer insights
+        why: These are must-haves for Assistant Brand Manager (Marketing · Campus) and nothing in your resume shows them. A must-have gap is the most common reason for a no-shortlist at this level.
+        do:  If you have done this in an internship, live project or course project, add one bullet that shows it with a result. If not, use the project or certification cards below to build the evidence before applying.
+   FIX 02 [TITLE_ALIGN +1.8] Signal the target role in your headline
+        why: Recruiters read title and company first. None of your current titles reads as Marketing for "Assistant Brand Manager".
+        do:  Add a one-line headline under your name: "MBA (Hrm) · Marketing track". Keep your formal job titles unchanged.
+   FIX 03 [CERT_GAP +1.4] Add a JD-valued credential: Google Ads + GA4 certifications (Skillshop)
+        why: Listed as preferred for MKT-CAMPUS. At Campus level an in-progress credential with a date ("exam booked: Dec 2026") is a credible signal.
+        do:  Start it this month and list it with a status and date. Cost Free, about 1–2 weeks.
+   CERT Google Ads + GA4 certifications (Skillshop) — Listed as preferred for MKT-CAMPUS (Free, 1–2 weeks)
+   CERT Meta Blueprint – Digital Marketing Associate — Listed as preferred for MKT-CAMPUS (≈USD 99 (verify), 2–3 weeks)
+   CERT HubSpot Inbound / Content Marketing — Listed as preferred for MKT-CAMPUS (Free, 1 week)
+   PROJECT Category deep-dive: price-pack architecture and share estimate for an FMCG category (retail audit of 30 outlets) — Builds evidence for Consumer insights, Marketing strategy (missing, or only in your skills list)
+   PROJECT Live ₹5–10k performance campaign for a D2C brand or campus venture (CTR, CAC, ROAS reported) — Builds evidence for Digital marketing, Campaign management, Marketing analytics (missing, or only in your skills list)
+   PROJECT Consumer research study (n ≥ 100 + 2 FGDs) translated into a positioning recommendation — Builds evidence for Consumer insights, Marketing strategy (missing, or only in your skills list)
+   COMPETITION HUL L.I.M.E. — Aug–Sep (1st-year MBA) · Open to MBA/PGDM students
+   COMPETITION L'Oréal Brandstorm — Oct–Mar · Open to MBA/PGDM students
+
+──────── R6_XLRI_HR_FRESHER × CON-CAMPUS → 59 MODERATE | JD CON/CAMPUS | user CAMPUS
+   V1 JD Skill & Must-Have Match                     4.1/20.8    20%
+   V2 Role & Domain Alignment                        0.2/4.7     5%
+   V3 Experience & Level Fit                         3/10.4      29%
+   V4 Quantified Impact                              12/14.6     83%
+   V5 Bullet Strength (Action / Result-First)        8.3/9.5     88%
+   V6 Leadership, PoR & Achievements                 9.1/14.2    64%
+   V7 Education & Credentials                        7.9/9.8     81%
+   V8 Structure, Sections & Contact                  6/6.6       91%
+   V9 Length & Bullet Discipline                     4.7/4.7     100%
+   V10 ATS Parse Health                              4/4.7       85%
+   Suitability: PIVOT — Pivot alert: your profile reads Human Resources (88) more than Consulting (8). Either target Human Resources roles or build Consulting evidence first (see projects & certifications).
+   FIX 01 [INTERNSHIP_FRAMING +2.1] Reframe your Hindustan Unilever internship toward Consulting
+        why: For Campus roles the summer internship is the main experience signal. Yours currently reads as hr intern talent acquisition rather than Consulting.
+        do:  Lead the internship block with its most Consulting-relevant result, add a one-line project objective, and name the JD terms you genuinely used (e.g. excel).
+   FIX 02 [MUST_HAVE_GAP +2] Close the must-have gap: Structured problem solving & Financial modelling
+        why: These are must-haves for Associate (Consulting · Campus) and nothing in your resume shows them. A must-have gap is the most common reason for a no-shortlist at this level.
+        do:  If you have done this in an internship, live project or course project, add one bullet that shows it with a result. If not, use the project or certification cards below to build the evidence before applying.
+   FIX 03 [TITLE_ALIGN +1.8] Signal the target role in your headline
+        why: Recruiters read title and company first. None of your current titles reads as Consulting for "Associate".
+        do:  Add a one-line headline under your name: "MBA (Hrm) · Consulting track · Data analysis". Keep your formal job titles unchanged.
+   FIX 04 [CERT_GAP +1.6] Add a JD-valued credential: Lean Six Sigma Green Belt (ISI / QAI / KPMG India)
+        why: Listed as preferred for CON-CAMPUS. At Campus level an in-progress credential with a date ("exam booked: Dec 2026") is a credible signal.
+        do:  Start it this month and list it with a status and date. Cost ₹17,700 (ISI Delhi) – ₹23,600 (KPMG India), about 3–6 days + project.
+   CERT Lean Six Sigma Green Belt (ISI / QAI / KPMG India) — Listed as preferred for CON-CAMPUS (₹17,700 (ISI Delhi) – ₹23,600 (KPMG India), 3–6 days + project)
+   CERT SQL for analytics (with a public query portfolio) — Listed as preferred for CON-CAMPUS (Free–low, 2–3 weeks)
+   CERT IIBA ECBA — Listed as preferred for CON-CAMPUS (USD 395 incl. first-year membership, 4–8 weeks)
+   PROJECT Market-entry or cost-diagnostic case for an Indian company (10-slide deck, bottom-up sizing) — Builds evidence for Structured problem solving, Market sizing, PowerPoint (missing, or only in your skills list)
+   PROJECT Pro-bono strategy sprint for an NGO or MSME (problem → recommendations → adoption) — Builds evidence for Structured problem solving, Stakeholder management (missing, or only in your skills list)
+   COMPETITION Accenture B-School Challenge — Jul–Aug · Open to MBA/PGDM students
+   COMPETITION Aditya Birla Group Stratos — Jul–Aug (invite-only B-schools) · Invite-only B-schools; check with your PlaceCom
+   REWRITE [STRONG_VERB]
+      before: Analysed exit-interview data of 380 employees to identify 4 attrition drivers; presented to the HR Director
+      after:  Analysed exit-interview data of 380 employees to identify 4 attrition drivers; presented to the HR Director — ₹[X] Cr [client] decision informed
+      result-first: ₹[X] Cr [client] decision informed by analysing exit-interview data of 380 employees to identify 4 attrition drivers; presented to the HR Director
+
+──────── R6_XLRI_HR_FRESHER × LEG-CAMPUS → 54 NEEDS WORK | JD LEG/CAMPUS | user CAMPUS
+   V1 JD Skill & Must-Have Match                     0/23.2      0%
+   V2 Role & Domain Alignment                        0/4.8       0%
+   V3 Experience & Level Fit                         3/10.5      29%
+   V4 Quantified Impact                              11.1/13.4   83%
+   V5 Bullet Strength (Action / Result-First)        8.6/9.6     90%
+   V6 Leadership, PoR & Achievements                 7.4/11.5    64%
+   V7 Education & Credentials                        8.7/10.8    81%
+   V8 Structure, Sections & Contact                  6.1/6.7     91%
+   V9 Length & Bullet Discipline                     4.8/4.8     100%
+   V10 ATS Parse Health                              4.1/4.8     85%
+   Suitability: PIVOT — Pivot alert: your profile reads Human Resources (88) more than Legal (0). Either target Human Resources roles or build Legal evidence first (see projects & certifications).
+   FIX 01 [MUST_HAVE_GAP +2.7] Close the must-have gap: Contract drafting & Regulatory compliance
+        why: These are must-haves for Legal Associate (Legal · Campus) and nothing in your resume shows them. A must-have gap is the most common reason for a no-shortlist at this level.
+        do:  If you have done this in an internship, live project or course project, add one bullet that shows it with a result. If not, use the project or certification cards below to build the evidence before applying.
+   FIX 02 [INTERNSHIP_FRAMING +2.1] Reframe your Hindustan Unilever internship toward Legal
+        why: For Campus roles the summer internship is the main experience signal. Yours currently reads as hr intern talent acquisition rather than Legal.
+        do:  Lead the internship block with its most Legal-relevant result, add a one-line project objective, and name the JD terms you genuinely used.
+   FIX 03 [TITLE_ALIGN +1.8] Signal the target role in your headline
+        why: Recruiters read title and company first. None of your current titles reads as Legal for "Legal Associate".
+        do:  Add a one-line headline under your name: "MBA (Hrm) · Legal track". Keep your formal job titles unchanged.
+   PROJECT Contract-review playbook (NDA/MSA) with a clause risk matrix — Builds evidence for Contract drafting, Contract management, Regulatory compliance (missing, or only in your skills list)
+   PROJECT Regulatory compliance calendar for an SME (Companies Act, GST, labour codes) — Builds evidence for Regulatory compliance, Corporate law, Legal research (missing, or only in your skills list)
+
+──────── R6_XLRI_HR_FRESHER × J6_ESG_ANALYST → 55 MODERATE | JD ESG/CAMPUS | user CAMPUS
+   V1 JD Skill & Must-Have Match                     3.1/23.2    13%
+   V2 Role & Domain Alignment                        0/4.8       0%
+   V3 Experience & Level Fit                         3/10.5      29%
+   V4 Quantified Impact                              11.1/13.4   83%
+   V5 Bullet Strength (Action / Result-First)        8.6/9.6     90%
+   V6 Leadership, PoR & Achievements                 7.4/11.5    64%
+   V7 Education & Credentials                        6.8/10.8    63%
+   V8 Structure, Sections & Contact                  6.1/6.7     91%
+   V9 Length & Bullet Discipline                     4.8/4.8     100%
+   V10 ATS Parse Health                              4.1/4.8     85%
+   Suitability: PIVOT — Pivot alert: your profile reads Human Resources (88) more than ESG & Sustainability (0). Either target Human Resources roles or build ESG & Sustainability evidence first (see projects & certifications).
+   FIX 01 [MUST_HAVE_GAP +4.6] Close the must-have gap: ESG frameworks & GHG accounting
+        why: These are must-haves for ESG Analyst (ESG & Sustainability · Campus) and nothing in your resume shows them. A must-have gap is the most common reason for a no-shortlist at this level.
+        do:  If you have done this in an internship, live project or course project, add one bullet that shows it with a result. If not, use the project or certification cards below to build the evidence before applying.
+   FIX 02 [JD_EVIDENCE +2.2] Prove Excel inside a bullet
+        why: ESG Analyst lists must-haves that appear only in your Skills section. Recruiter keyword search and the shortlisting panel both look for them in experience lines.
+        do:  Add the tool or skill where you actually used it, for example in: "Redesigned campus hiring funnel for 3 factories, cutting time-to-offer from 41 to 27 days". Name it and attach the outcome.
+   FIX 03 [INTERNSHIP_FRAMING +2.1] Reframe your Hindustan Unilever internship toward ESG & Sustainability
+        why: For Campus roles the summer internship is the main experience signal. Yours currently reads as hr intern talent acquisition rather than ESG & Sustainability.
+        do:  Lead the internship block with its most ESG & Sustainability-relevant result, add a one-line project objective, and name the JD terms you genuinely used (e.g. excel).
+   FIX 04 [TITLE_ALIGN +1.8] Signal the target role in your headline
+        why: Recruiters read title and company first. None of your current titles reads as ESG & Sustainability for "ESG Analyst".
+        do:  Add a one-line headline under your name: "MBA (Hrm) · ESG & Sustainability track". Keep your formal job titles unchanged.
+   CERT GRI Certified Sustainability Professional / BRSR course — Listed as preferred for this JD (Varies (verify), 3–6 weeks)
+   CERT CFA Level I (candidate) — Listed as preferred for this JD (USD 1,140 early / 1,490 standard, ~300 hrs)
+   PROJECT BRSR-style disclosure gap analysis and Scope 1–2 inventory for a listed company — Builds evidence for BRSR, GHG accounting, ESG frameworks (missing, or only in your skills list)
+   COMPETITION L'Oréal Brandstorm — Oct–Mar · Open to MBA/PGDM students

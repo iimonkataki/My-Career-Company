@@ -113,7 +113,10 @@
 
   function getScoringRoleFamily(j) {
     if (!j || !j.scoring || !j.scoring.roleFamily) return 'consulting';
-    return j.scoring.roleFamily;
+    var f = j.scoring.roleFamily;
+    if (f !== 'other') return f;
+    // same mapping as RFSv3Bridge.LEGACY_KEY, so the legacy and v3 paths agree
+    return ({ GM: 'genman', ENT: 'genman', PPD: 'genman', ESG: 'genman', LEG: 'genman', PRC: 'marketing', RE: 'finance', ENR: 'operations' })[j.domainCode] || 'genman';
   }
 
   return {
