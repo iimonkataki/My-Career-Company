@@ -6,22 +6,15 @@ echo ========================================================
 echo.
 
 echo [1/2] Authenticating with Google Firebase CLI...
-echo If a browser window does not open automatically, visit the URL shown below.
+echo.
 call firebase.cmd login --reauth
-
-if %ERRORLEVEL% NEQ 0 (
-    echo.
-    echo Trying manual authentication mode...
-    call firebase.cmd login --reauth --no-localhost
+echo.
+set /p AUTH_CODE="Enter the authorization code from your browser (or press Enter if already logged in): "
+if not "%AUTH_CODE%"=="" (
+    call firebase.cmd login %AUTH_CODE%
 )
 
-if %ERRORLEVEL% NEQ 0 (
-    echo.
-    echo [ERROR] Authentication was not completed.
-    pause
-    exit /b %ERRORLEVEL%
-)
-
+echo.
 echo [2/2] Deploying Hosting & Firestore to my-career-company...
 cd ..
 call firebase.cmd deploy --only hosting,firestore --project my-career-company
