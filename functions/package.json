@@ -1,0 +1,16 @@
+{
+  "name": "mcc-functions",
+  "description": "My Career Company Cloud Functions: JD link reader for Resume Fit Score",
+  "private": true,
+  "main": "index.js",
+  "engines": { "node": "20" },
+  "scripts": {
+    "test": "node ../test/test-fetch-jd.js",
+    "serve": "firebase emulators:start --only functions,hosting",
+    "deploy": "firebase deploy --only functions:fetchJd,hosting"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^6.1.0"
+  }
+}

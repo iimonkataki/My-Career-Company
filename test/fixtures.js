@@ -133,7 +133,25 @@ POSITIONS OF RESPONSIBILITY
 ACHIEVEMENTS
 • National Finalist, ITC Interrobang Season 15 (HR track)
 SKILLS
-Excel, HR analytics, Darwinbox, Power BI` }
+Excel, HR analytics, Darwinbox, Power BI` },
+R7_CONSULT_MA_CREDIT_PDFSPLIT: { pageCount: 1, profile: { status: 'Working Professional', institution: '' }, text: `ARJUN KAPOOR
+arjun.kapoor@gmail.com | +91 98110 22334 | linkedin.com/in/arjunkapoor
+PROFESSIONAL EXPERIENCE
+EY | Consultant – Transaction Advisory (M&A) | Jul 202 4 – Present
+• Supported IT and commercial due diligence for 4 PE-led acquisitions with a combined deal value of ₹2,400 Cr
+• Prepared Day 1 integration checklists and synergy trackers for a post-merger integration in the pharma sector
+• Built the integration PMO dashboard tracking 120 + milestones across 6 workstreams
+Axis Bank | Deputy Manager – Credit, Mid Corporate | Jun 202 1 – Jun 202 4
+• M anaged a portfolio of 50 + firms across 10 + industries in the Mid Corporate segment ; Credit analysis, Industry tracking, Due diligence
+• Prepared credit appraisal notes and CMA data for proposals of ₹25 – 150 Cr
+• Worked on annual reviews and covenant monitoring for the portfolio
+EDUCATION
+MBA (Finance & Strategy) | Management Development Institute, Gurgaon | 2019 – 2021
+B.Com (Hons) | Shri Ram College of Commerce | 2016 – 2019
+PROFESSIONAL QUALIFICATIONS
+• Successfully cleared the Chartered Financial Analyst – Level I I examination conducted by the CFA Institute, Charlottesville 202 4
+SKILLS
+Financial modelling, Valuation, Excel, PowerPoint, Power BI, SAP` }
 };
 
 module.exports.customJds = {
@@ -209,5 +227,23 @@ What you'll do
 • Use SQL and dashboards to track conversion rate and fill rate across dark stores
 Requirements
 • 2–4 years in category management or e-commerce; MBA preferred
-• Must have strong unit economics and pricing skills` }
+• Must have strong unit economics and pricing skills` },
+  // Stand-in for the exact Deloitte requisition 59723944 (not retrievable); composed from Deloitte's sibling postings
+  // for the same Delhi M&A Technology / Deal Transformation & PMI team (Oct 2026).
+  J9_DELOITTE_IT_MA: { title: '', text: `Deputy Manager | IT M&A | Delhi | M&A-Deal Transformation & Post Merger integration
+Location: Delhi
+Entity: Deloitte Touche Tohmatsu India LLP
+The team
+The team works as an extension of our Deloitte member firms' M&A Technology team and provides dedicated support throughout the project lifecycle. Learn more about Strategy & Transactions.
+Your work profile
+• As a Deputy Manager in our Transaction Services – M&A Technology team you will build positive working relationships with teams and clients
+• Identify deal-related IT risks and red flags and provide recommendations based on IT due diligence findings to support client investment decisions
+• Prepare Day 1 / Day 100 plans for integration and separation; identify IT synergies and one-off / ongoing costs
+• Support Deloitte member firms' (UK, Canadian and European) Technology DD practice with diligence, integration and separation expertise
+Desired qualifications
+• 3 to 5 years of experience of the M&A lifecycle, including writing and reviewing IT due diligence and post-merger integration / separation
+• Experience in Big-4 management consulting IT M&A teams, IT advisory / transformation, or the consulting BU of an IT services firm
+• Ability to work in a deal environment with staff at all levels
+• Strong PowerPoint and Excel skills` },
+  J10_DELOITTE_LINK_ONLY: { url: 'https://southasiacareers.deloitte.com/job/Delhi-Deputy-Manager-IT-M&A-Delhi-M&A-Deal-Transformation-&-Post-Merger-integration/59723944/', title: '', text: 'https://southasiacareers.deloitte.com/job/Delhi-Deputy-Manager-IT-M&A-Delhi-M&A-Deal-Transformation-&-Post-Merger-integration/59723944/' }
 };

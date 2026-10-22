@@ -16,7 +16,7 @@
   }
 })(this, function (C, COMPANIES, SCHOOLS) {
   'use strict';
-  var VERSION = 'RFS-3.0.0';
+  var VERSION = 'RFS-3.2.0';
   var DCODES = Object.keys(C.DOMAINS);
   var LEVEL_ORDER = ['CAMPUS', 'EARLY', 'MID', 'SENIOR'];
 
@@ -93,7 +93,8 @@
     return out.filter(function (x) { return x && x.length > 1 && !/^(e\.?g|etc)$/.test(x); });
   }
   var DISPLAY = {};
-  function disp(t) { return DISPLAY[t] || t; }
+  var ACRO = /\b(it|hr|hrm|m&a|pmi|pmo|imo|tsa|erp|sap|crm|sql|kpi|okr|gtm|cma|npa|esg|ghg|brsr|gri|tcfd|fp&a|p&l|dcf|lbo|ecm|dcm|ipo|roi|roas|cac|ltv|seo|sem|ga4|sdlc|uat|brd|prd|rca|kam|b2b|d2c|nps|csat|nrr|otif|s&op|abm|asm)\b/g;
+  function disp(t) { if (DISPLAY[t]) return DISPLAY[t]; var x = String(t || '').replace(ACRO, function (m) { return m.toUpperCase(); }); return x.charAt(0).toUpperCase() + x.slice(1); }
   function variantsFor(term) {
     var syn = C.SYN[term] || [];
     return uniq([term].concat(syn));
@@ -114,6 +115,7 @@
       add(r.mustHave, 3); add(r.atsKeywords, 1.5); add(r.skills && r.skills.technical, 1.2); add(r.tools, 1);
       (r.titles || []).forEach(function (t) { splitLibTerm(t).forEach(function (x) { D.titles[x] = 1; }); });
     });
+    C.SUBAREAS.forEach(function (sa) { sa.terms.forEach(function (t) { if (dom[sa.d] && !dom[sa.d].terms[t]) dom[sa.d].terms[t] = 1.2; }); });
     // document frequency across the 28 domains → IDF (generic terms like Excel/CRM get ~0 weight in domain detection)
     var df = {};
     DCODES.forEach(function (d) { Object.keys(dom[d].terms).forEach(function (t) { df[t] = (df[t] || 0) + 1; }); });
@@ -150,6 +152,105 @@
     return { s: clip(s / D.norm, 0, 1), hits: hits };
   }
 
+  /* ============================================================ 1b. Text repair (PDF extraction artefacts) */
+  // PDF.js often splits one word into several text items, so a resume arrives as "M anaged", "202 4", "Level I I", "50 +".
+  // Without repair, verbs and dates are missed: bullets look verb-less (→ bad rewrites) and roles are not found (→ wrong level).
+  var KNOWN = null;
+  function knownWords() {
+    if (KNOWN) return KNOWN;
+    KNOWN = {};
+    C.STRONG_VERBS.concat(C.NEUTRAL_VERBS, ['assisted', 'achieved', 'analysed', 'analyzed', 'implemented', 'improved', 'identified', 'initiated', 'increased', 'introduced',
+      'automated', 'awarded', 'appointed', 'audited', 'advised', 'aligned', 'interviewed', 'involved', 'acquired', 'authored', 'issued', 'activated', 'architected', 'and', 'across', 'internship'])
+      .forEach(function (w) { KNOWN[w.toLowerCase()] = 1; });
+    return KNOWN;
+  }
+  function repairText(t) {
+    var K = knownWords();
+    return String(t || '')
+      .replace(/\u00ad/g, '')                                                     // soft hyphens
+      .replace(/(^|[^A-Za-z])([B-HJ-Z]) ([a-z]{2,})\b/g, '$1$2$3')              // "M anaged" → "Managed" (A and I are real words, handled below)
+      .replace(/(^|[^A-Za-z])([AI]) ([a-z]{3,})\b/g, function (m, p, a, b) { return K[(a + b).toLowerCase()] ? p + a + b : m; })
+      .replace(/\b((?:19|20)\d) (\d)\b/g, '$1$2')                               // "202 4" → "2024"
+      .replace(/\b(19|20) (\d{2})\b/g, '$1$2')                                   // "20 24" → "2024"
+      .replace(/\b(Level|LEVEL|level|Series|Part)\s+(I|V)\s+(I|V)(?:\s+(I))?\b/g, function (m, l, a, b, c2) { return l + ' ' + a + b + (c2 || ''); })  // "Level I I" → "Level II"
+      .replace(/(\d) \+(?=\s|$|[^\d])/g, '$1+')                                 // "50 +" → "50+"
+      .replace(/(\d) %/g, '$1%')
+      .replace(/\b([A-Z]) ?& ?([A-Z])\b/g, '$1&$2')                               // "M & A" → "M&A", "P & L" → "P&L"
+      .replace(/[ \t]+([,;:!?)])/g, '$1').replace(/\( +/g, '(')                  // stray spaces before punctuation
+      .replace(/[ \t]{2,}/g, ' ');
+  }
+
+  /* ============================================================ 1c. Job-link parser (client-side; the JD page itself cannot be fetched by the browser) */
+  function titleCaseIfLower(tokens) {
+    var allLower = tokens.join(' ') === tokens.join(' ').toLowerCase();
+    return !allLower ? tokens : tokens.map(function (w) { return /^(it|hr|m&a|pmi|fp&a|cfo|ceo|coo|vp|avp|b2b|d2c|ai|ml|sap|erp|crm|esg|gtm|kam|sme|msme|bfsi|fmcg|apm|ecm|dcm|ipo|nbfc|hrbp|abm|asm|rsm|kpo|bpo|gcc|saas|ux|ui|sql|ca|cfa|frm)$/.test(w) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1); });
+  }
+  function parseJobUrl(url) {
+    var out = { url: url, host: '', company: null, designation: '', fn: '', location: '', department: '', experience: '', title: '', display: '', slugOnly: true };
+    if (!url) return out;
+    var u = String(url).trim(), host = '', path = u;
+    var m = /^https?:\/\/([^/?#]+)([^?#]*)/i.exec(u);
+    if (m) { host = m[1].toLowerCase().replace(/^www\./, ''); path = m[2]; }
+    out.host = host;
+    try { path = decodeURIComponent(path); } catch (e) { /* keep raw */ }
+    var rawSegs = path.split('/').filter(Boolean);
+    var segs = rawSegs.filter(function (x) { return !/^(jobs?|j|job-listings?|job-details?|view|posting|careers?|position|detail|details|apply|v|en|in|en-in|en_us|opening|openings|vacancy|search)$/i.test(x) && !/^\d+$/.test(x)
+      && !/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(x) && !/^[0-9a-z]{16,}$/i.test(x) || (/[a-z]-[a-z]/i.test(x) && x.length > 20 && /[aeiou]/i.test(x) && !/^[0-9a-f-]+$/i.test(x)); });
+    // ATS-hosted links (lever, greenhouse, ashby, …) carry the employer as the first path segment
+    if (/(^|\.)(lever|greenhouse|ashbyhq|workable|smartrecruiters|recruitee|freshteam)\./.test(host) && rawSegs[0]) out.company = rawSegs[0].charAt(0).toUpperCase() + rawSegs[0].slice(1);
+    segs = segs.filter(function (x) { return !(out.company && x.toLowerCase() === out.company.toLowerCase()); });
+    var seg = segs.sort(function (a, b) { return b.length - a.length; })[0] || '';
+    var toks = seg.split(/[-_+]+/).filter(Boolean).filter(function (t) { return !/^\d{5,}$/.test(t) && !/^[0-9a-f]{12,}$/i.test(t); });
+    while (toks.length && /^(job|jobs|listings?|listing|details?|opening|vacancy|careers?)$/i.test(toks[0])) toks.shift();
+    // experience like "0-2-years" (job-board slugs)
+    var tj = toks.join(' ').toLowerCase(), ex = /\b(\d{1,2}) (\d{1,2}) (years?|yrs?)\b/.exec(tj);
+    if (ex) { out.experience = ex[1] + '–' + ex[2] + ' years'; toks = toks.filter(function (t, i) { return !(/^\d{1,2}$/.test(t) || /^(years?|yrs?)$/i.test(t)); }); }
+    // company from host (career sites) or from slug tokens (job boards)
+    var boards = C.JOB_BOARDS.test('.' + host);
+    if (host && !boards) { var lab = host.split('.'); var core = lab.length > 2 ? lab[lab.length - 2] : lab[0]; var co = matchCompany(core); out.company = co ? co.n : core.charAt(0).toUpperCase() + core.slice(1); }
+    var lowerToks = toks.map(function (t) { return t.toLowerCase(); });
+    // split around cities (Deloitte-style: City-Title-City-Department; job boards: title-company-city)
+    var cityAt = [];
+    for (var i = 0; i < lowerToks.length; i++) {
+      for (var c = 0; c < C.CITIES.length; c++) {
+        var cw = C.CITIES[c].split(' ');
+        if (lowerToks.slice(i, i + cw.length).join(' ') === C.CITIES[c]) { cityAt.push([i, cw.length]); i += cw.length - 1; break; }
+      }
+    }
+    var titleToks = toks, deptToks = [];
+    if (cityAt.length) {
+      out.location = titleCaseIfLower(toks.slice(cityAt[0][0], cityAt[0][0] + cityAt[0][1])).join(' ');
+      if (cityAt[0][0] === 0 && cityAt.length > 1) { titleToks = toks.slice(cityAt[0][1], cityAt[1][0]); deptToks = toks.slice(cityAt[1][0] + cityAt[1][1]); }
+      else if (cityAt[0][0] === 0) { titleToks = toks.slice(cityAt[0][1]); }
+      else { titleToks = toks.slice(0, cityAt[0][0]); deptToks = toks.slice(cityAt[0][0] + cityAt[0][1]); }
+    }
+    // job-board slugs often put the company before the city: strip a recognised company from the end of the title
+    if (boards && titleToks.length > 2) {
+      for (var k = 1; k <= Math.min(4, titleToks.length - 2); k++) {
+        var tail = titleToks.slice(titleToks.length - k).join(' ').toLowerCase(), hit = null;
+        IDX.companies.some(function (o) { if (o.c.a.some(function (a) { return a.toLowerCase() === tail; })) { hit = o.c; return true; } return false; });
+        if (hit) { out.company = hit.n; titleToks = titleToks.slice(0, titleToks.length - k); break; }
+      }
+    }
+    // designation = up to the last title head word ("Deputy Manager"); the rest is the function ("IT M&A")
+    var lt = titleToks.map(function (t) { return t.toLowerCase(); }), headAt = -1;
+    lt.forEach(function (t, i) { if (C.TITLE_HEADS.indexOf(t) >= 0 && i <= 4) headAt = i; });
+    var desig = headAt >= 0 ? titleToks.slice(0, headAt + 1) : titleToks, fn = headAt >= 0 ? titleToks.slice(headAt + 1) : [];
+    out.designation = titleCaseIfLower(desig).join(' ');
+    out.fn = titleCaseIfLower(fn).join(' ');
+    var dept = titleCaseIfLower(deptToks);
+    if (dept.length > 1 && /&/.test(dept[0]) && /^[A-Z][a-z]/.test(dept[1])) { dept = [dept[0] + '-' + dept[1]].concat(dept.slice(2)); }   // "M&A-Deal Transformation"
+    out.department = dept.join(' ');
+    out.title = [out.designation, out.fn].filter(Boolean).join(' ');
+    out.display = (out.designation || out.fn) ? [out.designation, out.fn, boards || /lever|greenhouse|ashby/.test(host) ? out.company : '', out.location, out.department].filter(Boolean).join(' | ') : ''
+    out.display = out.display
+      || (out.company ? 'Job posting at ' + out.company : host ? 'Job posting at ' + host : 'Target job link');
+    out.readable = !!(out.designation || out.fn);
+    if (out.experience) out.display += ' | ' + out.experience;
+    out.detectText = [out.title, out.fn, out.department, out.experience, out.company || ''].join(' \n ');
+    return out;
+  }
+
   /* ============================================================ 2. Resume parsing */
   var GLYPH = /^\s*(?:[•▪●◦■□➢➤►▸✓✔❖◆○∙·♦\u2022\u25aa\u25cf\uf0b7\uf0a7\uf0d8*>]|[-–—](?=\s)|\(?\d{1,2}[.)](?=\s)|\(?[a-h][.)](?=\s))\s*/i;
   var HEADINGS = [
@@ -160,8 +261,8 @@
     ['por', /^(positions? of responsibilit(y|ies)|por|leadership( roles?| experience| (and|&) responsibilities)?|responsibilities held|positions held)$/],
     ['achievements', /^((scholastic|academic|key|professional|other|notable) )?(achievements?|accomplishments|honors?( (and|&) awards)?|awards( (and|&) (recognitions?|achievements|honors))?|recognitions?|accolades)( (and|&) (awards|honors|certifications))?$/],
     ['extracurricular', /^(extra-? ?curricular( activities| achievements)?|co-? ?curricular( activities)?|activities|volunteering|social (work|initiatives)|sports( (and|&) culturals?)?)$/],
-    ['skills', /^((technical|key|core|it|computer|software|professional) )?(skills?|competenc(y|ies)|proficienc(y|ies)|tools)( (and|&) (tools|certifications|interests|competencies))?$|^areas of expertise$/],
-    ['certifications', /^(certifications?|certificates?|licen[cs]es?( (and|&) certifications)?|courses?( (and|&) certifications)?|professional (certifications|courses|development)|online courses)$/],
+    ['skills', /^((technical|key|core|it|computer|software|professional|functional) )?(skills?|competenc(y|ies)|proficienc(y|ies)|tools|skill set)( (and|&) (tools|certifications|interests|competencies|expertise))?$|^areas of expertise$|^(key )?expertise$/],
+    ['certifications', /^(certifications?|certificates?|licen[cs]es?( (and|&) certifications)?|courses?( (and|&) certifications)?|professional (certifications|courses|development|qualifications?|credentials)|online courses|credentials|(technical|other) qualifications|certifications? (and|&) (trainings?|courses|awards|achievements)|trainings? (and|&) certifications?)$/],
     ['summary', /^((professional|career|executive) )?(summary|profile|objective|about me|snapshot)$/],
     ['interests', /^(interests?|hobbies( (and|&) interests)?|personal (details|information|profile)|languages?)$/]
   ];
@@ -224,7 +325,7 @@
   function parseResume(text, opts) {
     need(); opts = opts || {};
     var today = opts.today || new Date(); var todayYM = today.getFullYear() * 12 + today.getMonth();
-    var raw = String(text || '').replace(/\r/g, '').replace(/\t/g, '  ');
+    var raw = repairText(String(text || '').replace(/\r/g, '').replace(/\t/g, '  '));
     var lines = raw.split('\n').map(function (l) { return l.replace(/\s+$/, ''); });
     var R = { raw: raw, canon: canon(raw), lines: [], sections: {}, bullets: [], roles: [], headers: [] };
     var section = 'header', glyphCount = 0, contentLines = 0;
@@ -269,6 +370,7 @@
     // ---- roles: company, title, internship, months
     R.roles.forEach(function (r) {
       r.company = matchCompany(r.header);
+      if (r.company) { var hc = canon(r.header); r.companyAlias = r.company.a.slice().sort(function (x, y) { return y.length - x.length; }).filter(function (a) { return new RegExp('(?:^|[^a-z0-9])' + esc(canon(a)) + '(?![a-z0-9])').test(hc); })[0] || null; }
       var hdr = canon(r.header);
       r.isIntern = r.section === 'internship' || /\b(intern|internship|summer|sip|live project|winter project)\b/.test(hdr);
       r.months = r.range ? r.range.months : (durationMonths(r.header) || (r.isIntern ? 2 : 12));
@@ -296,7 +398,7 @@
       mba: /\b(mba|pgdm|pgp|mms|pgdba|epgp|pgpx|post graduate (diploma|program) in (business )?management|master of (business administration|management studies))\b/.test(degText),
       ca: /\b(chartered accountant|ca (final|inter\w*|qualified))\b/.test(degText) || /\bca\b/.test(degText) && /\bicai\b/.test(degText)
     };
-    R.ug = []; C.UG_DEGREE.forEach(function (u) { if (u[0].test(degText) || u[0].test(R.canon.replace(/\./g, ''))) R.ug.push(u[1]); });
+    R.ug = []; R.ugLabel = []; C.UG_DEGREE.forEach(function (u, i) { if (u[0].test(degText) || u[0].test(R.canon.replace(/\./g, ''))) { R.ug.push(u[1]); R.ugLabel.push(C.UG_LABEL[i] || 'UG degree'); } });
     R.school = null;
     IDX.schools.forEach(function (o) {
       o.res.forEach(function (re) { if (re.test(eduText) && (!R.school || o.s.t < R.school.t)) R.school = o.s; });
@@ -323,7 +425,7 @@
     R.certIds = []; R.certDom = [];
     C.CERT_SIGNALS.forEach(function (c) { if (c[0].test(R.canon)) { R.certIds.push(c[2]); R.certDom.push(c[1]); } });
     var actText = canon(['por', 'extracurricular', 'achievements', 'projects', 'internship'].map(function (k) { return (R.sections[k] || []).join('\n'); }).join('\n'));
-    R.clubDom = []; C.CLUB_SIGNALS.forEach(function (c) { if (c[0].test(actText)) R.clubDom.push(c[1]); });
+    R.clubDom = []; R.clubLabel = []; C.CLUB_SIGNALS.forEach(function (c) { var cm = c[0].exec(actText); if (cm) { R.clubDom.push(c[1]); R.clubLabel.push(disp(cm[0]).replace(/\b([a-z])/g, function (x) { return x.toUpperCase(); }).replace(/\bHr\b/g, 'HR')); } });
     R.contact = {
       email: /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i.test(raw),
       phone: /(?:\+91[\s.-]?|91[\s.-]?|0)?[6-9]\d{4}[\s.-]?\d{5}\b/.test(raw),
@@ -339,8 +441,8 @@
 
   /* ============================================================ 3. JD profile (library record or custom text) */
   var JD_HEAD = {
-    resp: /^(key )?(responsibilities|duties|what you('|wi)?ll do|what you will do|roles? (and|&) responsibilities|the role|about the role|job description|your role|key result areas|kras?|accountabilities|day to day)/,
-    req: /^(requirements|qualifications|eligibility|skills( (required|needed|&|and) .*)?|what (we|we're|we are) looking for|who you are|must[- ]haves?|required|desired (skills|profile)|candidate profile|experience|preferred|good to have|nice to have|key skills|you have|you bring|competencies)/,
+    resp: /^(key )?(responsibilities|duties|what you('|wi)?ll do|what you will do|what will you do|roles? (and|&) responsibilities|the role|about the role|job description|your role|your (work|job) profile|work profile|job profile|role overview|position overview|your responsibilities|engagement delivery|key result areas|kras?|accountabilities|day to day)/,
+    req: /^(requirements|qualifications|eligibility|skills( (required|needed|&|and) .*)?|what (we|we're|we are) looking for|who you are|must[- ]haves?|required|(desired|preferred|required|minimum|basic|key) (skills|profile|qualifications?|experience|requirements)|qualifications? (and|&) (experience|skills)|candidate profile|experience|preferred|good to have|nice to have|key skills|you have|you bring|what you('ll| will) bring|you should have|ideal candidate|competencies)/,
     boiler: /^(about (us|the company|the team|[a-z]+ ?[a-z]*)$|who we are|our (story|mission|culture|values)|benefits|perks|what we offer|why (join|us|work)|equal opportunit|eeo|diversity|disclaimer|how to apply|compensation|salary|ctc|life at)/
   };
   function jdZones(text, titleHint) {
@@ -357,7 +459,8 @@
       if (short && JD_HEAD.resp.test(bare)) { zone = 'resp'; return; }
       if (short && JD_HEAD.req.test(bare)) { zone = /preferred|good to have|nice to have/.test(bare) ? 'pref' : 'req'; return; }
       if (/equal opportunity employer|we are an equal|apply now|click here/.test(c)) return;
-      if (!titleSet && i < 3 && words(c).length <= 12 && !/[.]$/.test(c)) { Z.title = l; titleSet = true; return; }
+      var metaLine = /^(location|entity|company|date|job requisition( id)?|req(uisition)? id|job id|employment type|work mode|salary|ctc|experience)\s*:{1,2}/.test(c);
+      if (!titleSet && i < 3 && !metaLine && words(c.replace(/\|/g, ' ')).length <= (/\|/.test(c) ? 18 : 12) && !/[.]$/.test(c)) { Z.title = l; titleSet = true; return; }
       if (zone === 'boiler') return;
       if (zone === 'pref') { Z.req.push(c); Z.prefLines.push(c); return; }
       if (zone === 'req') { Z.req.push(c); if (/\b(must|required|mandatory|essential|should have|need to have|minimum|at least)\b/.test(c)) Z.mustLines.push(c); if (/\b(preferred|good to have|nice to have|plus|desirable|bonus|advantage)\b/.test(c)) Z.prefLines.push(c); return; }
@@ -393,6 +496,7 @@
     if (!lvl) {
       if (/\b(chief|head of|head -|vp|vice president|director|cxo|general manager|business head|national head)\b/.test(titleC)) { lvl = 'SENIOR'; basis = 'senior title'; }
       else if (/\b(senior manager|principal|group product manager|regional (sales )?manager|lead)\b/.test(titleC)) { lvl = 'MID'; basis = 'senior-manager title'; }
+      else if (/\b(assistant|deputy) manager\b/.test(titleC)) { lvl = 'EARLY'; basis = 'assistant / deputy manager title (typically 2–6 yrs in India)'; }
       else if (/\b(assistant|associate|trainee|analyst|executive|intern|junior|officer|apm)\b/.test(titleC)) { lvl = 'CAMPUS'; basis = 'entry-level title'; }
       else if (/\b(manager|senior|specialist|consultant)\b/.test(titleC)) { lvl = 'EARLY'; basis = 'manager / senior title'; }
       else { lvl = 'CAMPUS'; basis = 'no experience stated (default)'; }
@@ -400,17 +504,32 @@
     return { level: lvl, minYears: minY, maxYears: maxY, basis: basis };
   }
   /* detectDomainFromJd v3: zone-weighted, IDF-weighted, title-dictionary driven, boilerplate stripped, function vs industry. */
+  function detectSubArea(d, titleC, allC) {
+    // sub-areas are listed most-specific first: the first one with a title hit, or 2+ body hits, wins
+    for (var i = 0; i < C.SUBAREAS.length; i++) {
+      var sa = C.SUBAREAS[i]; if (sa.d !== d) continue;
+      var re = new RegExp(sa.re.source, 'g');
+      var nt = ((titleC || '').match(re) || []).length, nb = ((allC || '').match(re) || []).length;
+      if (nt >= 1 || nb >= 2) return { key: sa.key, label: sa.label };
+    }
+    return null;
+  }
+  /* detectDomainFromJdV3: zone-weighted IDF lexicons + title dictionary + context rules + employer prior + sub-area. */
   function detectDomainFromJdV3(text, opts) {
     need(); opts = opts || {};
-    var src = String(text || '');
-    if (/^\s*https?:\/\/\S+\s*$/.test(src)) {   // job link only: read the slug as words, keep "0-2 years", drop long numeric IDs
-      try { src = decodeURIComponent(src.trim().replace(/^https?:\/\/[^/]+/, '')).replace(/[-_/]+/g, ' ').replace(/\b\d{5,}\b/g, ' '); } catch (e) { src = src.replace(/[-_/]+/g, ' '); }
-    }
-    var slugTitle = opts.url ? (function () { try { return decodeURIComponent(String(opts.url).split('?')[0].split('/').filter(Boolean).pop() || ''); } catch (e) { return ''; } })().replace(/[-_]+/g, ' ').replace(/\b\d{5,}\b/g, ' ').replace(/\b(job|jobs|listings?|view|careers?)\b/gi, ' ').trim() : '';
-    text = src;
-    var Z = jdZones(text, opts.title || slugTitle);
+    var src = repairText(String(text || ''));
+    var urlOnly = /^\s*https?:\/\/\S+\s*$/.test(src);
+    var link = (opts.url || urlOnly) ? parseJobUrl(opts.url || src.trim()) : null;
+    if (urlOnly) src = link.detectText;                       // the browser cannot open the JD page: read the link slug
+    var titleHint = opts.title && !/\b[a-z] [a-z] [a-z]\b/i.test(opts.title) ? opts.title : '';   // ignore mangled legacy titles ("It M A")
+    var Z = jdZones(src, titleHint || (urlOnly && link && link.title) || '');
     var noZones = !Z.resp.length && !Z.req.length;
     var W = noZones ? { title: 0.40, resp: 0, req: 0, body: 0.60 } : { title: 0.40, resp: 0.30, req: 0.22, body: 0.08 };
+    var ctxText = Z.allC + '\n' + (link ? canon(link.detectText) : '');
+    // employer prior from the career-site host or an "Entity:/Company:" line (Recruiter Library)
+    var employer = null;
+    if (link && link.company) employer = matchCompany(link.company);
+    if (!employer) { var head = String(text || '').split('\n').slice(0, 15).join(' '); var em = /\b(entity|company|employer|organi[sz]ation)\s*[:\-]\s*([^\n|]{3,60})/i.exec(head); if (em) employer = matchCompany(em[2]); }
     var scores = DCODES.map(function (d) {
       var t = titleDomainScore(Z.titleC, d);
       var tl = domainLexScore(Z.titleC, d).s;
@@ -421,21 +540,36 @@
       var s = W.title * title + W.resp * r.s + W.req * q.s + W.body * b.s;
       if (C.DOMAINS[d].t === 'industry' && t === 0) s *= 0.85;
       return { d: d, s: s, title: title, evidence: uniq(r.hits.concat(q.hits, b.hits)).slice(0, 6) };
-    }).sort(function (a, b) { return b.s - a.s; });
+    });
+    var rulesHit = [];
+    C.JD_CONTEXT_RULES.forEach(function (rule) {
+      if (!rule[0].test(ctxText)) return;
+      rulesHit.push(rule[0].source.slice(0, 40));
+      scores.forEach(function (x) { if (rule[1][x.d]) x.s = Math.max(0, x.s + rule[1][x.d]); });
+    });
+    if (employer) scores.forEach(function (x) { x.s += employer.t.indexOf(x.d) >= 0 ? 0.08 : employer.c.indexOf(x.d) >= 0 ? 0.03 : 0; });
+    scores.sort(function (a, b) { return b.s - a.s; });
     var top = scores[0], second = scores[1];
     var margin = top.s > 0 ? (top.s - second.s) / top.s : 0;
     var conf = top.s < 0.10 ? 'LOW' : margin >= 0.30 ? 'HIGH' : margin >= 0.12 ? 'MEDIUM' : 'LOW';
     if (conf === 'HIGH' && second.s >= 0.5 * top.s) conf = 'MEDIUM';
+    var thin = words(Z.allC).length < 60;
+    if (link && urlOnly && !link.readable) { conf = 'LOW'; }
+    if (thin && conf === 'HIGH') conf = 'MEDIUM';             // a title alone is never "high confidence"
     var industry = scores.filter(function (x) { return C.DOMAINS[x.d].t === 'industry' && x.d !== top.d && x.s >= 0.25 * top.s && x.s > 0.06; })[0] || null;
-    var lv = detectLevelFromJd(Z.allC, Z.titleC);
+    var lv = detectLevelFromJd(Z.allC + (link && link.experience ? '\n' + link.experience.replace('–', '-') : ''), Z.titleC);
+    var sub = detectSubArea(top.d, Z.titleC, ctxText);
     return {
       domain: top.d, domainName: domName(top.d), score: round(top.s, 3), confidence: conf,
-      secondary: second.s >= 0.5 * top.s ? second.d : null, industry: industry ? industry.d : null,
-      evidence: top.evidence, title: Z.title, level: lv.level, levelBasis: lv.basis, minYears: lv.minYears, maxYears: lv.maxYears,
+      secondary: second.s >= 0.5 * top.s ? second.d : null, industry: industry ? industry.d : null, subArea: sub,
+      evidence: top.evidence, title: Z.title, displayTitle: (!urlOnly && titleHint) || (link && urlOnly ? link.display : '') || Z.title || (link ? link.display : ''), link: link, employer: employer ? employer.n : null, thin: thin,
+      level: lv.level, levelBasis: lv.basis, minYears: lv.minYears, maxYears: lv.maxYears, rules: rulesHit,
       ranking: scores.slice(0, 5).map(function (x) { return { d: x.d, s: round(x.s, 3) }; }), zones: Z,
       askUser: conf === 'LOW'
     };
   }
+  var GENERIC_JD_WORDS = { writing: 1, strategy: 1, consulting: 1, operations: 1, sales: 1, marketing: 1, finance: 1, analytics: 1, compliance: 1, reporting: 1,
+    communication: 1, leadership: 1, management: 1, content: 1, media: 1, retail: 1, energy: 1, telecom: 1, edtech: 1, healthcare: 1, sustainability: 1, esg: 1 };
   function recordFor(d, level) { var D = IDX.dom[d]; return D.rec[level] || D.rec.CAMPUS || D.rec[Object.keys(D.rec)[0]]; }
   function parseCertList(s) {
     if (!s || /^none/i.test(s)) return [];
@@ -459,17 +593,21 @@
       P.certPreferred = parseCertList(rec.certifications.preferred); P.certRequired = parseCertList(rec.certifications.required);
       P.certConditional = rec.certifications.conditional || [];
       P.goodToHave = rec.goodToHave || '';
+      P.displayTitle = rec.domain + ' · ' + rec.level + ' benchmark (' + rec.titles.slice(0, 2).join(' / ') + ')'; P.thin = false; P.subArea = null;
       return P;
     }
     // custom JD (URL text or pasted / uploaded)
     var det = detectDomainFromJdV3(jd.text, { title: jd.title, url: jd.url });
     var Z = det.zones;
     P.det = det; P.domain = jd.domainOverride || det.domain; P.level = jd.levelOverride || det.level; P.title = det.title || recordFor(P.domain, P.level).titles[0];
+    P.displayTitle = det.displayTitle || P.title; P.thin = det.thin; P.employer = det.employer; P.link = det.link;
+    P.subArea = (jd.domainOverride && jd.domainOverride !== det.domain) ? detectSubArea(P.domain, det.zones.titleC, det.zones.allC) : det.subArea;
     P.confidence = det.confidence; P.secondary = det.secondary; P.industry = det.industry; P.askUser = det.askUser && !jd.domainOverride;
     P.rec = recordFor(P.domain, P.level); P.id = 'CUSTOM:' + P.domain + '-' + P.level; P.titles = [P.title].concat(P.rec.titles);
     var found = [];
     IDX.allTerms.forEach(function (t) {
       if (C.LEVEL_GENERIC_TERMS.indexOf(t) >= 0) return;
+      if (GENERIC_JD_WORDS[t] && !Z.mustLines.some(function (l) { return termHit(l, t); })) return;   // "strategy", "writing"… from boilerplate are not skills
       var inReq = Z.reqC && termHit(Z.reqC, t), inResp = Z.respC && termHit(Z.respC, t), inBody = Z.bodyC && termHit(Z.bodyC, t), inTitle = termHit(Z.titleC, t);
       if (!(inReq || inResp || inBody || inTitle)) return;
       var must = Z.mustLines.some(function (l) { return termHit(l, t); });
@@ -500,11 +638,24 @@
       used[x.kind]++;
       P.terms.push({ t: x.t, w: x.kind === 'must' ? 3 : x.kind === 'preferred' ? 0.75 : 1.5, kind: x.kind });
     });
-    if (P.terms.length < 6) {   // thin JD → blend with the matching library benchmark at reduced weight
+    // sub-area skills (e.g. IT M&A: IT due diligence, PMI, Day 1, IT synergies). On a thin JD (link only / a few lines) the core
+    // sub-area skills act as must-haves; on a full JD they are extra keywords unless the JD itself marks them as required.
+    if (P.subArea) {
+      var pack = C.SUBAREAS.filter(function (x) { return x.key === P.subArea.key; })[0], haveS = {};
+      P.terms.forEach(function (x) { haveS[x.t] = 1; });
+      pack.terms.forEach(function (t) {
+        var coreT = pack.core.indexOf(t) >= 0, inReqZ = Z.reqC && termHit(Z.reqC, t);
+        if (haveS[t]) { if (coreT && (P.thin || inReqZ)) P.terms.forEach(function (x) { if (x.t === t) { x.kind = 'must'; x.w = Math.max(x.w, P.thin ? 2.25 : 3); } }); return; }
+        var core = pack.core.indexOf(t) >= 0;
+        P.terms.push({ t: t, w: P.thin ? (core ? 2.25 : 1.2) : (core ? 1.2 : 0.75), kind: P.thin && core ? 'must' : 'keyword', fromSubArea: true });
+      });
+    }
+    if (P.terms.length < 6 || P.thin) {   // thin JD → blend with the matching library benchmark at reduced weight
       var have = {}; P.terms.forEach(function (x) { have[x.t] = 1; });
-      (P.rec.mustHave || []).concat((P.rec.atsKeywords || []).slice(0, 8)).forEach(function (t) { splitLibTerm(t).forEach(function (x) { if (!have[x] && C.LEVEL_GENERIC_TERMS.indexOf(x) < 0) { have[x] = 1; P.terms.push({ t: x, w: 0.75, kind: 'keyword', fromLibrary: true }); } }); });
+      (P.rec.mustHave || []).concat(P.subArea ? [] : (P.rec.atsKeywords || []).slice(0, 8)).forEach(function (t) { splitLibTerm(t).forEach(function (x) { if (!have[x] && C.LEVEL_GENERIC_TERMS.indexOf(x) < 0) { have[x] = 1; P.terms.push({ t: x, w: 0.75, kind: 'keyword', fromLibrary: true }); } }); });
       P.blended = true;
     }
+    P.terms = P.terms.slice(0, 32);
     var minY = det.minYears; P.minMonths = minY != null ? minY * 12 : (P.rec.scoring.minExperienceMonths || 0); P.maxYears = det.maxYears || P.rec.experience.maxYears;
     P.freshers = P.level === 'CAMPUS';
     P.requiredDegrees = /\b(mba|pgdm|post ?graduate|pgp)\b/.test(Z.allC) ? ['MBA', 'PGDM'] : [];
@@ -544,8 +695,14 @@
     var q = outcome ? (base ? 1 : 0.85) : scale ? 0.5 : 0;
     return { q: q, outcome: outcome, baseline: base, scale: scale };
   }
+  var ADV_RE = new RegExp('^(?:' + C.ADVERBS.join('|') + ')\\s+');
+  var NOT_VERB_ED = { based: 1, need: 1, speed: 1, seed: 1, feed: 1, bed: 1, red: 1, shed: 1, hundred: 1, limited: 1, detailed: 1, varied: 1, advanced: 1, skilled: 1, talented: 1, dedicated: 1, interested: 1, experienced: 1, related: 1, united: 1, listed: 1, unlisted: 1, deed: 1, breed: 1, greed: 1, reed: 1, weed: 1, bleed: 1 };
+  function looseVerb(tok) {   // past-tense words not in the dictionaries ("cleared", "spearheaded-like" variants) still count as verbs
+    var t = (tok || '').replace(/[^a-z-]/g, '');
+    return verbLemma(t) || (/^[a-z]{4,}ed$/.test(t) && !NOT_VERB_ED[t] ? t : null);
+  }
   function classifyBullet(b) {
-    var c = b.c.replace(/^[^a-z0-9₹$]+/, '');
+    var c = b.c.replace(/^[^a-z0-9₹$]+/, '').replace(ADV_RE, '');
     // IIM PoR style "Head, Marketing Club (IIM X): led 14-member team…" → judge the clause after the colon
     var pc = /^[^:]{3,80}:\s+(.+)$/.exec(c);
     if (pc && verbLemma(words(pc[1])[0] || '')) { b.porPrefix = true; c = pc[1]; }
@@ -554,11 +711,15 @@
     var cls, pts;
     var lead = null;
     for (var i = 0; i < Math.min(3, toks.length); i++) { lead = verbLemma(toks[i]); if (lead) break; }
-    if (WEAK_RE.test(c)) { cls = 'WEAK'; pts = m.outcome ? 0.45 : 0.2; }
+    var loose = !lead && looseVerb(toks[0]);
+    b.credential = C.CREDENTIAL_LINE.test(c);
+    if (b.credential) { cls = 'NOUN_PHRASE_ACHIEVEMENT'; pts = 0.85; }
+    else if (WEAK_RE.test(c)) { cls = 'WEAK'; pts = m.outcome ? 0.45 : 0.2; }
     else if (RF_RE.test(c) && (m.outcome || NOUN_ACH_RE.test(c))) { cls = 'RESULT_FIRST'; pts = 1; }
     else if (NOUN_ACH_RE.test(toks.slice(0, 5).join(' '))) { cls = 'NOUN_PHRASE_ACHIEVEMENT'; pts = 0.85; }
     else if (lead && STRONG[lead]) { cls = m.outcome ? 'STRONG_VERB_RESULT' : 'STRONG_VERB'; pts = m.outcome ? 1 : (m.scale ? 0.8 : 0.72); }
     else if (lead && NEUTRAL[lead]) { cls = 'NEUTRAL'; pts = m.outcome ? 0.72 : m.scale ? 0.6 : 0.5; }
+    else if (loose) { cls = 'NEUTRAL'; lead = loose; pts = m.outcome ? 0.75 : m.scale ? 0.62 : 0.55; }
     else { cls = 'NO_VERB'; pts = m.outcome ? 0.7 : m.scale ? 0.5 : 0.4; }
     if (C.FIRST_PERSON.test(c)) pts -= 0.05;
     b.cls = cls; b.pts = clip(pts, 0, 1); b.metric = m; b.lead = lead;
@@ -577,6 +738,9 @@
   function roleTitleDomain(role) {
     var t = bfsiRetail(role.titleText || ''), out = {}, named = false;
     DCODES.forEach(function (d) { var s = titleDomainScore(t, d); if (s) { out[d] = s; if (s >= 0.85) named = true; } });
+    if (/\b(transaction (advisory|services)|deal (advisory|transformation)|deals|due diligence|post[- ]merger|integration (and|&) separation|carve-?outs?|valuation (and|&) modell?ing)\b/.test(t)) {
+      out.CON = Math.max(out.CON || 0, 0.9); if (out.IB) out.IB = Math.min(out.IB, 0.5); named = true;
+    }
     // Generic titles (Analyst, Associate, Consultant, Manager, Intern, MT…) that name no function are resolved through the
     // company's hiring profile, in its hiring order. Titles that already name a function are never re-assigned.
     if (!named && role.company && C.AMBIGUOUS_TITLES.some(function (a) { return compilePhrase(a).test(t); })) {
@@ -591,19 +755,25 @@
     var today = opts.today || new Date(), todayYM = today.getFullYear() * 12 + today.getMonth();
     var lvl = R.userLevel, W = SIG_W[lvl];
     if (R.isStudent && lvl !== 'CAMPUS') { W = {}; Object.keys(SIG_W.CAMPUS).forEach(function (k) { W[k] = 0.5 * SIG_W.CAMPUS[k] + 0.5 * SIG_W[lvl][k]; }); }
-    var S = {}; DCODES.forEach(function (d) { S[d] = { title: 0, company: 0, bullets: 0, intern: 0, spec: 0, ug: 0, certs: 0, clubs: 0, college: 0, skills: 0 }; });
+    var S = {}, EV = {}; DCODES.forEach(function (d) { S[d] = { title: 0, company: 0, bullets: 0, intern: 0, spec: 0, ug: 0, certs: 0, clubs: 0, college: 0, skills: 0 }; EV[d] = {}; });
+    function ev(d, k, txt) { if (txt && !(EV[d][k] || []).some(function (x) { return x === txt; })) (EV[d][k] = EV[d][k] || []).push(txt); }
+    function pretty(t) { return (t || '').replace(/\s+/g, ' ').trim().replace(/\b([a-z])/g, function (m) { return m.toUpperCase(); }).replace(/\b(It|Hr|Hrm|M&a|Pmi|Fp&a|Sme|Kam|Asm|Rsm|Bd|Erp|Sap|Crm|Esg|Pmo|Hrbp|Ta)\b/g, function (m) { return m.toUpperCase(); }); }
+    function coName(r) { return r.companyAlias || (r.company ? r.company.n.split(' / ')[0] : ''); }
     var ft = R.roles.filter(function (r) { return !r.isIntern; }), it = R.roles.filter(function (r) { return r.isIntern; });
     var wsum = ft.reduce(function (a, r) { return a + recencyW(r, todayYM); }, 0) || 1;
     ft.forEach(function (r) {
       var w = recencyW(r, todayYM) / wsum, td = roleTitleDomain(r), bt = bfsiRetail(canon(r.bullets.map(function (b) { return b.text; }).join('\n')));
       DCODES.forEach(function (d) {
         if (td[d]) S[d].title += w * td[d];
-        var bl = bt ? domainLexScore(bt + '\n' + (r.titleText || ''), d).s : 0;
+        var blx = bt ? domainLexScore(bt + '\n' + (r.titleText || ''), d) : { s: 0, hits: [] }, bl = blx.s;
         if (bt) S[d].bullets += w * bl;
+        if (bl > 0.05) ev(d, 'bullets', blx.hits.slice(0, 3).map(disp).join(', '));
+        if (td[d] >= 0.3) ev(d, 'title', pretty(r.titleText) + (r.company ? ' (' + coName(r) + ')' : ''));
         if (r.company) {
           var cv = r.company.i === d ? 0.8 : r.company.t.indexOf(d) >= 0 ? 1 : r.company.c.indexOf(d) >= 0 ? 0.45 : 0;
           var agrees = (td[d] || 0) >= 0.3 || bl >= 0.12 || r.company.i === d;   // a company hiring HR MBAs does not make a sales manager an HR profile
           S[d].company += w * cv * (agrees ? 1 : 0.2);
+          if (cv && agrees) ev(d, 'company', coName(r));
         }
       });
     });
@@ -613,17 +783,19 @@
       var k = i === 0 ? 1 : 0.5;
       DCODES.forEach(function (d) {
         var co = r.company ? (r.company.t.indexOf(d) >= 0 ? 1 : r.company.c.indexOf(d) >= 0 ? 0.4 : 0) : 0;
-        var v = 0.4 * (td[d] || 0) + 0.25 * co + 0.35 * domainLexScore(bt + '\n' + r.titleText, d).s;
+        var ilx = domainLexScore(bt + '\n' + r.titleText, d).s, iAgree = (td[d] || 0) >= 0.3 || ilx >= 0.12;   // an HR intern at an FMCG firm is not Marketing evidence
+        var v = 0.4 * (td[d] || 0) + 0.25 * co * (iAgree ? 1 : 0.2) + 0.35 * ilx;
         S[d].intern = Math.min(1, S[d].intern + k * v);
+        if (v > 0.15 && iAgree) ev(d, 'intern', 'Internship: ' + pretty(r.titleText) + (r.company ? ' (' + coName(r) + ')' : ''));
       });
     });
-    if (projTxt) DCODES.forEach(function (d) { S[d].intern = Math.min(1, S[d].intern + 0.35 * domainLexScore(projTxt, d).s); });
-    R.spec.forEach(function (sp, i) { var k = i === 0 ? 1 : 0.6; Object.keys(sp[1]).forEach(function (d) { S[d].spec = Math.max(S[d].spec, k * sp[1][d]); }); });
-    R.ug.forEach(function (m) { Object.keys(m).forEach(function (d) { S[d].ug = Math.max(S[d].ug, m[d]); }); });
-    R.certDom.forEach(function (m) { Object.keys(m).forEach(function (d) { S[d].certs = Math.min(1, S[d].certs + m[d]); }); });
-    R.clubDom.forEach(function (m) { Object.keys(m).forEach(function (d) { S[d].clubs = Math.min(1, S[d].clubs + 0.6 * m[d]); }); });
-    if (R.school && R.school.e) R.school.d.forEach(function (d, i) { S[d].college = Math.max(S[d].college, [1, 0.7, 0.5, 0.4][i] || 0.3); });
-    if (R.skillsText) DCODES.forEach(function (d) { S[d].skills = domainLexScore(R.skillsText, d).s; });
+    if (projTxt) DCODES.forEach(function (d) { var px = domainLexScore(projTxt, d); S[d].intern = Math.min(1, S[d].intern + 0.35 * px.s); if (px.s > 0.1) ev(d, 'intern', 'Projects: ' + px.hits.slice(0, 2).map(disp).join(', ')); });
+    R.spec.forEach(function (sp, i) { var k = i === 0 ? 1 : 0.6; Object.keys(sp[1]).forEach(function (d) { S[d].spec = Math.max(S[d].spec, k * sp[1][d]); if (sp[1][d] >= 0.6) ev(d, 'spec', 'MBA specialisation: ' + pretty(sp[0])); }); });
+    R.ug.forEach(function (m, i) { Object.keys(m).forEach(function (d) { S[d].ug = Math.max(S[d].ug, m[d]); if (m[d] >= 0.5) ev(d, 'ug', R.ugLabel[i]); }); });
+    R.certDom.forEach(function (m, i) { Object.keys(m).forEach(function (d) { S[d].certs = Math.min(1, S[d].certs + m[d]); if (m[d] >= 0.6) ev(d, 'certs', 'Certification: ' + (C.CERT_LABEL[R.certIds[i]] || R.certIds[i])); }); });
+    R.clubDom.forEach(function (m, i) { Object.keys(m).forEach(function (d) { S[d].clubs = Math.min(1, S[d].clubs + 0.6 * m[d]); if (m[d] >= 0.6) ev(d, 'clubs', 'Club / competition: ' + R.clubLabel[i]); }); });
+    if (R.school && R.school.e) R.school.d.forEach(function (d, i) { S[d].college = Math.max(S[d].college, [1, 0.7, 0.5, 0.4][i] || 0.3); ev(d, 'college', 'Institute strength: ' + R.school.n); });
+    if (R.skillsText) DCODES.forEach(function (d) { var sx = domainLexScore(R.skillsText, d); S[d].skills = sx.s; if (sx.s > 0.08) ev(d, 'skills', 'Skills: ' + sx.hits.slice(0, 3).map(disp).join(', ')); });
     // No full-time roles (fresher): redistribute title/company/bullets weight to internships & projects
     var Wl = Object.assign({}, W);
     if (!ft.length) { Wl.intern += Wl.title + Wl.company + Wl.bullets * 0.5; Wl.bullets *= 0.5; Wl.title = 0; Wl.company = 0; }
@@ -631,7 +803,9 @@
       var E = 0, contrib = [];
       Object.keys(Wl).forEach(function (k) { var v = Wl[k] * S[d][k]; E += v; if (S[d][k] > 0.05) contrib.push([k, v]); });
       contrib.sort(function (a, b) { return b[1] - a[1]; });
-      return { d: d, name: domName(d), score: Math.round(100 * (1 - Math.exp(-3.4 * E))), E: E, signals: contrib.slice(0, 3).map(function (x) { return x[0]; }), raw: S[d] };
+      var evidence = [];
+      contrib.forEach(function (x) { (EV[d][x[0]] || []).slice(0, x[0] === 'title' ? 2 : 1).forEach(function (t) { if (evidence.length < 4) evidence.push(x[0] === 'bullets' ? 'Experience: ' + t : x[0] === 'title' ? 'Role: ' + t : x[0] === 'company' ? 'Employer: ' + t : t); }); });
+      return { d: d, name: domName(d), score: Math.round(100 * (1 - Math.exp(-3.4 * E))), E: E, signals: contrib.slice(0, 3).map(function (x) { return x[0]; }), evidence: evidence, raw: S[d] };
     }).sort(function (a, b) { return b.score - a.score; });
     out.forEach(function (x) { x.tier = x.score >= 70 ? 'Strong Fit' : x.score >= 45 ? 'Moderate Fit' : 'Developing Fit'; });
     var top = out[0], second = out[1], nSig = top.signals.length;
@@ -754,10 +928,13 @@
       if (/\b(pre-placement (offer|interview)|ppo|ppi)\b/.test(c)) ach += 0.6;
     });
     R.bullets.forEach(function (b) { if (b.section === 'internship' && /\b(pre-placement (offer|interview)|ppo|ppi)\b/.test(b.c)) ach += 0.6; });
+    (R.sections.certifications || []).concat(R.sections.achievements || []).forEach(function (l) {   // "Cleared CFA Level II", "FRM Part I" …
+      var c = canon(l); if (C.CREDENTIAL_LINE.test(c) || /\b(cfa|frm|caia)\b[^\n]{0,20}\b(level|part) ?(ii|iii|2|3)\b|\b(chartered accountant|ca final|cma final)\b/.test(c)) ach += 0.55;
+    });
     var allC = R.canon;
     var people = /\b(team of \d+|\d+[- ]member|led (a )?(\d+[- ]member )?team|managed (a )?team|direct reports?|mentored \d+|supervised \d+|led \d+)\b/.test(allC) ? 1 : 0;
     var teamSize = +((/\b(\d+)[- ]member\b|\bteam of (\d+)\b/.exec(allC) || [])[1] || (/\bteam of (\d+)\b/.exec(allC) || [])[1] || 0);
-    var owner = /\b(p&l|profit (and|&) loss|budget of|people budget|₹\s?\d[\d,.]*\s?(cr|crore)[^.]{0,30}(p&l|budget|portfolio|revenue|business)|head (of|-|–)|business head)\b/.test(allC) ? 1 : 0;
+    var owner = /\b(managed (a|an|the)? ?(portfolio|book|workstream|client portfolio|key accounts?|accounts?|territory|region|brand|category|programme|program|project)|owned (the|a)?|independently (managed|led|ran)|led the [a-z ]{0,25}(workstream|programme|program|project|integration|implementation)|p&l|profit (and|&) loss|budget of|people budget|₹\s?\d[\d,.]*\s?(cr|crore)[^.]{0,30}(p&l|budget|portfolio|revenue|business)|head (of|-|–)|business head)\b/.test(allC) ? 1 : 0;
     var promo = /\bpromoted\b|\bfast-?tracked\b/.test(allC) || (function () { var byCo = {}; R.roles.forEach(function (r) { if (r.company && !r.isIntern) byCo[r.company.n] = (byCo[r.company.n] || 0) + 1; }); return Object.keys(byCo).some(function (k) { return byCo[k] > 1; }); })();
     var L = P.level;
     if (L === 'CAMPUS') V.lead = clip(0.55 * sat(por, 1.2) * 1.45 + 0.45 * sat(ach, 1.0) * 1.5 + (people ? 0.08 : 0), 0, 1);
@@ -841,9 +1018,33 @@
       : section === 'por' || section === 'extracurricular' ? 'Keep the club / committee head\'s or faculty confirmation.'
       : 'Keep the project report or faculty sign-off.';
   }
+  // verb chosen from the activity noun at the start of a bullet ("annual reviews…" → "Conducted annual reviews…")
+  var NOUN_VERB = [[/\b(reviews?|audits?|analysis|analyses|research|surveys?|interviews?|assessments?|due diligence|diligence|benchmarking|studies|study)\b/, 'Conducted'],
+    [/\b(reports?|notes?|memos?|presentations?|decks?|proposals?|plans?|checklists?|documentation|budgets?|forecasts?)\b/, 'Prepared'],
+    [/\b(models?|dashboards?|trackers?|tools?|templates?|frameworks?|playbooks?|databases?|pipelines?)\b/, 'Built'],
+    [/\b(campaigns?|activations?|launch(es)?)\b/, 'Executed'], [/\b(events?|fests?|conclaves?|workshops?|sessions?|webinars?)\b/, 'Organised'],
+    [/\b(monitoring|tracking|reconciliations?|onboarding|recruitment|hiring|training|operations)\b/, 'Ran'],
+    [/\b(negotiations?|implementation|migration|rollout|integration|transformation)\b/, 'Led']];
+  function nounVerb(c) { for (var i = 0; i < NOUN_VERB.length; i++) if (NOUN_VERB[i][0].test(c)) return NOUN_VERB[i][1]; return null; }
+  function bulletFamily(b, P) {   // outcome language follows what the bullet is about (a credit bullet gets finance outcomes) …
+    var jdHits = P.terms.filter(function (x) { return (x.kind === 'must' || x.fromSubArea) && termHit(b.c, x.t); }).length;
+    var best = P.domain, bs = domainLexScore(b.c, P.domain).s + 0.15 * jdHits;
+    DCODES.forEach(function (d) { var x = domainLexScore(b.c, d).s; if (x > bs + 0.08) { bs = x; best = d; } });
+    return familyOf(best);                                                       // … the JD domain only wins ties
+  }
+  function semicolonTail(core) {   // "…segment; Credit analysis, Industry tracking, Due diligence" → "…segment, covering credit analysis, industry tracking and due diligence"
+    var m = /^(.{12,}?)\s*;\s*([A-Za-z][^;]{3,90})$/.exec(core);
+    if (!m) return core;
+    var items = m[2].split(/\s*,\s*|\s+and\s+/).filter(Boolean);
+    if (items.length < 2 || items.some(function (x) { return words(x).length > 4 || looseVerb(canon(words(x)[0])); })) return core;
+    var low = items.map(function (x) { return /^[A-Z]{2,}/.test(x) ? x : x.charAt(0).toLowerCase() + x.slice(1); });
+    return m[1] + ', covering ' + low.slice(0, -1).join(', ') + ' and ' + low[low.length - 1];
+  }
   function rewriteBullet(b, P) {
-    var fam = familyOf(P.domain), t = b.text.replace(/[.;\s]+$/, ''), needs = [], notes = [];
-    var core = t, m;
+    var fam = bulletFamily(b, P), t = b.text.replace(/[.;\s]+$/, ''), needs = [], notes = [];
+    var core = t.replace(new RegExp('^(?:' + C.ADVERBS.join('|') + ')\\s+', 'i'), function (x) { return ''; }), m;
+    core = core.charAt(0).toUpperCase() + core.slice(1);
+    core = semicolonTail(core);
     var ownershipCheck = false;
     if ((m = /^(?:was\s+)?(?:responsible for|in charge of|tasked with|duties included?|looked after)\s+/i.exec(core))) core = core.slice(m[0].length);
     else if ((m = /^(?:worked (?:on|with|as)|involved in|engaged in|dealt with)\s+/i.exec(core))) core = core.slice(m[0].length);
@@ -866,10 +1067,14 @@
     var toks = words(core), first = toks[0] || '';
     var verb;
     if (/ing$/i.test(first)) { verb = gerundToPast(first); toks[0] = verb; }
-    else if (verbLemma(canon(first)) && /ed$|^(led|built|drove|ran|made|wrote|won|sold|grew|cut|set)$/i.test(first)) { verb = cap(first); toks[0] = verb; }
+    else if (looseVerb(canon(first)) && /ed$|^(led|built|drove|ran|made|wrote|won|sold|grew|cut|set)$/i.test(first)) { verb = cap(first); toks[0] = verb; }
     else if (/^(applied|as)$/i.test(first)) { verb = cap(first); }
     else {
-      verb = OBJ_VERB[objectType(canon(core))] || 'Delivered'; toks.unshift(verb);
+      // add a verb ONLY when the bullet clearly names an activity we can describe honestly; otherwise leave it for the user
+      var ot = objectType(canon(core)), nv = nounVerb(canon(toks.slice(0, 5).join(' ')));
+      if (/^[a-z]+ed$/i.test(first)) return null;
+      if (nv) verb = nv; else if (ot !== '_any' && OBJ_VERB[ot]) verb = OBJ_VERB[ot]; else return null;   // no honest verb → leave the bullet alone
+      toks.unshift(verb);
       if (toks[1] && /^[A-Z][a-z]+$/.test(toks[1]) && toks[2] && /^[a-z]/.test(toks[2])) toks[1] = toks[1].toLowerCase();   // keep acronyms & proper nouns
     }
     if (toks[1] && /^[A-Z][a-z]+$/.test(toks[1]) && toks[2] && /^[a-z]/.test(toks[2])) toks[1] = toks[1].toLowerCase();
@@ -879,6 +1084,7 @@
     core = core.charAt(0).toUpperCase() + core.slice(1);
     var hasMetric = b.metric && b.metric.outcome, hasScale = b.metric && b.metric.scale;
     var obj = objectType(b.c), famT = C.OUTCOME[fam] || {}, used = P._usedClauses || (P._usedClauses = {});
+    if (fam === 'finance' && /\b(portfolio|loan book|borrowers?|firms|exposure)\b/.test(b.c)) obj = 'portfolio';
     var options = [famT[obj], famT._any, C.OUTCOME._default._any].filter(Boolean);
     var tpl = options.filter(function (o) { return !used[o.a]; })[0] || options[0];
     used[tpl.a] = 1;
@@ -897,6 +1103,9 @@
     var scope = C.LEVEL_SCOPE[P.level];
     if (scope && !/\b(team|member|\d+ (people|reports))\b/i.test(after) && (P.level === 'MID' || P.level === 'SENIOR')) needs.push('Scope if true: "' + scope.trim() + '"');
     if (ownershipCheck) notes.push('Ownership check: keep "Supported…" if this was mainly someone else\'s work. Overclaiming fails PlaceCom verification and interviews.');
+    var w2 = words(after.replace(/^[^:]{3,80}:\s+/, ''));
+    if (w2.length > 1 && looseVerb(canon(w2[0])) && looseVerb(canon(w2[1])) && !/^(and|&)$/i.test(w2[1])) return null;   // never "Delivered managed…"
+    if (canon(after.replace(/\[[^\]]*\]/g, '')).replace(/[^a-z]/g, '') === canon(b.text).replace(/[^a-z]/g, '')) return null;     // nothing improved
     var evid = P.terms.filter(function (x) { return termHit(b.c, x.t); }).map(function (x) { return x.t; }).slice(0, 4);
     var gapCand = (b._gapHint || null);
     return { bulletId: b.id, section: b.section, before: b.text, after: after, afterResultFirst: rf,
@@ -908,7 +1117,7 @@
     var gapTerms = VX.det.skill.gaps.concat(VX.det.skill.listedOnly).filter(function (x) { return x.kind === 'must' || x.kind === 'keyword'; });
     P._usedClauses = {};
     var cands = VX.content.filter(function (b) {
-      if (b.section === 'achievements' || b.cls === 'RESULT_FIRST' || b.cls === 'NOUN_PHRASE_ACHIEVEMENT') return false;
+      if (b.section === 'achievements' || b.credential || b.cls === 'RESULT_FIRST' || b.cls === 'NOUN_PHRASE_ACHIEVEMENT') return false;
       if (b.metric.q >= 0.85 && (b.cls === 'STRONG_VERB_RESULT' || b.cls === 'STRONG_VERB')) return false;
       if (b.cls === 'STRONG_VERB' && b.metric.scale && b.rel < 0.35) return false;   // already strong & low JD relevance → leave it alone
       return true;
@@ -924,8 +1133,10 @@
       if (out.length >= n || b._prio < 0.12) return;
       var key = b.role ? R.roles.indexOf(b.role) : b.section;
       if ((perRole[key] || 0) >= 2) return;
+      var rw = rewriteBullet(b, P);
+      if (!rw) return;
       perRole[key] = (perRole[key] || 0) + 1;
-      out.push(rewriteBullet(b, P));
+      out.push(rw);
     });
     return out;
   }
@@ -937,7 +1148,12 @@
   function userSuggestLevel(R) { return R.isStudent ? 'CAMPUS' : R.userLevel; }
   function gapTermList(VX) { return VX.det.skill.gaps.concat(VX.det.skill.listedOnly); }
   function suggestCertifications(R, P, VX) {
-    var ul = userSuggestLevel(R), jdC = canon([P.certPreferred.join(' ; '), P.certRequired.join(' ; '), P.goodToHave].join(' ; '));
+    var ul = userSuggestLevel(R);
+    var custom = P.source !== 'library';
+    var jdC = canon(custom ? [P.certRequired.join(' ; '), P.goodToHave, P.det ? P.det.zones.reqC : ''].join(' ; ') : [P.certPreferred.join(' ; '), P.certRequired.join(' ; '), P.goodToHave].join(' ; '));
+    var benchC = canon(P.certPreferred.join(' ; '));
+    var subCerts = P.subArea ? (C.SUBAREAS.filter(function (x) { return x.key === P.subArea.key; })[0] || {}).certs || [] : [];
+    var hasL2 = /\bcfa\b[^.\n]{0,60}\blevel (ii|2)\b|\blevel (ii|2)\b[^.\n]{0,40}\bcfa\b|\bchartered financial analyst\b[^.\n]{0,40}\blevel (ii|2)\b/.test(R.canon);
     var ACT = { NISM15: /research report|publish(ing)? research|equity research|initiat\w* coverage/, NISM5A: /mutual fund|amfi|wealth/, NISM8: /derivativ|f&o|dealing|trading desk|broking/, IC38: /insurance|bancassurance/ };
     var gaps = gapTermList(VX).map(function (x) { return x.t; });
     var jdAllC = P.det ? P.det.zones.allC : canon(P.rec.responsibilities.join(' ') + ' ' + P.rec.summary);
@@ -945,20 +1161,30 @@
       if (c.lv.indexOf(ul) < 0 && !(ul === 'CAMPUS' && R.fullTimeMonths >= 24 && c.lv.indexOf('EARLY') >= 0)) return false;
       if (R.certIds.indexOf(c.id) >= 0 || (c.id === 'GADS' && R.certIds.indexOf('GADS') >= 0)) return false;
       if (c.gate && R.fullTimeMonths < c.gate) return false;
+      if (c.needs === 'CFA_L2' && !hasL2) return false;
+      if (c.id === 'CFA1' && hasL2) return false;
       if (ACT[c.id] && !ACT[c.id].test(jdAllC) && !(CERT_JD_RE[c.id] && CERT_JD_RE[c.id].test(jdC))) return false;
       return true;
     }).map(function (c) {
       var inJD = CERT_JD_RE[c.id] ? CERT_JD_RE[c.id].test(jdC) : false;
+      var inBench = !inJD && CERT_JD_RE[c.id] ? CERT_JD_RE[c.id].test(benchC) : false;
+      var inSub = subCerts.indexOf(c.id) >= 0;
       var dom = c.d.indexOf(P.domain) >= 0 ? 1 : (P.secondary && c.d.indexOf(P.secondary) >= 0) || (P.industry && c.d.indexOf(P.industry) >= 0) ? 0.7 : C.DOMAINS[P.domain].adj.some(function (a) { return c.d.indexOf(a) >= 0; }) ? 0.35 : 0;
       var covered = c.covers.filter(function (t) { return gaps.some(function (g) { return g === t || canon(g).indexOf(canon(t)) >= 0 || canon(t).indexOf(canon(g)) >= 0; }); });
       var cov = Math.min(1, covered.length / 2);
       var cr = c.cr === 1 ? 1 : c.cr === 2 ? 0.6 : 0.3;
       var heavy = /USD 1,|\$1,|~300|~240|100–150|80–120/.test(c.cost + ' ' + c.time);
       var quick = /week|days|free/i.test(c.time + c.cost) ? 1 : 0.4;
-      var s = 0.36 * (inJD ? 1 : 0) + 0.28 * dom + 0.22 * cov + 0.08 * cr + 0.06 * (ul === 'CAMPUS' ? quick : 1);
+      if (inSub) dom = 1;
+      var s = 0.32 * (inJD ? 1 : 0) + 0.22 * (inSub ? 1 : 0) + (custom ? 0.08 : 0.3) * (inBench ? 1 : 0) + 0.18 * dom + 0.16 * cov + 0.06 * cr + 0.04 * (ul === 'CAMPUS' ? quick : 1);
+      if (P.subArea && !inSub && !inJD && !cov) s *= 0.5;                       // generic domain certs rank below role-specific ones
       if (dom === 0 && !inJD) s = 0;
-      if (!inJD && !covered.length && !(dom === 1 && c.cr === 1)) s = 0;
-      var why = inJD ? 'Listed as preferred for ' + (P.id.indexOf('CUSTOM') === 0 ? 'this JD' : P.id) : covered.length ? 'Closes your JD gap in ' + covered.slice(0, 2).map(disp).join(' & ') : 'Recognised ' + domName(P.domain) + ' credential that recruiters filter on';
+      if (!inJD && !inSub && !covered.length && !(dom === 1 && c.cr === 1)) s = 0;
+      var why = inJD ? (custom ? 'Mentioned in this JD' : 'Listed as preferred for the ' + P.id + ' benchmark')
+        : covered.length ? 'Closes your gap in ' + covered.slice(0, 2).map(disp).join(' & ') + (inSub ? ' (core for ' + P.subArea.label + ' roles)' : '')
+        : inSub ? 'Relevant for ' + P.subArea.label + ' roles'
+        : inBench ? 'Commonly preferred for ' + domName(P.domain) + ' roles at this level'
+        : 'Recognised ' + domName(P.domain) + ' credential that recruiters filter on';
       return { id: c.id, name: c.n, why: why, cost: c.cost, time: c.time, credibility: ['', 'High', 'Medium', 'Low'][c.cr], note: c.note, verify: c.v, score: round(s, 3), heavy: heavy, inJD: inJD, covers: covered };
     }).filter(function (x) { return x.score >= 0.3; }).sort(function (a, b) { return b.score - a.score; });
     var picked = [], heavyUsed = false;
@@ -969,14 +1195,20 @@
   }
   function suggestProjects(R, P, VX) {
     var ul = userSuggestLevel(R), gaps = gapTermList(VX), gapNames = gaps.map(function (x) { return x.t; });
+    var subKey = P.subArea ? (C.SUBAREAS.filter(function (x) { return x.key === P.subArea.key; })[0] || {}).projects : null;
     if (ul === 'MID' || ul === 'SENIOR' || (!R.isStudent && R.userLevel !== 'CAMPUS' && R.userLevel !== 'EARLY')) {
       var g = gapNames.slice(0, 2);
-      return { mode: 'INITIATIVE', projects: [{ name: C.INITIATIVES[ul] || C.INITIATIVES._default,
+      var samples = (C.PROJECTS[subKey] || C.PROJECTS[P.domain] || []).filter(function (p) { return p.lv.indexOf(ul) >= 0 || p.lv.indexOf('MID') >= 0; }).map(function (p) {
+        var hit = p.s.filter(function (x) { return gapNames.some(function (gn) { return gn === x || canon(gn).indexOf(canon(x)) >= 0 || canon(x).indexOf(canon(gn)) >= 0; }); });
+        return { name: 'Work sample: ' + p.n, why: hit.length ? 'Shows ' + hit.slice(0, 3).map(disp).join(', ') + ', which your resume does not yet evidence' : 'Interview-ready proof for ' + (P.subArea ? P.subArea.label : domName(P.domain)) + ' roles', weeks: p.w, proof: p.proof, hits: hit.length };
+      }).sort(function (a, b) { return b.hits - a.hits; }).slice(0, 2);
+      return { mode: 'INITIATIVE', projects: samples.concat([{ name: C.INITIATIVES[ul] || C.INITIATIVES._default,
         why: g.length ? 'Your resume does not yet evidence ' + g.map(disp).join(' & ') + ', which ' + (P.title || 'the role') + ' asks for. Use a real initiative to show it.' : 'Senior screens read scope and outcomes, not coursework.',
-        evidence: 'Before/after metric, team size, budget, stakeholder level', planner: C.PLANNER_HOOKS.oneToOne }], competitions: [] };
+        evidence: 'Before/after metric, team size, budget, stakeholder level', planner: C.PLANNER_HOOKS.oneToOne }]).slice(0, 3), competitions: [] };
     }
     var pool = [];
-    function addPool(d, k) { (C.PROJECTS[d] || []).forEach(function (p) { pool.push({ p: p, d: d, k: k }); }); }
+    function addPool(d, k) { (C.PROJECTS[d] || []).forEach(function (p) { pool.push({ p: p, d: C.PROJECTS[d] && C.DOMAINS[d] ? d : P.domain, k: k }); }); }
+    if (subKey && subKey !== P.domain) addPool(subKey, 1.15);
     addPool(P.domain, 1); if (P.secondary) addPool(P.secondary, 0.7); if (P.industry && P.industry !== P.domain) addPool(P.industry, 0.7);
     var scored = pool.filter(function (x) { return x.p.lv.indexOf(ul) >= 0 || (ul === 'EARLY' && x.p.lv.indexOf('CAMPUS') >= 0); }).map(function (x) {
       var hit = x.p.s.filter(function (s) { return gapNames.some(function (g) { return g === s || canon(g).indexOf(canon(s)) >= 0 || canon(s).indexOf(canon(g)) >= 0; }); });
@@ -1021,7 +1253,7 @@
       var dc2 = mg.reduce(function (a, x) { return a + x.w; }, 0) / sw;
       add({ family: 'MUST_HAVE_GAP', vector: 'V1', gain: w.skill * (v1(cov + dc2) - v1(cov)) * 0.5,
         title: 'Close the must-have gap: ' + mg.map(function (x) { return disp(x.t); }).join(' & '),
-        why: 'These are must-haves for ' + jt + ' (' + dn + ' · ' + C.LEVELS[L].n + ') and nothing in your resume shows them. A must-have gap is the most common reason for a no-shortlist at this level.',
+        why: (P.thin ? 'These are core skills for ' + (P.subArea ? P.subArea.label : dn) + ' roles at ' + C.LEVELS[L].n + ' level (inferred from the job title, because the link could not be read)' : 'These are must-haves for ' + jt + ' (' + dn + ' · ' + C.LEVELS[L].n + ')') + ', and nothing in your resume shows them yet.',
         action: (L === 'CAMPUS' ? 'If you have done this in an internship, live project or course project, add one bullet that shows it with a result. If not, use the project or certification cards below to build the evidence before applying.'
           : 'If you have owned this, add one bullet per role with its scale and outcome (volume, ₹, %, compliance result). If it sits with another team, name your part in it. Otherwise flag it as a development area before applying.'),
         quote: null, jdPhrase: mg.map(function (x) { return disp(x.t); }), effort: L === 'CAMPUS' ? '2–4 weeks (project)' : '1 week' });
@@ -1036,7 +1268,7 @@
       add({ family: 'QUANTIFY', vector: 'V4', gain: w.impact * Math.max(0, dv),
         title: 'Put a number on your ' + (uq[0].section === 'internship' ? 'internship' : uq[0].section === 'experience' ? 'most relevant work' : uq[0].section) + ' bullets',
         why: (L === 'CAMPUS' ? 'Campus shortlists for ' + dn : dn + ' screens at ' + C.LEVELS[L].n + ' level') + ' compare outcomes, not activities. ' + Math.round(100 * (1 - det.impact.quantifiedShare)) + '% of your JD-relevant bullets have no outcome metric.',
-        action: 'Rewrite "' + trimQuote(uq[0].text, 110) + '"' + (uq[1] ? ' and "' + trimQuote(uq[1].text, 80) + '"' : '') + ' with one of: ' + C.METRIC_MENU[d] + '. Use only numbers you can prove.',
+        action: 'Rewrite "' + trimQuote(uq[0].text, 110) + '"' + (uq[1] ? ' and "' + trimQuote(uq[1].text, 80) + '"' : '') + ' with one of: ' + ((P.subArea && C.METRIC_MENU_SUB[P.subArea.key]) || C.METRIC_MENU[d]) + '. Use only numbers you can prove.',
         quote: uq[0].text, jdPhrase: null, effort: '15 min' });
     }
     // 4. Weak openers (only bullet openers count)
@@ -1058,17 +1290,7 @@
         why: 'The same opener used more than twice flattens a one-page CV and hides the range of your work.',
         action: 'Swap a few for ' + dn + ' verbs: ' + (C.DOMAIN_VERBS[fam] || []).join(', ') + '.', quote: null, jdPhrase: null, effort: '5 min' });
     }
-    // 6. Title / headline alignment
-    if (det.role.titleAlign < 0.5 && (L !== 'CAMPUS' || R.roles.length)) {
-      var strengths = det.skill.matched.slice().sort(function (a, b) { return b.w - a.w; }).slice(0, 2).map(function (x) { return x.t; });
-      var spec = R.spec[0] ? cap(R.spec[0][0]) : null;
-      var head = L === 'CAMPUS' ? 'MBA' + (spec ? ' (' + spec + ')' : '') + ' · ' + dn + ' track' + (strengths.length ? ' · ' + strengths.map(cap).join(' · ') : '')
-        : Math.max(1, Math.round(R.fullTimeMonths / 12)) + ' yrs · ' + dn + (strengths.length ? ' · ' + strengths.map(cap).join(' · ') : '');
-      add({ family: 'TITLE_ALIGN', vector: 'V2', gain: w.role * 0.5 * (0.75 - det.role.titleAlign),
-        title: 'Signal the target role in your headline',
-        why: 'Recruiters read title and company first. None of your current titles' + (det.role.bestTitle ? ' (e.g. "' + det.role.bestTitle + '")' : '') + ' reads as ' + dn + ' for "' + jt + '".',
-        action: 'Add a one-line headline under your name: "' + head + '". Keep your formal job titles unchanged.', quote: null, jdPhrase: [jt], effort: '2 min' });
-    }
+    // (Headline / title-alignment suggestions were removed in v3.1 at the founders' request; title alignment is still scored in V2.)
     // 7. Internship framing (Campus)
     var intern = R.roles.filter(function (r) { return r.isIntern; })[0];
     if (L === 'CAMPUS' && intern && det.exp.bestInternRelevance < 0.6) {
@@ -1084,7 +1306,7 @@
       var txt = L === 'CAMPUS'
         ? (porNoScale ? { t: 'Add scale to your position of responsibility', a: 'Quantify "' + trimQuote(porNoScale, 100) + '": team size, budget (₹), reach / participants and the outcome. If you were a member, name your specific contribution.' }
                       : { t: 'Add a Positions of Responsibility / achievements block', a: 'List 2–3 PoRs, competitions or ranks with scale (team size, participants, ranking out of N). Campus shortlists use them as tie-breakers.' })
-        : L === 'EARLY' ? { t: 'Show ownership scope in each role', a: 'State what you owned: ' + (C.OWNERSHIP[fam] || C.OWNERSHIP.general) + ', plus people you guided (1–3 is normal at this level) and any promotion with dates' + (bestBullet ? ', e.g. in "' + trimQuote(bestBullet.text, 90) + '"' : '') + '.' }
+        : L === 'EARLY' ? { t: 'Show ownership scope in each role', a: 'State what you owned in each role: ' + (C.OWNERSHIP[fam] || C.OWNERSHIP.general) + '. Add promotions with dates' + (bestBullet ? '. Start with "' + trimQuote(bestBullet.text, 90) + '"' : '') + '.' }
         : { t: 'State team size and ₹ budget / P&L for every role', a: (L === 'SENIOR' ? 'Senior screens read P&L or function scope first: ' : 'Mid-level screens read team and budget scope first: ') + 'add "led an [N]-member team", "₹[X] Cr P&L / budget" and promotions to each role header line.' };
       add({ family: 'LEADERSHIP_SCOPE', vector: 'V6', gain: w.lead * (0.75 - V.lead) * 0.7, title: txt.t,
         why: dn + ' recruiters at ' + C.LEVELS[L].n + ' level look for ' + (L === 'CAMPUS' ? 'leadership spikes and competition results.' : L === 'EARLY' ? 'evidence that you owned a workstream and guided others.' : 'team leadership and budget ownership.'),
@@ -1168,7 +1390,7 @@
     }
     var report = { version: VERSION, generatedAt: today.toISOString(), advisories: [],
       level: { user: R.userLevel, userMonths: R.fullTimeMonths, internMonths: R.internMonths, isStudent: R.isStudent, target: P.level },
-      jd: { id: P.id, source: P.source, title: P.title, domain: P.domain, domainName: domName(P.domain), secondary: P.secondary, industry: P.industry,
+      jd: { id: P.id, source: P.source, title: P.displayTitle || P.title, subArea: P.subArea || null, thin: !!P.thin, employer: P.employer || null, domain: P.domain, domainName: domName(P.domain), secondary: P.secondary, industry: P.industry,
             confidence: P.confidence, askUser: !!P.askUser, level: P.level, blendedWithLibrary: !!P.blended,
             mustHave: P.terms.filter(function (x) { return x.kind === 'must'; }).map(function (x) { return disp(x.t); }), evidence: P.det ? P.det.evidence : null, levelBasis: P.det ? P.det.levelBasis : 'library' },
       candidate: { school: R.school ? { name: R.school.n, tier: R.school.t } : null, specialisation: R.spec.map(function (s) { return s[0]; }), certifications: R.certIds,
@@ -1176,7 +1398,10 @@
       totalScore: total, rawScore: round(raw, 1), band: band.name, bandSymbol: band.sym, gateNotice: gateNotice, gates: gates,
       vectors: vectors, weights: w,
       details: JSON.parse(JSON.stringify(VX.det, function (k, v) { return ((k === 'role' && v && v.bullets) || k === 'c' || k === '_prio' || k === '_gapHint' || k === 'company') ? undefined : v; })) };   // Firestore-safe (no cycles)
-    report.domainSuitability = { ranking: VX.DS.ranking.slice(0, 6).map(function (x) { return { code: x.d, name: x.name, score: x.score, tier: x.tier, signals: x.signals }; }),
+    if (P.thin) report.advisories.push({ type: 'JD_THIN', text: (P.link && !P.link.readable ? 'We could not read a job title from this link.' : 'We could only read the job title from this link (' + (P.displayTitle || P.title) + ').') +
+      ' Websites cannot open other companies\' job pages from your browser, so skills were inferred from the title' + (P.subArea ? ' and the ' + P.subArea.label + ' benchmark' : ' and the ' + domName(P.domain) + ' benchmark') + '. Paste the full JD text for an exact match.' });
+    if (P.askUser) report.advisories.push({ type: 'CONFIRM_DOMAIN', text: 'We are not fully sure this JD is ' + domName(P.domain) + '. Please confirm the target domain.' });
+    report.domainSuitability = { ranking: VX.DS.ranking.slice(0, 6).map(function (x) { return { code: x.d, name: x.name, score: x.score, tier: x.tier, signals: x.signals, evidence: x.evidence }; }),
       confidence: VX.DS.confidence, insight: suitabilityInsight(VX.DS, P.domain, R), pastDomain: VX.DS.pastDomain, emergingDomain: VX.DS.emergingDomain, switcher: VX.DS.switcher };
     report._certs = suggestCertifications(R, P, VX);
     report.certifications = report._certs;
@@ -1191,6 +1416,6 @@
   return { _internal: { canon: canon, compilePhrase: compilePhrase, termHit: termHit, domainLexScore: domainLexScore, splitLibTerm: splitLibTerm,
            variantsFor: variantsFor, disp: function (t) { return disp(t); }, levelFromMonths: levelFromMonths, familyOf: familyOf, domName: domName, recordFor: recordFor, clip: clip, sat: sat,
            round: round, uniq: uniq, words: words, esc: esc, cap: cap, trimQuote: trimQuote, GLYPH: GLYPH, idx: function () { return IDX; } },
-           VERSION: VERSION, init: init, analyse: analyse, parseResume: parseResume, buildJdProfile: buildJdProfile, detectDomainFromJdV3: detectDomainFromJdV3,
+           VERSION: VERSION, init: init, analyse: analyse, parseJobUrl: function (u) { need(); return parseJobUrl(u); }, repairText: repairText, parseResume: parseResume, buildJdProfile: buildJdProfile, detectDomainFromJdV3: detectDomainFromJdV3,
            calculateDomainSuitabilityV3: calculateDomainSuitabilityV3, classifyBullet: classifyBullet, weightsFor: weightsFor, C: C };
 });

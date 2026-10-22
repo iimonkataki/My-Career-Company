@@ -176,7 +176,7 @@
           <div class="stat-label">Fit Score Index</div>
         </div>
         <div class="stat-card">
-          <div class="stat-num">8</div>
+          <div class="stat-num">10</div>
           <div class="stat-label">Evaluation Vectors</div>
         </div>
         <div class="stat-card">
@@ -401,13 +401,13 @@
               <label for="jdUrlInput" class="form-label">Job Posting / Career URL</label>
               <div class="url-input-row">
                 <input type="url" id="jdUrlInput" class="form-input-text"
-                  placeholder="https://www.linkedin.com/jobs/view/... or company portal link">
+                  placeholder="Paste a job link: company career page, Naukri, LinkedIn, Workday, Greenhouse, Lever…">
                 <button type="button" class="btn-fetch" id="fetchJdUrlBtn">
-                  <span>Analyze Link</span>
+                  <span>Read JD from Link</span>
                 </button>
               </div>
               <div class="url-status-note" id="urlStatusNote">
-                Enter the public job posting URL to analyze company requirements and competencies.
+                Paste the job link and we will open the page and read the full JD for you. Only the link is sent; your resume never leaves your browser.
               </div>
             </div>
           </div>
@@ -590,7 +590,7 @@
         <div class="results-heading-group">
           <div class="results-eyebrow">RESUME FIT SCORE&trade; &bull; DIAGNOSTIC REPORT</div>
           <h2 class="results-title">Resume Fit Diagnostic Report</h2>
-          <div class="results-meta" id="reportMetaText">Target Domain: Consulting / Strategy &bull; Assessed Today</div>
+          <div class="results-meta" id="reportMetaText">Assessed today</div>
         </div>
         <div class="results-actions">
           <button type="button" class="btn-secondary" id="printReportBtn">
@@ -611,8 +611,7 @@
           <div class="td-details">
             <div class="td-label">TARGET RECRUITMENT DOMAIN</div>
             <h3 class="td-name" id="targetDomainBannerTitle">Management Consulting &amp; Strategy</h3>
-            <p class="td-meta" id="targetDomainBannerMeta">Calibrated against target Job Description &bull; 18 Verified
-              Core Competencies</p>
+            <p class="td-meta" id="targetDomainBannerMeta">Calibrated against your target JD</p>
           </div>
         </div>
         <div class="td-tag-wrap">
@@ -668,11 +667,11 @@
           </div>
         </div>
 
-        <!-- 8 Sub-score Breakdown Bars Card -->
+        <!-- 10 Sub-score Breakdown Bars Card (Resume Fit Score v3.1) -->
         <div class="score-card breakdown-card">
           <div class="breakdown-card-header">
             <span class="card-kicker">EVALUATION VECTORS</span>
-            <span class="dim-subtext">8 Scored Evaluation Vectors</span>
+            <span class="dim-subtext">10 Scored Evaluation Vectors</span>
           </div>
 
           <div class="dimension-bars-list" id="dimensionBarsList">
@@ -720,12 +719,11 @@
             <span class="card-kicker">DOMAIN CALIBRATION</span>
             <h3 class="keywords-title" id="keywordsRoleTitle">Role Keywords Analysis</h3>
             <p class="keywords-subtitle">
-              Recruiter ATS systems and interview panelists screen for 18 core competencies in this domain. (Full marks
-              at 50% matched).
+              Recruiter ATS systems and interview panels screen for the skills and must-haves listed below.
             </p>
           </div>
           <div class="keyword-match-stat">
-            <span class="stat-highlight" id="keywordMatchRatio">0 / 18</span>
+            <span class="stat-highlight" id="keywordMatchRatio">0 / 0</span>
             <span class="stat-caption">Keywords Detected</span>
           </div>
         </div>
@@ -1321,12 +1319,12 @@
   <script src="jd-database.js"></script>
   <script src="jd-database-v3.js"></script>
   <script src="repository-service.js"></script>
-  <script src="data/rfs-v3-content.js"></script>
-  <script src="data/rfs-v3-companies.js"></script>
-  <script src="data/rfs-v3-schools.js"></script>
-  <script src="fit-engine-v3.js"></script>
-  <script src="rfs-v3-bridge.js"></script>
-  <script src="script.js"></script>
+  <script src="data/rfs-v3-content.js?v=3.2"></script>
+  <script src="data/rfs-v3-companies.js?v=3.2"></script>
+  <script src="data/rfs-v3-schools.js?v=3.2"></script>
+  <script src="fit-engine-v3.js?v=3.2"></script>
+  <script src="rfs-v3-bridge.js?v=3.2"></script>
+  <script src="script.js?v=3.2"></script>
 </body>
 
 </html>

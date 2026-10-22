@@ -9,14 +9,15 @@ var MATRIX = {
   R3_EARLY_IT_TO_PM: ['PM-EARLY', 'BA-EARLY', 'ITS-EARLY', 'J4_PRODUCT_ANALYST_GROWTH'],
   R4_MID_SALES: ['SAL-MID', 'MKT-MID', 'SAL-CAMPUS', 'J5_MT_SALES_FMCG', 'J8_QCOMM_CATEGORY'],
   R5_SENIOR_HR: ['HR-SENIOR', 'HR-MID', 'GM-SENIOR'],
-  R6_XLRI_HR_FRESHER: ['HR-CAMPUS', 'MKT-CAMPUS', 'CON-CAMPUS', 'LEG-CAMPUS', 'J6_ESG_ANALYST']
+  R6_XLRI_HR_FRESHER: ['HR-CAMPUS', 'MKT-CAMPUS', 'CON-CAMPUS', 'LEG-CAMPUS', 'J6_ESG_ANALYST'],
+  R7_CONSULT_MA_CREDIT_PDFSPLIT: ['J10_DELOITTE_LINK_ONLY', 'J9_DELOITTE_IT_MA', 'CON-EARLY', 'FIN-EARLY', 'IB-EARLY']
 };
 var rows = [], v3Scores = [], perResume = {};
 Object.keys(MATRIX).forEach(function (rk) {
   var r = F.resumes[rk];
   MATRIX[rk].forEach(function (jk) {
     var custom = F.customJds[jk];
-    var jd = custom ? { mode: 'custom', text: custom.text } : { mode: 'library', jdId: jk };
+    var jd = custom ? { mode: 'custom', text: custom.text, url: custom.url } : { mode: 'library', jdId: jk };
     var rep = E.analyse({ resumeText: r.text, pageCount: r.pageCount, profile: r.profile, jd: jd, today: TODAY });
     var fam = custom ? (LEG.detectDomainFromJd(custom.text, '', '') || 'consulting') : LEG.getScoringRoleFamily(rec(jk));
     var old = LEG.scoreResume(r.text, r.pageCount, fam, custom ? custom.text : LEG.formatJdText(rec(jk)));
@@ -66,4 +67,31 @@ if (CHECK) {
     r.rewrites.forEach(function (w) { console.log('   REWRITE [' + w.weakness + ']\n      before: ' + w.before + '\n      after:  ' + w.after + (w.afterResultFirst ? '\n      result-first: ' + w.afterResultFirst : '') + (w.notes.length ? '\n      note: ' + w.notes.join(' ') : '')); });
   });
 }
+
+/* ---------- Acceptance checks for the October 2026 feedback document (each issue → one automated check) */
+var checks = [], ok = function (name, cond, info) { checks.push([cond ? 'PASS' : 'FAIL', name, info || '']); };
+var L10 = E.detectDomainFromJdV3(F.customJds.J10_DELOITTE_LINK_ONLY.text, { url: F.customJds.J10_DELOITTE_LINK_ONLY.url });
+ok('Doc #1  Deloitte link → Consulting (IT M&A), not IT & Systems', L10.domain === 'CON' && L10.subArea && L10.subArea.key === 'CON_ITMA', L10.domainName + ' · ' + (L10.subArea || {}).label);
+ok('Doc #3/#8  Link title shown as "Deputy Manager | IT M&A | Delhi | M&A-Deal Transformation & Post Merger integration"', L10.displayTitle === 'Deputy Manager | IT M&A | Delhi | M&A-Deal Transformation & Post Merger integration', L10.displayTitle);
+ok('Level from "Deputy Manager" = Early (JD family states 3–5 yrs)', L10.level === 'EARLY', L10.level);
+var R7 = E.parseResume(F.resumes.R7_CONSULT_MA_CREDIT_PDFSPLIT.text, { today: TODAY });
+ok('PDF word-splits repaired ("M anaged", "202 4", "Level I I", "50 +")', /Managed a portfolio of 50\+ firms/.test(R7.raw) && /Level II/.test(R7.raw) && !/202 4/.test(R7.raw));
+ok('Doc #10  Roles found despite split dates (was 0)', R7.roles.length === 2, R7.roles.length + ' roles, ' + R7.fullTimeMonths + ' months');
+var r7rows = rows.filter(function (x) { return x.resume === 'R7_CONSULT_MA_CREDIT_PDFSPLIT'; });
+var r10 = r7rows.filter(function (x) { return x.jd === 'J10_DELOITTE_LINK_ONLY'; })[0].rep, r9 = r7rows.filter(function (x) { return x.jd === 'J9_DELOITTE_IT_MA'; })[0].rep;
+ok('Doc #5  Consulting + M&A resume vs Deloitte IT M&A scores higher (was 46)', r10.totalScore >= 70 && r9.totalScore >= 70, 'link-only ' + r10.totalScore + ', full JD ' + r9.totalScore);
+ok('Doc #5  JD skill, role alignment and experience vectors no longer low', r9.vectors[0].pct >= 60 && r9.vectors[1].pct >= 70 && r9.vectors[2].pct >= 70, 'V1 ' + r9.vectors[0].pct + '% · V2 ' + r9.vectors[1].pct + '% · V3 ' + r9.vectors[2].pct + '%');
+var allRw = []; rows.forEach(function (x) { allRw = allRw.concat(x.rep.rewrites); });
+ok('Doc #7  No rewrite starts with "Delivered" + another verb', !allRw.some(function (w) { return /^(Delivered|Conducted|Built|Executed|Ran|Prepared|Led|Organised)\s+\w+(ed|ing)\b/.test(w.after) && !/^\w+\s+(\w+ing\s+(and|the|a)|integration)/.test(w.after); }), allRw.length + ' rewrites checked');
+ok('Doc #7  Credential / exam lines (e.g. "cleared CFA Level II") are never rewritten', !allRw.some(function (w) { return /\b(cfa|frm|cleared|passed)\b.*\b(level|exam)/i.test(w.before); }));
+var allFix = []; rows.forEach(function (x) { allFix = allFix.concat(x.rep.priorityFixes); });
+ok('Doc #9  No "headline under your name" suggestion anywhere', !allFix.some(function (f) { return /headline/i.test(f.title + f.action); }), allFix.length + ' fixes checked');
+ok('Doc #6  IT M&A certifications are role-specific (no ECBA / SAP / Scrum)', r9.certifications.length > 0 && !r9.certifications.some(function (c) { return /ECBA|SAP|Scrum/.test(c.name); }), r9.certifications.map(function (c) { return c.name.split(' (')[0]; }).join('; '));
+ok('Doc #6  Certifications never claim "listed in this JD" unless the JD text names them', !r10.certifications.some(function (c) { return /Mentioned in this JD/.test(c.why); }));
+var ev = r9.domainSuitability.ranking.slice(0, 3).map(function (x) { return x.evidence.join('|'); });
+ok('Doc #10  Suitability evidence differs by domain (not the same generic signals)', ev[0] !== ev[1] && ev[1] !== ev[2] && ev.every(function (x) { return x.length > 0; }));
+ok('Thin / link-only JD shows a "paste the full JD" advisory', r10.advisories.some(function (a) { return a.type === 'JD_THIN'; }));
+console.log('\n=== ACCEPTANCE CHECKS (feedback document) ===');
+checks.forEach(function (c) { console.log((c[0] === 'PASS' ? '✔ ' : '✘ ') + c[0] + '  ' + c[1] + (c[2] ? '  →  ' + c[2] : '')); });
+console.log(checks.filter(function (c) { return c[0] === 'PASS'; }).length + ' / ' + checks.length + ' checks passed');
 module.exports = rows;

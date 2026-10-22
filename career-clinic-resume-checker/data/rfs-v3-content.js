@@ -377,6 +377,8 @@
   };
   // Objects detected inside a bullet → outcome placeholder clause (no invented numbers; [ ] = user fills in).
   C.OBJECT_TYPES = [
+    ['diligence',/\b(due diligence|diligence|red flags?|dd)\b/],
+    ['integration',/\b(integration|day 1|day one|day 100|synerg\w*|separation|carve-?outs?|tsas?|pmo|imo|cut-?over|workstreams?)\b/],
     ['research',/\b(research|survey|interviews?|insights?|focus group|fgd|study|questionnaire|respondents|preference|perception)\b/],
     ['campaign',/\b(campaign|social media|content|instagram|influencer|ads?|activation|promotion|launch event)\b/],
     ['model',/\b(model|valuation|dcf|forecast|projection|financial analysis|ratio)\b/],
@@ -394,7 +396,9 @@
    * v = value clause (bullet already has a count/scale, so never repeat "[N]"), r = result-first lead. Brackets are user inputs. */
   C.OUTCOME = {
     _default:{_any:{a:', delivering [outcome: X% / ₹X L / N units] for [team / client]',v:', delivering [outcome: X% / ₹X L] for [team / client]',r:'[Outcome: X% / ₹X L] for [team / client]'}},
-    consulting:{research:{a:', synthesising [N] interviews into [N] recommendations adopted by [client]',v:', with [N] recommendations adopted by [client / partner]',r:'[N] recommendations adopted by [client]'},
+    consulting:{diligence:{a:', flagging [N] [IT / commercial] red flags that shaped the [price / SPA / integration plan]',v:', flagging [N] red flags that shaped the [price / SPA / integration plan]',r:'[N] red flags that shaped the [price / SPA] flagged'},
+      integration:{a:', adopted for Day 1 across [N] workstreams with [X]% of milestones delivered on time',v:', with [X]% of milestones delivered on time for Day 1',r:'[X]% on-time Day 1 milestones'},
+      research:{a:', synthesising [N] interviews into [N] recommendations adopted by [client]',v:', with [N] recommendations adopted by [client / partner]',r:'[N] recommendations adopted by [client]'},
       model:{a:', sizing a ₹[X] Cr opportunity used in the [client] decision',v:', sizing a ₹[X] Cr opportunity for the [client] decision',r:'₹[X] Cr opportunity sized for [client decision]'},
       strategy:{a:', with [N] of [N] recommendations accepted by [client CXO]',v:', with [N] recommendations accepted by [client CXO]',r:'[N] of [N] recommendations accepted by [client CXO]'},
       process:{a:', identifying ₹[X] L annualised savings across [N] [sites / categories]',v:', identifying ₹[X] L annualised savings',r:'₹[X] L annualised savings identified'},
@@ -402,6 +406,7 @@
     finance:{research:{a:', surveying [N] investors to recommend [product / channel] changes',v:', with [recommendation] adopted by [team / faculty]',r:'[Recommendation] adopted from a [N]-respondent study'},
       model:{a:', supporting a ₹[X] Cr [credit / investment / pricing] decision',v:', supporting a ₹[X] Cr [credit / investment] decision',r:'₹[X] Cr [credit / investment] decision supported'},
       sales:{a:', across a ₹[X] Cr [loan book / portfolio] of [N] clients',v:', across a ₹[X] Cr [loan book / portfolio]',r:'₹[X] Cr [portfolio] covered'},
+      portfolio:{a:', with ₹[X] Cr exposure and [zero / X%] slippage',v:', with ₹[X] Cr exposure and [zero / X%] slippage',r:'₹[X] Cr exposure with [zero / X%] slippage'},
       process:{a:', cutting [TAT / processing time] from [X] to [Y] days for [N] files',v:', cutting [TAT] from [X] to [Y] days',r:'[TAT] cut from [X] to [Y] days'},
       data:{a:', saving [X] analyst-hours per [week] in [MIS / reporting]',v:', saving [X] analyst-hours per [week]',r:'[X] analyst-hours saved per [week]'},
       _any:{a:', covering ₹[X] Cr of [exposure / spend] with [outcome]',v:', covering ₹[X] Cr of [exposure]',r:'₹[X] Cr of [exposure] reviewed'}},
@@ -557,6 +562,131 @@
   ];
   C.PLANNER_HOOKS = { report:'Day 1 (Resume checker report)', certs:'Day 3 · Visit 1 (Resumes & certifications walkthrough)',
     rewrite:'Day 13 (Resume rephrasing) → Day 15 (Resume v2 due)', oneToOne:'Day 16 · Visit 3 (1:1 resume iteration)', final:'Day 28 (Resume v3, re-run checker)' };
+
+
+  /* ================================================================ v3.1 additions (Oct 2026 feedback round) */
+  // Sub-areas inside a domain. Detected from the JD (title weighted 2x). Each adds role-specific skills, certifications and
+  // projects so "IT M&A consulting" is never treated as generic "IT & Systems". List the most specific first.
+  C.SUBAREAS = [
+    {key:'CON_ITMA', d:'CON', label:'IT M&A · deal technology', re:/\b(it|technology|tech)\b[^.\n]{0,30}\b(m&a|due diligence|dd|diligence|integration|separation|carve-?outs?)\b|\bm&a technology\b|\bit m&a\b|\btechnology (dd|due diligence)\b|\bit due diligence\b/,
+     terms:['it due diligence','post-merger integration','separation','day 1 planning','it synergies','one-off costs','transition services agreement','it operating model','application rationalisation','infrastructure assessment','pmo','erp'],
+     core:['it due diligence','post-merger integration','day 1 planning','it synergies'], certs:['TOGAF','ITIL4','AZ900','AWSCCP','PMP','CAPM','PRINCE2'], projects:'CON_ITMA'},
+    {key:'CON_DEAL', d:'CON', label:'Deal advisory / M&A', re:/\bdeal (advisory|transformation)\b|\btransaction (services|advisory)\b|\bpost[- ]merger\b|\bpmi\b|\bcarve-?outs?\b|\b(commercial|operational|financial|vendor) due diligence\b|\bintegration (and|&) separation\b|\bm&a\b|\bsynerg/,
+     terms:['due diligence','m&a','post-merger integration','separation','synergies','day 1 planning','valuation','financial modelling','pmo'],
+     core:['due diligence','m&a','post-merger integration','synergies'], certs:['FMOD','CFA1','CFA3','PMP','CAPM'], projects:'CON_DEAL'},
+    {key:'CON_TECH', d:'CON', label:'Technology / digital consulting', re:/\bdigital transformation\b|\btechnology consult|\berp\b|\bsap\b|\bimplementation\b|\bit strategy\b|\bcloud\b/,
+     terms:['digital transformation','erp','requirements gathering','process mapping','pmo','agile','solution design'], core:['digital transformation','requirements gathering','pmo'], certs:['ECBA','SAP','CSPO','AZ900','ITIL4'], projects:'ITS'},
+    {key:'CON_RISK', d:'CON', label:'Risk advisory', re:/\brisk advisory\b|\binternal audit\b|\bsox\b|\binternal controls?\b|\bgrc\b|\bforensic\b/,
+     terms:['internal audit','internal controls','risk management','regulatory compliance','process mapping'], core:['internal audit','internal controls','risk management'], certs:['CISA','LSSGB'], projects:'CON_RISK'},
+    {key:'CON_OPS', d:'CON', label:'Operations consulting', re:/\boperations consult|\bcost (reduction|transformation)\b|\boperational excellence\b|\bprocess excellence\b|\bsupply chain consult/,
+     terms:['cost control','process improvement','procurement','lean','root cause analysis'], core:['process improvement','cost control'], certs:['LSSGB','CSCP'], projects:'OPS'},
+    {key:'CON_STRAT', d:'CON', label:'Strategy consulting', re:/\bstrategy\b|\bmarket entry\b|\bgrowth strategy\b|\bmanagement consult/,
+     terms:['market sizing','strategic analysis','structured problem solving','business case','go-to-market','competitive analysis'], core:['structured problem solving','market sizing'], certs:['FMOD','CFA1'], projects:'CON'},
+    {key:'FIN_CREDIT', d:'FIN', label:'Credit & corporate banking', re:/\bcredit\b|\bunderwrit|\blending\b|\bcorporate banking\b|\bnbfc\b|\bloans?\b/,
+     terms:['credit appraisal','financial statement analysis','cma data','portfolio monitoring','underwriting','due diligence'], core:['credit appraisal','financial statement analysis'], certs:['IIBFCCP','FRM1','CFA1','FMOD'], projects:'FIN_CREDIT'},
+    {key:'FIN_FPA', d:'FIN', label:'FP&A / corporate finance', re:/\bfp&a\b|\bfinancial planning\b|\bbudget|\bcontroller|\bcontrollership\b|\bcorporate finance\b/,
+     terms:['fp&a','budgeting','variance analysis','forecasting','mis','financial modelling'], core:['budgeting','variance analysis'], certs:['PL300','CFA1','FMOD'], projects:'FIN'},
+    {key:'IB_MA', d:'IB', label:'M&A / capital markets advisory', re:/\bpitch ?books?\b|\becm\b|\bdcm\b|\borigination\b|\bmerchant banking\b|\bdeal execution\b|\bmergers and acquisitions\b/,
+     terms:['valuation','financial modelling','pitch book','due diligence','m&a'], core:['valuation','financial modelling','pitch book'], certs:['CFA1','CFA3','FMOD','NISM15'], projects:'IB'},
+    {key:'IB_ER', d:'IB', label:'Equity research', re:/\bequity research\b|\bresearch analyst\b|\binitiat\w* coverage\b/,
+     terms:['valuation','financial modelling','financial statement analysis','report writing'], core:['valuation','financial modelling'], certs:['NISM15','CFA1','CFA3'], projects:'IB'},
+    {key:'MKT_DIGITAL', d:'MKT', label:'Digital / performance marketing', re:/\bdigital marketing\b|\bperformance marketing\b|\bgrowth marketing\b|\bseo\b|\bsem\b|\bpaid (media|acquisition)\b/,
+     terms:['digital marketing','performance marketing','marketing analytics','campaign management','a/b testing'], core:['digital marketing','marketing analytics'], certs:['GADS','META','TABLEAU'], projects:'MKT'},
+    {key:'MKT_BRAND', d:'MKT', label:'Brand management', re:/\bbrand\b|\babm\b|\bfmcg\b|\bconsumer insight/,
+     terms:['brand management','consumer insights','marketing strategy','campaign management','pricing'], core:['consumer insights','marketing strategy'], certs:['GADS','META'], projects:'MKT'},
+    {key:'SAL_B2B', d:'SAL', label:'B2B / enterprise sales', re:/\bb2b\b|\benterprise (sales|selling)\b|\bsaas\b|\baccount executive\b|\bsdr\b|\bbdr\b/,
+     terms:['business development','crm','negotiation','enterprise selling','account management'], core:['business development','crm'], certs:['SFDC'], projects:'SAL'},
+    {key:'SAL_FMCG', d:'SAL', label:'FMCG / channel sales', re:/\bdistributors?\b|\bgeneral trade\b|\bmodern trade\b|\bfmcg\b|\bbeat plan|\bterritory\b/,
+     terms:['territory management','distribution','target achievement','sales analytics','negotiation'], core:['territory management','target achievement'], certs:['PL300'], projects:'SAL'},
+    {key:'HR_TA', d:'HR', label:'Talent acquisition', re:/\btalent acquisition\b|\brecruit|\bhiring\b/,
+     terms:['talent acquisition','hr analytics','employee relations'], core:['talent acquisition'], certs:['SHRMCP','HRAN'], projects:'HR'},
+    {key:'HR_HRBP', d:'HR', label:'HR business partnering', re:/\bhrbp\b|\bbusiness partner\b|\bemployee relations\b|\bindustrial relations\b/,
+     terms:['performance management','employee relations','labour law','hr analytics'], core:['performance management','employee relations'], certs:['SHRMCP','HRAN'], projects:'HR'}
+  ];
+  // Phrase rules that decide the domain when a JD's words are shared across domains (applied to title + body).
+  C.JD_CONTEXT_RULES = [
+    [/\bpost[- ]merger integration\b|\bpmi\b|\bintegration (and|&) separation\b|\bcarve-?outs?\b|\btransition services agreements?\b|\btsas?\b|\bday[- ]?(1|one|100)\b|\bdeal transformation\b|\btransaction services\b|\b(operational|commercial|it|technology) due diligence\b|\btechnology dd\b|\bm&a technology\b|\bit m&a\b/, {CON:0.35, IB:-0.2, ITS:-0.15}],
+    [/\bpitch ?books?\b|\becm\b|\bdcm\b|\borigination\b|\bmerchant banking\b|\blbo\b|\bleveraged finance\b|\bdeal execution\b|\bsell[- ]side\b/, {IB:0.3}],
+    [/\b(it|technical|tech) recruit\w*\b/, {HR:0.35, ITS:-0.25}],
+    [/\b(it|software|saas|cloud) sales\b/, {SAL:0.3, ITS:-0.2}],
+    [/\brisk advisory\b|\binternal audit\b|\bsox\b|\binternal controls?\b/, {CON:0.15, FIN:0.08}],
+    [/\b(it|technology) (procurement|sourcing)\b/, {SCM:0.25, ITS:-0.1}],
+    [/\bmanagement consult\w*\b|\bstrategy consult\w*\b|\bbig[- ]?4\b|\bbig four\b|\bstrategy (&|and) transactions\b/, {CON:0.2}]
+  ];
+  // Cities used to split job-link slugs into title / location / department.
+  // "Put a number on it" menus for sub-areas (more specific than the domain menu)
+  C.METRIC_MENU_SUB = {
+    CON_ITMA:'deal value (₹ Cr), number of deals or targets, IT red flags raised, IT synergies (₹ Cr), one-off costs, TSA services scoped, Day 1 milestones / workstreams',
+    CON_DEAL:'deal value (₹ Cr), targets assessed, synergies identified (₹ Cr), red flags raised, workstreams run, price or SPA impact',
+    CON_TECH:'modules implemented, users migrated, go-live on time, process time cut (%), programme budget (₹ Cr)',
+    CON_RISK:'processes reviewed, control gaps closed, audit observations, risk exposure (₹)',
+    FIN_CREDIT:'portfolio / exposure (₹ Cr), proposals appraised, TAT (days), slippage or NPA rate, covenant breaches caught',
+    IB_MA:'deal size (₹/$ Mn), mandates supported, models built, buyers / investors contacted'
+  };
+  C.CITIES = ['new delhi','delhi ncr','delhi','gurugram','gurgaon','noida','navi mumbai','mumbai','thane','bengaluru','bangalore','hyderabad','pune','chennai','kolkata',
+    'ahmedabad','jaipur','kochi','chandigarh','indore','coimbatore','lucknow','bhubaneswar','vadodara','nagpur','gift city','remote','pan india','india'];
+  C.TITLE_HEADS = ['manager','analyst','consultant','associate','executive','officer','lead','head','director','intern','trainee','specialist','engineer','partner',
+    'president','vp','avp','advisor','adviser','architect','owner','planner','buyer','counsel','controller','scientist','strategist','representative','coordinator'];
+  C.JOB_BOARDS = /(^|\.)(naukri|linkedin|indeed|foundit|monsterindia|iimjobs|hirist|instahyre|glassdoor|wellfound|angel|cutshort|apna|shine|timesjobs|unstop|internshala|greenhouse|lever|workday|myworkdayjobs|smartrecruiters|ashbyhq|freshteam|zohorecruit|successfactors|taleo|icims)\./;
+  // Leading adverbs that hide the real verb ("Successfully cleared…", "Actively managed…").
+  C.ADVERBS = ['successfully','actively','effectively','independently','jointly','personally','consistently','proactively','single-handedly','directly','closely','extensively','also','regularly'];
+  // Lines that state a credential or exam result. Scored as achievements and never rewritten as work bullets.
+  C.CREDENTIAL_LINE = /\b(cleared|passed|qualified|completed|awarded|attained|earned|certified|pursuing|appeared)\b[^.\n]{0,70}\b(cfa|frm|caia|cfp|ca|cs|cma|nism|acca|cpa|level|exam\w*|certification|certificate|course|gmat|gre|cat)\b|\b(cfa|frm|caia)\b[^.\n]{0,25}\blevel\b/;
+  C.CERT_LABEL = {CFA1:'CFA',FRM1:'FRM',NISM:'NISM',NISM8:'NISM VIII',NISM15:'NISM XV',NISM5A:'NISM V-A',NISM10A:'NISM X-A',FMOD:'Financial modelling course',LSSGB:'Six Sigma',
+    CSCP:'APICS/ASCM',SHRMCP:'SHRM',PMP:'PMP/PRINCE2',GADS:'Google Ads / GA4',PL300:'Power BI (PL-300)',TABLEAU:'Tableau',GDA:'Google Data Analytics',SQLC:'SQL certification',
+    CSPO:'Scrum / Product Owner',ECBA:'IIBA',SFDC:'Salesforce',SAP:'SAP',ESGC:'ESG / GRI',IC38:'IRDAI IC-38',TOGAF:'TOGAF',ITIL4:'ITIL 4',AZ900:'Azure Fundamentals',AWSCCP:'AWS Cloud Practitioner',CISA:'CISA'};
+  C.UG_LABEL = ['Engineering degree','Commerce degree','CA / CMA','BBA / BMS','Medical / pharma degree','Agriculture degree','Law degree','Economics','Statistics / maths','Architecture / civil','Electrical engineering','Mass communication','Computer science / IT'];
+  // Extra skills (and their resume variants) used by the sub-areas above.
+  var SYN2 = {
+    'it due diligence':['it due diligence','it~due diligence','technology due diligence','technology~due diligence','technology dd','it dd','it diligence','it red flags'],
+    'post-merger integration':['post-merger integration','post merger integration','pmi','integration management office','imo','integration planning','integration programme'],
+    'separation':['separation','carve-out','carve out','carveout','divestiture','demerger','standalone'],
+    'day 1 planning':['day 1','day one','day 100','100-day plan','cut-over','cutover','day-1 readiness'],
+    'it synergies':['it synergies','technology synergies','cost synergies','synergy model','synergy tracker*'],
+    'one-off costs':['one-off cost*','one-time cost*','ongoing cost*','dis-synerg*','stranded cost*'],
+    'transition services agreement':['transition services agreement*','tsa','tsas','reverse tsa'],
+    'it operating model':['it operating model','target operating model','operating model','tom'],
+    'application rationalisation':['application rationaliz*','application landscape','application portfolio','legacy systems'],
+    'infrastructure assessment':['it infrastructure','infrastructure assessment','data center*','cloud migration','network infrastructure'],
+    'synergies':['synerg*'],
+    'm&a':['m&a','mergers and acquisitions','acquisition*','merger*'],
+    'carve-out':['carve-out','carve out','carveout','divestiture'],
+    'portfolio monitoring':['portfolio monitoring','covenant*','annual review*','early warning','stock audit*','portfolio of'],
+    'cma data':['cma data','cma'],
+    'underwriting':['underwrit*','credit underwrit*'],
+    'internal audit':['internal audit*','audit plan*','audit observation*'],
+    'internal controls':['internal control*','ifc','icfr','sox','control testing'],
+    'risk management':['risk management','risk assessment*','risk register','risk mitigation'],
+    'solution design':['solution design','solutioning','solution architecture'],
+    'competitive analysis':['competitive analy*','competitor analy*','competitive landscape','benchmarking'],
+    'mis':['mis','management information'],
+    'budgeting':['budget*'],
+    'forecasting':['forecast*']
+  };
+  Object.keys(SYN2).forEach(function (k) { if (!C.SYN[k]) C.SYN[k] = SYN2[k]; });
+  // Certifications for the sub-areas (costs are indicative: verify on the official site before showing a price).
+  C.CERTS = C.CERTS.concat([
+    {id:'TOGAF',n:'TOGAF Enterprise Architecture Foundation (The Open Group)',d:['CON','ITS'],lv:['EARLY','MID','SENIOR'],cost:'Verify (The Open Group)',time:'3–5 weeks',cr:1,covers:['it operating model','application rationalisation','solution design','infrastructure assessment'],v:'https://www.opengroup.org/certifications',note:'Shows you can read an IT landscape in due diligence and integration'},
+    {id:'ITIL4',n:'ITIL 4 Foundation',d:['CON','ITS','OPS'],lv:['CAMPUS','EARLY','MID'],cost:'Verify (accredited partners, incl. exam)',time:'2–3 weeks',cr:1,covers:['transition services agreement','it operating model','separation'],v:'https://www.axelos.com',note:'Useful for TSA, service separation and Day 1 IT operations'},
+    {id:'AZ900',n:'Microsoft Azure Fundamentals (AZ-900)',d:['CON','ITS','BA'],lv:['CAMPUS','EARLY','MID'],cost:'Verify (Microsoft India pricing)',time:'1–3 weeks',cr:2,covers:['infrastructure assessment','application rationalisation'],v:'https://learn.microsoft.com/credentials',note:'Cloud basics for infrastructure diligence'},
+    {id:'AWSCCP',n:'AWS Certified Cloud Practitioner',d:['CON','ITS','BA'],lv:['CAMPUS','EARLY','MID'],cost:'≈USD 100 (verify)',time:'2–4 weeks',cr:2,covers:['infrastructure assessment','application rationalisation'],v:'https://aws.amazon.com/certification',note:'Alternative to AZ-900; pick one'},
+    {id:'PRINCE2',n:'PRINCE2 Foundation',d:['CON','OPS','ITS','INF'],lv:['EARLY','MID'],cost:'Verify (accredited partners)',time:'1–2 weeks',cr:2,covers:['pmo','project management','programme management'],v:'https://www.axelos.com',note:'No experience requirement, unlike PMP'},
+    {id:'CFA3',n:'CFA Level III (next step after Level II)',d:['IB','FIN','CON'],lv:['EARLY','MID'],cost:'USD 1,140 early / 1,490 standard (verify)',time:'~300 hrs',cr:1,covers:['valuation','financial modelling'],v:'https://www.cfainstitute.org',note:'Suggested only when Level II is already on your resume',needs:'CFA_L2'},
+    {id:'CISA',n:'ISACA CISA',d:['CON','FIN','ITS'],lv:['MID','SENIOR'],gate:60,cost:'Verify (ISACA)',time:'2–3 months',cr:1,covers:['internal audit','internal controls','risk management'],v:'https://www.isaca.org',note:'Certification needs 5 yrs of IS audit/control experience'}
+  ]);
+  // Projects and work samples for the sub-areas (Early+ candidates see them as interview-ready work samples).
+  C.PROJECTS.CON_ITMA = [
+    {n:'IT due-diligence red-flag memo on a recent listed Indian acquisition (applications, infrastructure, cyber, licences, IT people) built from public filings',s:['it due diligence','infrastructure assessment','application rationalisation','m&a'],lv:['CAMPUS','EARLY','MID'],w:2,proof:'2-page memo you can walk through in the interview'},
+    {n:'Day 1 / Day 100 IT integration plan with TSA scope and exit roadmap for a carve-out',s:['day 1 planning','transition services agreement','separation','post-merger integration','pmo'],lv:['CAMPUS','EARLY','MID'],w:2,proof:'Plan + TSA schedule (Excel/PPT)'},
+    {n:'IT synergy and one-off cost model for a merger (application rationalisation, infrastructure consolidation, licence renegotiation)',s:['it synergies','one-off costs','application rationalisation','financial modelling'],lv:['CAMPUS','EARLY','MID'],w:2,proof:'Synergy model with assumptions sheet'}];
+  C.PROJECTS.CON_DEAL = [
+    {n:'Commercial due-diligence pack on a listed mid-cap target (market, customers, competitive position, red flags)',s:['due diligence','strategic analysis','market sizing','m&a'],lv:['CAMPUS','EARLY','MID'],w:3,proof:'10-slide pack'},
+    {n:'Synergy model and integration tracker for a recent Indian merger (revenue and cost synergies, one-off costs, Day 1 priorities)',s:['synergies','post-merger integration','day 1 planning','financial modelling'],lv:['CAMPUS','EARLY','MID'],w:2,proof:'Model + tracker'}];
+  C.PROJECTS.CON_RISK = [
+    {n:'Risk and control matrix (RCM) with test steps for one business process of a listed company',s:['internal controls','internal audit','risk management','process mapping'],lv:['CAMPUS','EARLY'],w:2,proof:'RCM workbook'}];
+  C.PROJECTS.FIN_CREDIT = [
+    {n:'Credit appraisal note on a listed mid-corporate borrower (CMA data, ratio and cash-flow analysis, covenant proposal)',s:['credit appraisal','financial statement analysis','cma data','underwriting'],lv:['CAMPUS','EARLY'],w:2,proof:'Credit note'},
+    {n:'Early-warning dashboard for a 20-account portfolio (ratios, delays, covenant breaches)',s:['portfolio monitoring','dashboarding','financial statement analysis'],lv:['CAMPUS','EARLY','MID'],w:2,proof:'Dashboard'}];
 
   if (typeof module === 'object' && module.exports) { module.exports = C; } else { root.RFS_CONTENT = C; }
 })(this);

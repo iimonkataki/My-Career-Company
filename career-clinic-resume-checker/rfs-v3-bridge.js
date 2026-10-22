@@ -62,7 +62,15 @@
     if (isBenchmark && !edited) jd = { mode: 'library', jdId: J.id };
     else if (isBenchmark && edited)   // user edited the loaded benchmark text: score their text, keep the chosen domain & level
       jd = { mode: 'custom', text: o.jdText, title: (J.titles && J.titles[0]) || '', domainOverride: J.domainCode, levelOverride: J.levelCode };
-    else jd = { mode: 'custom', text: o.jdText || o.jdUrl || '', title: o.jdTitle && !/\.(pdf|docx)$/i.test(o.jdTitle) ? o.jdTitle : '', url: o.jdUrl || '', domainOverride: o.domainOverride || null, levelOverride: o.levelOverride || null };
+    else {
+      var txt = o.jdText || o.jdUrl || '';
+      var linkTab = o.jdTab === 'link' || /^\s*https?:\/\/\S+\s*$/.test(txt);
+      // titles from the old parseJdLinkTitle() are mangled ("It M A"); for links the engine reads the URL itself
+      var urlOnlyText = /^\s*https?:\/\/\S+\s*$/.test(txt);
+      // page title from the JD reader (or a typed title) is used; file names and link-only titles are re-derived by the engine
+      var ttl = (o.jdTitle && !/\.(pdf|docx?)$/i.test(o.jdTitle) && !(linkTab && urlOnlyText)) ? o.jdTitle : '';
+      jd = { mode: 'custom', text: txt, title: ttl, url: linkTab ? (o.jdUrl || txt) : '', domainOverride: o.domainOverride || null, levelOverride: o.levelOverride || null };
+    }
     var rep = root.RFSv3.analyse({ resumeText: o.text, pageCount: o.numPages, jd: jd,
       profile: { status: o.candidateType === 'college_student' ? 'College Student' : 'Working Professional', institution: o.institutionName || '' } });
     var d = rep.details;
@@ -93,8 +101,9 @@
     var SIG = { title: 'Job titles', company: 'Employers', bullets: 'Experience bullets', intern: 'Internships & projects', spec: 'MBA specialisation', ug: 'UG degree', certs: 'Certifications', clubs: 'Clubs & competitions', college: 'Institute', skills: 'Skills list' };
     var domains = rows.map(function (x) {
       var tier = x.score >= 70 ? 'strong' : x.score >= 45 ? 'moderate' : 'developing';
+      // concrete evidence per domain ("Role: Credit Manager (Axis Bank)", "Certification: CFA"), not generic category names
       return { key: x.code, label: x.name, shortLabel: x.name, icon: ICONS[x.code] || '•', score: x.score, fitTier: tier, fitLabel: x.tier,
-        matchedCount: x.signals.length, totalKeywords: 10, topSignals: x.signals.map(function (s) { return SIG[s] || s; }), isTarget: x.code === target };
+        matchedCount: (x.evidence || []).length, totalKeywords: 10, topSignals: (x.evidence && x.evidence.length ? x.evidence : x.signals.map(function (s) { return SIG[s] || s; })), isTarget: x.code === target };
     });
     var kwAll = function (arr) { return arr.map(function (x) { return x.t; }); };
     var pdisp = function (t) { var x = root.RFSv3._internal.disp(t); return x.charAt(0).toUpperCase() + x.slice(1); };
@@ -116,6 +125,7 @@
                strongVerbShare: Math.round(100 * rep.vectors[4].pct / 100), estimatedPages: d.length.pages || Math.max(1, Math.ceil(d.length.words / 600)),
                jdWordCount: (o.jdText || '').split(/\s+/).filter(Boolean).length },
       // v3-only data for the new UI blocks
+      jdNotice: (rep.advisories.filter(function (a) { return a.type === 'JD_THIN' || a.type === 'CONFIRM_DOMAIN'; })[0] || {}).text || '',
       v3: { jd: rep.jd, level: rep.level, candidate: rep.candidate, gates: rep.gates, advisories: rep.advisories, certifications: rep.certifications,
             projects: rep.projects, weights: rep.weights, bulletDiagnostics: rep.bulletDiagnostics, domainInsight: ds.insight },
       detectedDomain: target, targetRoleKey: LEGACY_KEY[target] || 'consulting', jdMode: jd.mode + (edited ? ' (edited benchmark)' : '')
@@ -130,15 +140,19 @@
     if (v.certifications && v.certifications.conditionalNotes) certs.push('Only if your role involves a regulated activity: ' + v.certifications.conditionalNotes.join('; '));
     var projects = ((v.projects && v.projects.projects) || []).map(function (p) { return p.name + ' — ' + p.why + (p.weeks ? ' · ~' + p.weeks + ' weeks' : '') + (p.proof ? ' · Proof: ' + p.proof : ''); });
     ((v.projects && v.projects.competitions) || []).forEach(function (c) { projects.push('Competition: ' + c.name + ' (' + c.window + ') — ' + c.eligibility + '. ' + c.note + '.'); });
-    return { label: j.domainName + (j.industry ? ' · ' + (root.RFSv3.C.DOMAINS[j.industry] || {}).n : ''), shortLabel: j.domainName, icon: ICONS[j.domain] || '🎯',
+    return { label: j.domainName + (j.subArea ? ' · ' + j.subArea.label : j.industry ? ' · ' + (root.RFSv3.C.DOMAINS[j.industry] || {}).n : ''), shortLabel: j.domainName, icon: ICONS[j.domain] || '🎯',
              certifications: certs, projects: projects };
   }
   /* For JD intake handlers: returns the legacy role key (for state.targetRole) plus the full v3 detection. */
   function detectJd(text, title, url) {
     ensureInit();
-    var det = root.RFSv3.detectDomainFromJdV3(text || url || '', { title: title, url: url });
+    var isUrl = /^\s*https?:\/\/\S+\s*$/.test(text || '');
+    if (isUrl && !url) { url = text; }
+    var det = root.RFSv3.detectDomainFromJdV3(text || url || '', { title: (isUrl ? '' : title), url: url });
     return { legacyKey: LEGACY_KEY[det.domain] || 'consulting', code: det.domain, name: det.domainName, secondary: det.secondary, level: det.level,
-             confidence: det.confidence, askUser: det.askUser, label: det.domainName + (det.secondary ? ' / ' + root.RFSv3.C.DOMAINS[det.secondary].n : '') + ' · ' + levelLabel(det.level) };
+             confidence: det.confidence, askUser: det.askUser, subArea: det.subArea, title: det.displayTitle, thin: det.thin,
+             label: det.domainName + (det.subArea ? ' (' + det.subArea.label + ')' : det.secondary ? ' / ' + root.RFSv3.C.DOMAINS[det.secondary].n : '') + ' · ' + levelLabel(det.level) };
   }
-  root.RFSv3Bridge = { score: score, roleMeta: roleMeta, detectJd: detectJd, LEGACY_KEY: LEGACY_KEY, ICONS: ICONS };
+  function parseJobUrl(url) { ensureInit(); return root.RFSv3.parseJobUrl(url); }
+  root.RFSv3Bridge = { score: score, roleMeta: roleMeta, detectJd: detectJd, parseJobUrl: parseJobUrl, LEGACY_KEY: LEGACY_KEY, ICONS: ICONS, VERSION: 'bridge-3.2.0' };
 })(typeof window !== 'undefined' ? window : this);

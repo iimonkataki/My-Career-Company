@@ -16,11 +16,23 @@
       "test/**",
       "tools/**",
       "docs/**",
-      "RFS_v3/**"
+      "RFS_v3/**",
+      "functions/**",
+      "snippets/**",
+      "RFS_v3*",
+      "RFS_v3*/**",
+      "unpack-rfs.js"
     ],
     "cleanUrls": true,
     "trailingSlash": false,
     "rewrites": [
+      {
+        "source": "/api/fetch-jd",
+        "function": {
+          "functionId": "fetchJd",
+          "region": "asia-south1"
+        }
+      },
       {
         "source": "/career-clinic",
         "destination": "/career-clinic.html"
@@ -186,5 +198,16 @@
   },
   "storage": {
     "rules": "storage.rules"
-  }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "*.local"
+      ]
+    }
+  ]
 }
