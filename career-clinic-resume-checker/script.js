@@ -3011,6 +3011,13 @@ DESIRED QUALIFICATIONS & COMPETENCIES
         } else if (jdTextarea && jdTextarea.value.trim().length > 20) {
           jdTextToAnalyze = jdTextarea.value.trim();
         }
+        if (!jdTextToAnalyze || jdTextToAnalyze.length < 20) {
+          showError(
+            "Missing Job Description Text",
+            "Please paste your target job description into the text area (minimum 20 characters) to analyze fit against it."
+          );
+          return;
+        }
         const pasteRoleSelect = document.getElementById('targetRoleSelect');
         if (pasteRoleSelect && pasteRoleSelect.value && window.JD_DATABASE) {
           const domName = pasteRoleSelect.value;
@@ -3068,11 +3075,20 @@ DESIRED QUALIFICATIONS & COMPETENCIES
 
       let diagnosticResult;
       try {
+        let domainOverride = null;
+        if (state.jdTab === 'paste') {
+          const pasteRoleSelect = document.getElementById('targetRoleSelect');
+          if (pasteRoleSelect && pasteRoleSelect.value && window.JD_DATABASE_V3) {
+            const dObj = window.JD_DATABASE_V3.getDomains().find(d => d.name === pasteRoleSelect.value);
+            if (dObj) domainOverride = dObj.code;
+          }
+        }
         diagnosticResult = window.RFSv3Bridge.score({
           text: textToAnalyze, numPages: numPages,
           candidateType: state.candidateType, institutionName: state.institutionName,
           jdTab: state.jdTab, jdObject: state.currentJdObject, jdText: jdTextToAnalyze,
-          jdTitle: jdCustomTitle, jdUrl: state.jdUrl
+          jdTitle: jdCustomTitle, jdUrl: state.jdUrl,
+          domainOverride: domainOverride
         });
         state.targetRole = diagnosticResult.targetRoleKey;
       } catch (e) {
@@ -3698,10 +3714,30 @@ DESIRED QUALIFICATIONS & COMPETENCIES
     // JD Paste Text Area word count & Immediate Auto-Record
     const jdPasteTextInput = document.getElementById('jdPasteTextInput');
     let jdPasteDebounce = null;
+    function syncPastedJdDomain(text) {
+      if (!text || text.length < 40) return;
+      if (window.RFSv3Bridge && typeof window.RFSv3Bridge.detectJd === 'function') {
+        const det = window.RFSv3Bridge.detectJd(text, '', '');
+        if (det && det.name) {
+          const pasteRoleSelect = document.getElementById('targetRoleSelect');
+          if (pasteRoleSelect) {
+            for (let i = 0; i < pasteRoleSelect.options.length; i++) {
+              if (pasteRoleSelect.options[i].value === det.name) {
+                pasteRoleSelect.selectedIndex = i;
+                break;
+              }
+            }
+          }
+          if (det.legacyKey) state.targetRole = det.legacyKey;
+        }
+      }
+    }
+
     if (jdPasteTextInput) {
       jdPasteTextInput.addEventListener('input', () => {
         updateJdPasteWordCount();
         const text = jdPasteTextInput.value.trim();
+        syncPastedJdDomain(text);
         if (text.length >= 60) {
           clearTimeout(jdPasteDebounce);
           jdPasteDebounce = setTimeout(() => {
@@ -3727,6 +3763,32 @@ DESIRED QUALIFICATIONS & COMPETENCIES
             }
           }, 1200);
         }
+      });
+
+      jdPasteTextInput.addEventListener('paste', () => {
+        setTimeout(() => {
+          updateJdPasteWordCount();
+          syncPastedJdDomain(jdPasteTextInput.value.trim());
+        }, 100);
+      });
+    }
+
+    // Switch to paste from upload tab button
+    const switchToPasteJdBtn = document.getElementById('switchToPasteJdBtn');
+    if (switchToPasteJdBtn && tabJdPaste) {
+      switchToPasteJdBtn.addEventListener('click', () => tabJdPaste.click());
+    }
+
+    // Load Sample Consulting JD into Paste tab
+    const loadSamplePasteJdBtn = document.getElementById('loadSamplePasteJdBtn');
+    if (loadSamplePasteJdBtn && jdPasteTextInput) {
+      loadSamplePasteJdBtn.addEventListener('click', () => {
+        jdPasteTextInput.value = SAMPLE_CONSULTING_JD;
+        updateJdPasteWordCount();
+        hideError();
+        syncPastedJdDomain(SAMPLE_CONSULTING_JD);
+        loadSamplePasteJdBtn.classList.add('pulse-active');
+        setTimeout(() => loadSamplePasteJdBtn.classList.remove('pulse-active'), 600);
       });
     }
 

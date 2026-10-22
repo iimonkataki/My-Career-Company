@@ -343,7 +343,7 @@
           <div class="intake-header">
             <span class="intake-badge badge-jd">INPUT C</span>
             <h3 class="intake-title">Target Job Description (JD)</h3>
-            <p class="intake-desc">Upload JD document, provide job link, or choose domain benchmark</p>
+            <p class="intake-desc">Upload JD document, paste JD text, provide job link, or choose domain benchmark</p>
           </div>
 
           <!-- JD Tabs -->
@@ -354,8 +354,11 @@
             <button type="button" class="mini-tab" id="tabJdLink" role="tab" aria-selected="false">
               Share a JD link
             </button>
+            <button type="button" class="mini-tab" id="tabJdPaste" role="tab" aria-selected="false">
+              Paste JD text
+            </button>
             <button type="button" class="mini-tab" id="tabJdUpload" role="tab" aria-selected="false">
-              Upload or paste a JD
+              Upload JD file
             </button>
           </div>
 
@@ -380,6 +383,10 @@
                 </div>
                 <div class="dropzone-specs">Supports .PDF and .DOCX job descriptions</div>
               </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 10px; font-size: 12px; color: var(--color-text-muted);">
+              Prefer to paste text? <button type="button" class="btn-link-action" id="switchToPasteJdBtn" style="color: var(--color-gold-light); font-weight: 600; text-decoration: underline; background: none; border: none; cursor: pointer; font-size: 12px;">Paste JD text</button>
             </div>
 
             <!-- Selected JD File Indicator -->
@@ -550,11 +557,13 @@
               <label for="jdPasteTextInput" class="form-label" style="margin-top: 8px;">
                 Paste Specific Job Description Text (from LinkedIn, Naukri, or Company Portal)
               </label>
-              <textarea id="jdPasteTextInput" class="resume-textarea" rows="6"
-                placeholder="Paste the specific job description, responsibilities, and required qualifications here..."></textarea>
+              <textarea id="jdPasteTextInput" class="resume-textarea" rows="8"
+                placeholder="Paste the complete job description text including About the Role, Requirements, Responsibilities, and Qualifications..."></textarea>
               <div class="textarea-footer">
                 <span class="word-counter" id="jdPasteWordCounter">0 words</span>
-                <span class="field-hint">Supports full job specs up to 20,000 characters</span>
+                <button type="button" class="sample-load-btn" id="loadSamplePasteJdBtn">
+                  &#10024; Load Sample Consulting JD
+                </button>
               </div>
             </div>
           </div>
@@ -1324,7 +1333,7 @@
   <script src="data/rfs-v3-schools.js?v=3.2"></script>
   <script src="fit-engine-v3.js?v=3.2"></script>
   <script src="rfs-v3-bridge.js?v=3.2"></script>
-  <script src="script.js?v=3.2"></script>
+  <script src="script.js?v=3.2.1"></script>
 </body>
 
 </html>
