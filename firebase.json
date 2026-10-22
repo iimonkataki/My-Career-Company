@@ -82,6 +82,10 @@
         "destination": "/career-clinic-resume-checker/jd-database.js"
       },
       {
+        "source": "/ResumeFitScore/jd-database-v3.js",
+        "destination": "/career-clinic-resume-checker/jd-database-v3.js"
+      },
+      {
         "source": "/ResumeFitScore/logo.png",
         "destination": "/career-clinic-resume-checker/logo.png"
       },

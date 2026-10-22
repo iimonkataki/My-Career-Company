@@ -25,12 +25,63 @@
     ],
     "rewrites": [
       {
+        "source": "/ResumeFitScore/style.css",
+        "destination": "/style.css"
+      },
+      {
+        "source": "/ResumeFitScore/script.js",
+        "destination": "/script.js"
+      },
+      {
+        "source": "/ResumeFitScore/repository-service.js",
+        "destination": "/repository-service.js"
+      },
+      {
+        "source": "/ResumeFitScore/jd-database.js",
+        "destination": "/jd-database.js"
+      },
+      {
+        "source": "/ResumeFitScore/jd-database-v3.js",
+        "destination": "/jd-database-v3.js"
+      },
+      {
+        "source": "/ResumeFitScore/auth-guard.js",
+        "destination": "/auth-guard.js"
+      },
+      {
+        "source": "/ResumeFitScore/logo.png",
+        "destination": "/logo.png"
+      },
+      {
+        "source": "/ResumeFitScore/brand-logo.png",
+        "destination": "/brand-logo.png"
+      },
+      {
+        "source": "/ResumeFitScore/brand-emblem.png",
+        "destination": "/brand-emblem.png"
+      },
+      {
+        "source": "/ResumeFitScore/favicon.png",
+        "destination": "/favicon.png"
+      },
+      {
         "source": "/ResumeFitScore",
         "destination": "/index.html"
       },
       {
         "source": "/ResumeFitScore/**",
         "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(css|js|html)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
       }
     ],
     "site": "my-career-company"
