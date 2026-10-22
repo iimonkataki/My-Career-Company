@@ -419,6 +419,48 @@
           <div class="intake-tab-body active" id="jdDomainSection">
             <div class="paste-container">
 
+              <!-- Target Company Selection (v3 Database: 835 Companies + Other) -->
+              <div class="form-group jd-cascading-row-full">
+                <div class="jd-label-with-search">
+                  <label for="jdCompanySelect" class="form-label">
+                    Target Company: <span class="required-star">*</span>
+                  </label>
+                  <div class="company-quick-filter-wrap">
+                    <input type="text" id="jdCompanySearchInput" class="form-input-text form-input-compact"
+                      placeholder="🔍 Search 835 companies (e.g. McKinsey, HUL, Google, TAS)..." autocomplete="off">
+                  </div>
+                </div>
+                <div class="select-wrapper">
+                  <select id="jdCompanySelect" class="form-select">
+                    <!-- Dynamically populated from 835 Companies + Other -->
+                  </select>
+                </div>
+              </div>
+
+              <!-- Unlisted Company Configuration (Shown when 'Other' selected) -->
+              <div id="jdOtherCompanyFields" class="jd-other-grid" style="display: none;">
+                <div class="form-group">
+                  <label for="jdArchetypeSelect" class="form-label">
+                    Company Type / Archetype: <span class="required-star">*</span>
+                  </label>
+                  <div class="select-wrapper">
+                    <select id="jdArchetypeSelect" class="form-select">
+                      <!-- 45 Archetypes -->
+                    </select>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="jdSegmentSelect" class="form-label">
+                    Sub-Segment / Focus Area:
+                  </label>
+                  <div class="select-wrapper">
+                    <select id="jdSegmentSelect" class="form-select">
+                      <!-- Archetype Sub-segments -->
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               <!-- Filter by Career Level Pills -->
               <div class="jd-level-pills-container">
                 <div class="jd-level-label">
@@ -440,7 +482,7 @@
                   </label>
                   <div class="select-wrapper">
                     <select id="jdDomainSelect" class="form-select">
-                      <!-- Dynamically populated from 28 domains in JD Database v2 -->
+                      <!-- Dynamically populated from 28 domains -->
                     </select>
                   </div>
                 </div>
@@ -457,6 +499,19 @@
                       <option value="SENIOR">Senior Executive (10+ years / CXO / P&amp;L)</option>
                     </select>
                   </div>
+                </div>
+              </div>
+
+              <!-- Target Role Selection (from 236 Calibrated Roles) -->
+              <div class="form-group jd-cascading-row-full" id="jdRoleSelectGroup">
+                <label for="jdRoleSelect" class="form-label">
+                  Target Role / Functional Track: <span class="required-star">*</span>
+                  <span class="field-hint" id="jdRoleHint">(Featured role auto-calibrated by company affinity)</span>
+                </label>
+                <div class="select-wrapper">
+                  <select id="jdRoleSelect" class="form-select">
+                    <!-- Dynamically populated based on Domain & Level -->
+                  </select>
                 </div>
               </div>
 
@@ -1269,6 +1324,7 @@
 
   <!-- Application Logic & Firebase Repository Service -->
   <script src="jd-database.js"></script>
+  <script src="jd-database-v3.js"></script>
   <script src="repository-service.js"></script>
   <script src="script.js"></script>
 </body>

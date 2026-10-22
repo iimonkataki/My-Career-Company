@@ -648,37 +648,424 @@ SKILLS & CERTIFICATIONS
   }
 
   /**
-   * Initialize and render Target Domain & Career Level selection (Consolidated 112 Profiles across 28 Domains x 4 Career Levels)
+   * Initialize and render Target Company, Domain, Career Level, and Role selection
+   * Supports Target JD Database v3 (835 Companies × 45 Archetypes × 28 Domains × 4 Levels × 236 Roles)
    */
   function initJdTaxonomy() {
-    if (!window.JD_DATABASE) return;
+    const v3 = window.JD_DATABASE_V3;
+    const v2 = window.JD_DATABASE;
+    if (!v3 && !v2) return;
 
+    const companySelect = document.getElementById('jdCompanySelect');
+    const companySearchInput = document.getElementById('jdCompanySearchInput');
+    const otherFields = document.getElementById('jdOtherCompanyFields');
+    const archetypeSelect = document.getElementById('jdArchetypeSelect');
+    const segmentSelect = document.getElementById('jdSegmentSelect');
     const domainSelect = document.getElementById('jdDomainSelect');
     const levelSelect = document.getElementById('jdLevelSelect');
     const levelPillsContainer = document.getElementById('jdLevelPills');
+    const roleSelect = document.getElementById('jdRoleSelect');
+    const roleHint = document.getElementById('jdRoleHint');
     const pasteDomainSelect = document.getElementById('targetRoleSelect');
     const jdTextInput = document.getElementById('jdTextInput');
 
     if (!domainSelect) return;
 
+    // State defaults
+    state.selectedCompanyId = state.selectedCompanyId || 'mckinsey-and-company';
+    state.selectedArchetype = state.selectedArchetype || 'AR01';
+    state.selectedSegment = state.selectedSegment || '';
+    state.selectedDomainCode = state.selectedDomainCode || 'CON';
+    state.selectedLevelCode = state.selectedLevelCode || 'CAMPUS';
+    state.selectedRoleId = state.selectedRoleId || '';
+
+    if (v3) {
+      const allCompanies = v3.getCompanies();
+      const archetypes = v3.getArchetypes();
+      const domains = v3.getDomains();
+      const levels = v3.getLevels();
+
+      // Marquee recruiters for top of list
+      const marqueeIds = [
+        'mckinsey-and-company', 'boston-consulting-group-bcg', 'bain-and-company',
+        'hindustan-unilever', 'procter-and-gamble-pg', 'itc', 'nestle-india',
+        'google', 'microsoft', 'amazon', 'apple',
+        'goldman-sachs', 'morgan-stanley', 'jp-morgan-chase',
+        'tata-administrative-services', 'aditya-birla-group', 'reliance-industries',
+        'hdfc-bank', 'icici-bank', 'kotak-mahindra-bank', 'tcs', 'infosys'
+      ];
+
+      function renderCompanyDropdown(filterText = '') {
+        if (!companySelect) return;
+        const q = filterText.trim().toLowerCase();
+        let filtered = allCompanies;
+        if (q) {
+          filtered = allCompanies.filter(c =>
+            c.name.toLowerCase().includes(q) ||
+            (c.sector && c.sector.toLowerCase().includes(q)) ||
+            c.id.toLowerCase().includes(q)
+          );
+        }
+
+        let html = '';
+        html += '<option value="other"' + (state.selectedCompanyId === 'other' ? ' selected' : '') + '>⭐ — Other (Unlisted Company / Specific Type) —</option>';
+
+        if (!q) {
+          html += '<optgroup label="🌟 Featured & Marquee Recruiters">';
+          marqueeIds.forEach(id => {
+            const found = allCompanies.find(c => c.id === id);
+            if (found) {
+              const sel = (state.selectedCompanyId === found.id) ? ' selected' : '';
+              html += `<option value="${escapeHtml(found.id)}"${sel}>${escapeHtml(found.name)} (${escapeHtml(found.sector)})</option>`;
+            }
+          });
+          html += '</optgroup>';
+        }
+
+        const groups = {};
+        filtered.forEach(c => {
+          if (!q && marqueeIds.includes(c.id)) return;
+          const sec = c.sector || 'General Corporate';
+          if (!groups[sec]) groups[sec] = [];
+          groups[sec].push(c);
+        });
+
+        const sortedSectors = Object.keys(groups).sort();
+        sortedSectors.forEach(sec => {
+          html += `<optgroup label="${escapeHtml(sec)} (${groups[sec].length})">`;
+          groups[sec].sort((a, b) => a.name.localeCompare(b.name)).forEach(c => {
+            const sel = (state.selectedCompanyId === c.id) ? ' selected' : '';
+            html += `<option value="${escapeHtml(c.id)}"${sel}>${escapeHtml(c.name)}</option>`;
+          });
+          html += '</optgroup>';
+        });
+
+        companySelect.innerHTML = html;
+
+        if (state.selectedCompanyId !== 'other') {
+          const exists = filtered.some(c => c.id === state.selectedCompanyId);
+          if (!exists && filtered.length > 0) {
+            state.selectedCompanyId = filtered[0].id;
+            companySelect.value = state.selectedCompanyId;
+          }
+        }
+      }
+
+      renderCompanyDropdown();
+
+      if (companySearchInput) {
+        companySearchInput.addEventListener('input', (e) => {
+          renderCompanyDropdown(e.target.value);
+        });
+      }
+
+      if (archetypeSelect) {
+        archetypeSelect.innerHTML = archetypes.map(a =>
+          `<option value="${escapeHtml(a.code)}"${a.code === state.selectedArchetype ? ' selected' : ''}>${escapeHtml(a.name)}</option>`
+        ).join('');
+      }
+
+      function updateSegments() {
+        if (!segmentSelect || !archetypeSelect) return;
+        const arch = archetypes.find(a => a.code === archetypeSelect.value);
+        if (arch && Array.isArray(arch.segments) && arch.segments.length > 0) {
+          segmentSelect.innerHTML = arch.segments.map((seg, idx) =>
+            `<option value="${escapeHtml(seg)}"${(state.selectedSegment === seg || idx === 0) ? ' selected' : ''}>${escapeHtml(seg)}</option>`
+          ).join('');
+          state.selectedSegment = segmentSelect.value;
+          segmentSelect.parentElement.parentElement.style.display = 'block';
+        } else {
+          segmentSelect.innerHTML = '<option value="">Standard Domain Focus</option>';
+          state.selectedSegment = '';
+          segmentSelect.parentElement.parentElement.style.display = 'none';
+        }
+      }
+
+      updateSegments();
+
+      // Populate Domain dropdown (28 Domains)
+      domainSelect.innerHTML = domains.map(d => {
+        const isSelected = d.code === state.selectedDomainCode ? ' selected' : '';
+        return `<option value="${escapeHtml(d.code)}"${isSelected}>${escapeHtml(d.name)}</option>`;
+      }).join('');
+
+      if (pasteDomainSelect) {
+        pasteDomainSelect.innerHTML = domains.map(d =>
+          `<option value="${escapeHtml(d.name)}">${escapeHtml(d.name)}</option>`
+        ).join('');
+      }
+
+      // Populate Career Level dropdown (4 Levels)
+      if (levelSelect) {
+        levelSelect.innerHTML = levels.map(lvl => {
+          const isSelected = lvl.code === state.selectedLevelCode ? ' selected' : '';
+          return `<option value="${escapeHtml(lvl.code)}"${isSelected}>${escapeHtml(lvl.label)} (${escapeHtml(lvl.band)})</option>`;
+        }).join('');
+        levelSelect.value = state.selectedLevelCode;
+      }
+
+      // Populate Target Roles dropdown based on Company, Domain, and Level
+      function updateRolesDropdown() {
+        if (!roleSelect) return;
+        try {
+          const tempCard = v3.generate({
+            companyId: state.selectedCompanyId === 'other' ? undefined : state.selectedCompanyId,
+            archetype: state.selectedCompanyId === 'other' ? state.selectedArchetype : undefined,
+            segment: state.selectedCompanyId === 'other' ? state.selectedSegment : undefined,
+            domain: state.selectedDomainCode,
+            level: state.selectedLevelCode
+          });
+
+          const options = tempCard.roleOptions || [];
+          if (options.length > 0) {
+            roleSelect.innerHTML = options.map((r, i) => {
+              const isSel = (state.selectedRoleId && state.selectedRoleId === r.id) || (!state.selectedRoleId && i === 0);
+              return `<option value="${escapeHtml(r.id)}"${isSel ? ' selected' : ''}>${escapeHtml(r.name)} (${escapeHtml(r.title)})</option>`;
+            }).join('');
+
+            const selectedRoleObj = options.find(r => r.id === roleSelect.value) || options[0];
+            state.selectedRoleId = selectedRoleObj.id;
+            if (roleHint) {
+              roleHint.textContent = selectedRoleObj.focus ? `Focus: ${selectedRoleObj.focus}` : '(Featured role auto-calibrated by affinity)';
+            }
+          }
+        } catch (err) {
+          console.warn("Role update note:", err);
+        }
+      }
+
+      updateRolesDropdown();
+
+      function updateSelectedJd(autoPopulateText = false) {
+        try {
+          const card = v3.generate({
+            companyId: state.selectedCompanyId === 'other' ? undefined : state.selectedCompanyId,
+            archetype: state.selectedCompanyId === 'other' ? state.selectedArchetype : undefined,
+            segment: state.selectedCompanyId === 'other' ? state.selectedSegment : undefined,
+            domain: state.selectedDomainCode,
+            level: state.selectedLevelCode,
+            roleId: state.selectedRoleId || undefined
+          });
+
+          state.currentJdCard = card;
+          state.currentJdObject = card;
+          state.selectedDomain = card.domainName;
+          state.targetRole = card.scoring ? card.scoring.roleFamily : 'consulting';
+
+          renderSnapshotCardV3(card);
+          updateGeneratorButtonV3(card);
+
+          if (autoPopulateText && jdTextInput) {
+            jdTextInput.value = v3.toJDText(card);
+            updateJdWordCount();
+          }
+
+          if (state.lastResult) {
+            handleExecuteDiagnostic();
+          }
+        } catch (genErr) {
+          console.error("Target JD Generation error:", genErr);
+        }
+      }
+
+      function renderSnapshotCardV3(c) {
+        const card = document.getElementById('jdBenchmarkCard');
+        if (!card) return;
+        if (!c) { card.style.display = 'none'; return; }
+        card.style.display = 'block';
+
+        const classBadges = {
+          'CORE': { label: '✓ CORE RELEVANCE', cls: 'status-v' },
+          'INTERNAL': { label: '⚙ INTERNAL FUNCTION', cls: 'status-p' },
+          'ADJACENT': { label: '⇄ ADJACENT ROLE', cls: 'status-p' },
+          'ATYPICAL': { label: '⚠ ATYPICAL / EXTRAPOLATED', cls: 'status-a' }
+        };
+        const cb = (c.relevance && classBadges[c.relevance.label]) ? classBadges[c.relevance.label] : classBadges['CORE'];
+
+        let bannerHtml = '';
+        if (c.banner) {
+          bannerHtml = `
+            <div class="jd-reg-callout" style="background: rgba(212, 175, 124, 0.1); border-color: rgba(212, 175, 124, 0.35);">
+              <span class="jd-reg-icon">&#9432;</span>
+              <div><strong>Relevance Context:</strong> ${escapeHtml(c.banner)}</div>
+            </div>
+          `;
+        }
+
+        const cutOffText = c.eligibility?.note ? c.eligibility.note : 'Standard 60% consistency floor';
+
+        let mustHavesHtml = '';
+        const mustHaves = Array.isArray(c.mustHave) ? c.mustHave : [];
+        if (mustHaves.length > 0) {
+          mustHavesHtml = `
+            <div class="jd-skills-chips-wrap">
+              <span class="jd-skills-label">Core Must-Haves:</span>
+              ${mustHaves.map(s => `<span class="jd-skill-tag" style="background: rgba(212, 175, 124, 0.16); font-weight: 600; color: #F8F6EF;">${escapeHtml(s)}</span>`).join('')}
+            </div>
+          `;
+        }
+
+        let toolsHtml = '';
+        if (Array.isArray(c.tools) && c.tools.length > 0) {
+          toolsHtml = `
+            <div class="jd-skills-chips-wrap" style="margin-top: 4px;">
+              <span class="jd-skills-label">Tools &amp; Stack:</span>
+              ${c.tools.slice(0, 6).map(t => `<span class="jd-skill-tag">${escapeHtml(t)}</span>`).join('')}
+            </div>
+          `;
+        }
+
+        let regHtml = '';
+        if (c.certifications?.conditional && c.certifications.conditional.length > 0) {
+          regHtml = `
+            <div class="jd-reg-callout">
+              <span class="jd-reg-icon">&#9888;</span>
+              <div><strong>Regulated Sub-Area Certifications:</strong> ${escapeHtml(c.certifications.conditional.join('; '))}</div>
+            </div>
+          `;
+        }
+
+        card.innerHTML = `
+          <div class="jd-benchmark-header">
+            <div class="jd-benchmark-title-wrap">
+              <div class="jd-benchmark-role-title">${escapeHtml(c.title)}</div>
+              <div class="jd-benchmark-path">${escapeHtml(c.companyName)} &bull; ${escapeHtml(c.sector)} &bull; ${escapeHtml(c.domainName)} (${escapeHtml(c.levelLabel)})</div>
+            </div>
+            <div class="jd-badges-row">
+              <span class="jd-status-badge ${cb.cls}">${cb.label}</span>
+            </div>
+          </div>
+
+          <div class="jd-benchmark-meta-chips">
+            <span class="jd-meta-chip">&#127970; <strong>Target:</strong> ${escapeHtml(c.companyName)}</span>
+            <span class="jd-meta-chip">&#127891; <strong>Level:</strong> ${escapeHtml(c.levelLabel)} (${escapeHtml(c.experienceBand)})</span>
+            <span class="jd-meta-chip">&#9878; <strong>Criteria:</strong> ${escapeHtml(cutOffText.slice(0, 75))}${cutOffText.length > 75 ? '...' : ''}</span>
+            ${c.locations ? `<span class="jd-meta-chip">&#128205; ${escapeHtml(c.locations)}</span>` : ''}
+          </div>
+
+          <div class="jd-benchmark-summary" title="${escapeHtml(c.summary)}">${escapeHtml(c.summary)}</div>
+
+          ${bannerHtml}
+          ${regHtml}
+          ${mustHavesHtml}
+          ${toolsHtml}
+
+          <div style="margin-top: 8px; font-size: 10px; color: var(--color-text-muted); font-style: italic; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 6px;">
+            ${escapeHtml(c.disclaimer)}
+          </div>
+        `;
+      }
+
+      function updateGeneratorButtonV3(c) {
+        const btn = document.getElementById('loadSampleJdBtn');
+        if (!btn || !c) return;
+        btn.innerHTML = `&#10024; Load ${escapeHtml(c.companyName)} Benchmark JD`;
+        btn.title = `Click to generate and populate target JD for ${c.companyName} (${c.title})`;
+      }
+
+      if (companySelect) {
+        companySelect.addEventListener('change', () => {
+          state.selectedCompanyId = companySelect.value;
+          if (otherFields) {
+            otherFields.style.display = (state.selectedCompanyId === 'other') ? 'grid' : 'none';
+          }
+          state.selectedRoleId = '';
+          updateRolesDropdown();
+          updateSelectedJd(true);
+        });
+      }
+
+      if (archetypeSelect) {
+        archetypeSelect.addEventListener('change', () => {
+          state.selectedArchetype = archetypeSelect.value;
+          updateSegments();
+          state.selectedRoleId = '';
+          updateRolesDropdown();
+          updateSelectedJd(true);
+        });
+      }
+
+      if (segmentSelect) {
+        segmentSelect.addEventListener('change', () => {
+          state.selectedSegment = segmentSelect.value;
+          updateSelectedJd(true);
+        });
+      }
+
+      domainSelect.addEventListener('change', () => {
+        state.selectedDomainCode = domainSelect.value;
+        if (pasteDomainSelect) {
+          const found = domains.find(d => d.code === domainSelect.value);
+          if (found) pasteDomainSelect.value = found.name;
+        }
+        state.selectedRoleId = '';
+        updateRolesDropdown();
+        updateSelectedJd(true);
+      });
+
+      if (levelSelect) {
+        levelSelect.addEventListener('change', () => {
+          state.selectedLevelCode = levelSelect.value;
+          if (levelPillsContainer) {
+            levelPillsContainer.querySelectorAll('.jd-level-pill').forEach(p => {
+              if (p.getAttribute('data-level') === state.selectedLevelCode) p.classList.add('active');
+              else p.classList.remove('active');
+            });
+          }
+          state.selectedRoleId = '';
+          updateRolesDropdown();
+          updateSelectedJd(true);
+        });
+      }
+
+      if (levelPillsContainer) {
+        levelPillsContainer.addEventListener('click', (e) => {
+          const pill = e.target.closest('.jd-level-pill');
+          if (!pill) return;
+          const lvlCode = pill.getAttribute('data-level');
+          if (!lvlCode) return;
+          levelPillsContainer.querySelectorAll('.jd-level-pill').forEach(p => p.classList.remove('active'));
+          pill.classList.add('active');
+          state.selectedLevelCode = lvlCode;
+          if (levelSelect) levelSelect.value = lvlCode;
+          state.selectedRoleId = '';
+          updateRolesDropdown();
+          updateSelectedJd(true);
+        });
+      }
+
+      if (roleSelect) {
+        roleSelect.addEventListener('change', () => {
+          state.selectedRoleId = roleSelect.value;
+          updateSelectedJd(true);
+        });
+      }
+
+      updateSelectedJd(false);
+      if (jdTextInput && !jdTextInput.value.trim() && state.currentJdCard) {
+        jdTextInput.value = v3.toJDText(state.currentJdCard);
+        updateJdWordCount();
+      }
+
+      return;
+    }
+
+    // Fallback: v2 database
     const domains = window.JD_DATABASE.getDomains();
     const levels = window.JD_DATABASE.getLevels();
 
-    // Populate Domain Dropdown (28 Domains from v2)
     domainSelect.innerHTML = domains.map(d => {
       const typeLabel = d.type === 'industry' ? 'Industry' : 'Function';
       const isSelected = d.code === (state.selectedDomainCode || 'CON') ? 'selected' : '';
       return `<option value="${escapeHtml(d.code)}" ${isSelected}>${escapeHtml(d.name)} (${typeLabel})</option>`;
     }).join('');
 
-    // Also populate Target Domain dropdown in Paste tab if present
     if (pasteDomainSelect) {
       pasteDomainSelect.innerHTML = domains.map(d =>
         `<option value="${escapeHtml(d.name)}">${escapeHtml(d.name)}</option>`
       ).join('');
     }
 
-    // Populate or sync Career Level Dropdown (4 Levels)
     if (levelSelect) {
       levelSelect.innerHTML = levels.map(lvl => {
         const isSelected = lvl.code === (state.selectedLevelCode || 'CAMPUS') ? 'selected' : '';
@@ -687,10 +1074,7 @@ SKILLS & CERTIFICATIONS
       levelSelect.value = state.selectedLevelCode || 'CAMPUS';
     }
 
-    state.selectedDomainCode = state.selectedDomainCode || 'CON';
-    state.selectedLevelCode = state.selectedLevelCode || 'CAMPUS';
-
-    function updateSelectedJd(autoPopulateText = false) {
+    function updateSelectedJdV2(autoPopulateText = false) {
       const jdObj = window.JD_DATABASE.getJd(state.selectedDomainCode, state.selectedLevelCode);
       if (!jdObj) return;
 
@@ -698,8 +1082,8 @@ SKILLS & CERTIFICATIONS
       state.selectedDomain = jdObj.domain;
       state.targetRole = window.JD_DATABASE.getScoringRoleFamily(jdObj);
 
-      renderSnapshotCard(jdObj);
-      updateGeneratorButton(jdObj);
+      renderSnapshotCardV2(jdObj);
+      updateGeneratorButtonV2(jdObj);
 
       if (autoPopulateText && jdTextInput) {
         jdTextInput.value = window.JD_DATABASE.formatJdText(jdObj);
@@ -711,15 +1095,10 @@ SKILLS & CERTIFICATIONS
       }
     }
 
-    function renderSnapshotCard(jd) {
+    function renderSnapshotCardV2(jd) {
       const card = document.getElementById('jdBenchmarkCard');
       if (!card) return;
-
-      if (!jd) {
-        card.style.display = 'none';
-        return;
-      }
-
+      if (!jd) { card.style.display = 'none'; return; }
       card.style.display = 'block';
 
       const statusMap = {
@@ -728,43 +1107,9 @@ SKILLS & CERTIFICATIONS
         'A': { label: 'Assumption-led', cls: 'status-a', icon: '&#8505;' }
       };
       const st = statusMap[jd.status?.code] || { label: 'Institutional Pattern', cls: 'status-v', icon: '&#10003;' };
-
       const locs = Array.isArray(jd.locations) ? jd.locations.slice(0, 4).join(', ') : (jd.locations || '');
       const titlesStr = Array.isArray(jd.titles) ? jd.titles.join(' • ') : (jd.titles || '');
       const cutOffText = jd.academicCutOff?.note ? jd.academicCutOff.note.split('.')[0] : 'Standard 60% consistency floor';
-
-      let regHtml = '';
-      if (jd.certifications?.conditional && jd.certifications.conditional.length > 0) {
-        regHtml = `
-          <div class="jd-reg-callout">
-            <span class="jd-reg-icon">&#9888;</span>
-            <div><strong>Regulated Sub-Area Requirements:</strong> ${escapeHtml(jd.certifications.conditional.join('; '))}</div>
-          </div>
-        `;
-      }
-
-      let subAreasHtml = '';
-      if (Array.isArray(jd.subAreas) && jd.subAreas.length > 0) {
-        subAreasHtml = `
-          <div class="jd-subareas-container">
-            <div class="jd-subareas-label">&#9741; Consolidated Sub-Areas Unified in this Benchmark (${jd.subAreas.length}):</div>
-            <div class="jd-subareas-chips">
-              ${jd.subAreas.map(sa => `<span class="jd-subarea-chip">${escapeHtml(sa)}</span>`).join('')}
-            </div>
-          </div>
-        `;
-      }
-
-      let mustHavesHtml = '';
-      const mustHaves = Array.isArray(jd.mustHave) ? jd.mustHave : [];
-      if (mustHaves.length > 0) {
-        mustHavesHtml = `
-          <div class="jd-skills-chips-wrap">
-            <span class="jd-skills-label">Core Must-Haves:</span>
-            ${mustHaves.map(s => `<span class="jd-skill-tag">${escapeHtml(s)}</span>`).join('')}
-          </div>
-        `;
-      }
 
       card.innerHTML = `
         <div class="jd-benchmark-header">
@@ -777,59 +1122,45 @@ SKILLS & CERTIFICATIONS
             <span class="jd-status-badge ${st.cls}">${st.icon} ${st.label}</span>
           </div>
         </div>
-
         <div class="jd-benchmark-meta-chips">
           <span class="jd-meta-chip">&#127891; <strong>Titles:</strong> ${escapeHtml(titlesStr)}</span>
           <span class="jd-meta-chip">&#127970; ${escapeHtml(jd.employerTypes || 'Tier-1 Corporates & Recruiters')}</span>
           ${locs ? `<span class="jd-meta-chip">&#128205; ${escapeHtml(locs)}</span>` : ''}
           <span class="jd-meta-chip">&#9878; ${escapeHtml(cutOffText)}</span>
         </div>
-
         <div class="jd-benchmark-summary" title="${escapeHtml(jd.summary)}">${escapeHtml(jd.summary)}</div>
-
-        ${subAreasHtml}
-        ${regHtml}
-        ${mustHavesHtml}
       `;
     }
 
-    function updateGeneratorButton(jd) {
+    function updateGeneratorButtonV2(jd) {
       const btn = document.getElementById('loadSampleJdBtn');
       if (!btn) return;
       const label = window.JD_DATABASE.getCustomGeneratorLabel(jd);
       btn.innerHTML = label;
-      btn.title = `Click to load pre-calibrated institutional benchmark JD for ${jd ? jd.domain + ' (' + jd.level + ')' : 'selected domain'}`;
     }
 
-    // Domain change event
     domainSelect.addEventListener('change', () => {
       state.selectedDomainCode = domainSelect.value;
       if (pasteDomainSelect) {
         const found = domains.find(d => d.code === domainSelect.value);
         if (found) pasteDomainSelect.value = found.name;
       }
-      updateSelectedJd(true);
+      updateSelectedJdV2(true);
     });
 
-    // Level select dropdown change event
     if (levelSelect) {
       levelSelect.addEventListener('change', () => {
         state.selectedLevelCode = levelSelect.value;
-        // Sync pills
         if (levelPillsContainer) {
           levelPillsContainer.querySelectorAll('.jd-level-pill').forEach(p => {
-            if (p.getAttribute('data-level') === state.selectedLevelCode) {
-              p.classList.add('active');
-            } else {
-              p.classList.remove('active');
-            }
+            if (p.getAttribute('data-level') === state.selectedLevelCode) p.classList.add('active');
+            else p.classList.remove('active');
           });
         }
-        updateSelectedJd(true);
+        updateSelectedJdV2(true);
       });
     }
 
-    // Level filter pills click handling
     if (levelPillsContainer) {
       levelPillsContainer.addEventListener('click', (e) => {
         const pill = e.target.closest('.jd-level-pill');
@@ -839,15 +1170,12 @@ SKILLS & CERTIFICATIONS
         levelPillsContainer.querySelectorAll('.jd-level-pill').forEach(p => p.classList.remove('active'));
         pill.classList.add('active');
         state.selectedLevelCode = lvlCode;
-        if (levelSelect) {
-          levelSelect.value = lvlCode;
-        }
-        updateSelectedJd(true);
+        if (levelSelect) levelSelect.value = lvlCode;
+        updateSelectedJdV2(true);
       });
     }
 
-    // Initial load: render default selection (CON-CAMPUS) and populate textarea if empty
-    updateSelectedJd(false);
+    updateSelectedJdV2(false);
     if (jdTextInput && !jdTextInput.value.trim() && state.currentJdObject) {
       jdTextInput.value = window.JD_DATABASE.formatJdText(state.currentJdObject);
       updateJdWordCount();
@@ -3012,6 +3340,32 @@ DESIRED QUALIFICATIONS & COMPETENCIES
     const jdLoadToast = document.getElementById('jdLoadToast');
     if (loadSampleJdBtn && jdTextInput) {
       loadSampleJdBtn.addEventListener('click', () => {
+        if (window.JD_DATABASE_V3 && state.currentJdCard) {
+          jdTextInput.value = window.JD_DATABASE_V3.toJDText(state.currentJdCard);
+          state.currentJdObject = state.currentJdCard;
+          state.targetRole = state.currentJdCard.scoring ? state.currentJdCard.scoring.roleFamily : 'consulting';
+          updateJdWordCount();
+          hideError();
+
+          loadSampleJdBtn.classList.add('pulse-active');
+          setTimeout(() => loadSampleJdBtn.classList.remove('pulse-active'), 600);
+
+          jdTextInput.classList.add('textarea-pulse');
+          setTimeout(() => jdTextInput.classList.remove('textarea-pulse'), 800);
+
+          if (jdLoadToast) {
+            const shortTitle = (state.currentJdCard.companyName || 'Target') + ' (' + (state.currentJdCard.domain || 'JD') + ')';
+            jdLoadToast.textContent = `✓ ${shortTitle} Loaded`;
+            jdLoadToast.classList.add('visible');
+            setTimeout(() => jdLoadToast.classList.remove('visible'), 2200);
+          }
+
+          if (state.lastResult) {
+            handleExecuteDiagnostic();
+          }
+          return;
+        }
+
         if (!state.currentJdObject && window.JD_DATABASE) {
           state.currentJdObject = window.JD_DATABASE.getJd(state.selectedDomainCode || 'CON', state.selectedLevelCode || 'CAMPUS') || window.JD_DATABASE.LIBRARY[0];
         }

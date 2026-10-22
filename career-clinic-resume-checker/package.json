@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "jd:extract:v3": "node scripts/extract-jd-database-v3.mjs",
+    "jd:extract:v3": "node scripts/extract-jd-database-v3.mjs && node scripts/build-client-jd-v3.mjs",
+    "jd:bundle:v3": "node scripts/build-client-jd-v3.mjs",
     "jd:extract": "node scripts/extract-jd-library.mjs",
     "test": "vitest run",
     "build": "tsc --noEmit"
