@@ -2516,11 +2516,11 @@ h1, h2, h3, h4, h5, h6 {
   gap: 16px;
   align-items: center;
   min-width: 100%;
-  animation: alumniScrollLeft 50s linear infinite;
+  animation: alumniScrollLeft 80s linear infinite;
 }
 
 .alumni-marquee-track.reverse {
-  animation: alumniScrollRight 54s linear infinite;
+  animation: alumniScrollRight 85s linear infinite;
 }
 
 .alumni-marquee-row:hover .alumni-marquee-track {
