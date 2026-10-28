@@ -109,6 +109,129 @@
     return computeHash(`${normFile}_${normText}_${size || 0}`);
   }
 
+  // Canonical recruitment domain mapping (all 28 RFS v3 codes, legacy role keys, and display variants)
+  const CANONICAL_DOMAINS = {
+    'con': 'Consulting',
+    'fin': 'Finance',
+    'ib': 'Investment Banking',
+    'sal': 'Sales',
+    'mkt': 'Marketing',
+    'pm': 'Product Management',
+    'hr': 'Human Resources',
+    'gm': 'General Management',
+    'ops': 'Operations',
+    'scm': 'Supply Chain',
+    'prc': 'PR & Communications',
+    'leg': 'Legal',
+    'ba': 'Business Analytics',
+    'its': 'IT & Systems',
+    'csm': 'Customer Success',
+    'ent': 'Entrepreneurship',
+    'hcm': 'Healthcare Management',
+    'agb': 'Agribusiness',
+    'rtl': 'Retail Management',
+    're': 'Real Estate',
+    'ppd': 'Public Policy & Development',
+    'esg': 'ESG & Sustainability',
+    'ecm': 'E-commerce',
+    'med': 'Media & Entertainment',
+    'enr': 'Energy',
+    'inf': 'Infrastructure',
+    'tel': 'Telecom',
+    'edt': 'EdTech',
+
+    // Legacy keys & common label variants
+    'consulting': 'Consulting',
+    'consulting & strategy': 'Consulting',
+    'management consulting': 'Consulting',
+    'management consulting & strategy': 'Consulting',
+    'strategy & consulting': 'Consulting',
+    'finance': 'Finance',
+    'finance & banking': 'Finance',
+    'banking & finance': 'Finance',
+    'corporate finance': 'Finance',
+    'investment banking': 'Investment Banking',
+    'investment banking & pe': 'Investment Banking',
+    'sales': 'Sales',
+    'sales & business development': 'Sales',
+    'marketing': 'Marketing',
+    'brand & marketing': 'Marketing',
+    'brand management': 'Marketing',
+    'brand management & marketing': 'Marketing',
+    'sales & marketing': 'Marketing',
+    'product': 'Product Management',
+    'product management': 'Product Management',
+    'prodman': 'Product Management',
+    'human resources': 'Human Resources',
+    'human resources & od': 'Human Resources',
+    'hr & od': 'Human Resources',
+    'people & hr': 'Human Resources',
+    'general management': 'General Management',
+    'general_management': 'General Management',
+    'genman': 'General Management',
+    'general': 'General Management',
+    'leadership & general management': 'General Management',
+    'operations': 'Operations',
+    'supply chain & ops': 'Operations',
+    'operations & supply chain': 'Operations',
+    'supply chain': 'Supply Chain',
+    'supply chain management': 'Supply Chain',
+    'pr & communications': 'PR & Communications',
+    'public relations': 'PR & Communications',
+    'corporate communications': 'PR & Communications',
+    'legal': 'Legal',
+    'analytics': 'Business Analytics',
+    'business analytics': 'Business Analytics',
+    'analytics & data science': 'Business Analytics',
+    'data science & analytics': 'Business Analytics',
+    'data analytics': 'Business Analytics',
+    'it & systems': 'IT & Systems',
+    'information technology': 'IT & Systems',
+    'technology & systems': 'IT & Systems',
+    'customer success': 'Customer Success',
+    'entrepreneurship': 'Entrepreneurship',
+    'founders office': 'Entrepreneurship',
+    "founder's office": 'Entrepreneurship',
+    'healthcare management': 'Healthcare Management',
+    'healthcare': 'Healthcare Management',
+    'pharma & healthcare': 'Healthcare Management',
+    'agribusiness': 'Agribusiness',
+    'retail management': 'Retail Management',
+    'retail': 'Retail Management',
+    'real estate': 'Real Estate',
+    'public policy & development': 'Public Policy & Development',
+    'public policy': 'Public Policy & Development',
+    'esg & sustainability': 'ESG & Sustainability',
+    'sustainability': 'ESG & Sustainability',
+    'e-commerce': 'E-commerce',
+    'ecommerce': 'E-commerce',
+    'media & entertainment': 'Media & Entertainment',
+    'media': 'Media & Entertainment',
+    'energy': 'Energy',
+    'infrastructure': 'Infrastructure',
+    'telecom': 'Telecom',
+    'telecommunications': 'Telecom',
+    'edtech': 'EdTech'
+  };
+
+  function normalizeDomainName(rawDomain) {
+    if (!rawDomain || typeof rawDomain !== 'string') return 'Consulting';
+    const base = rawDomain.split(/[·•]/)[0].trim();
+    if (!base) return 'Consulting';
+    const key = base.toLowerCase().replace(/\s+/g, ' ');
+    if (CANONICAL_DOMAINS[key]) return CANONICAL_DOMAINS[key];
+    if (typeof window !== 'undefined' && window.RFSv3Content && window.RFSv3Content.DOMAINS) {
+      const upper = base.toUpperCase();
+      if (window.RFSv3Content.DOMAINS[upper] && window.RFSv3Content.DOMAINS[upper].n) {
+        return window.RFSv3Content.DOMAINS[upper].n;
+      }
+      for (const d of Object.values(window.RFSv3Content.DOMAINS)) {
+        if (d && d.n && d.n.toLowerCase() === key) return d.n;
+      }
+    }
+    return base.replace(/\b\w+/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+  }
+
   /**
    * Determine if two resume records are duplicates based on name, size, filename, and content
    */
@@ -224,8 +347,8 @@
     const titleB = normalizeFileNameForComparison(b.title || b.fileName);
     const sameTitle = titleA && titleB && titleA === titleB;
 
-    const domainA = (a.domain || '').toLowerCase().trim();
-    const domainB = (b.domain || '').toLowerCase().trim();
+    const domainA = normalizeDomainName(a.domain).toLowerCase();
+    const domainB = normalizeDomainName(b.domain).toLowerCase();
     const sameDomain = domainA && domainB && domainA === domainB;
 
     const sizeA = Number(a.fileSizeBytes) || 0;
@@ -607,7 +730,7 @@
     const jdRecord = {
       id: canonicalId,
       title: title || (file ? file.name : (isLink ? `Job Link: ${urlClean.substring(0, 60)}` : 'Target Job Description')),
-      domain: domain || 'Consulting',
+      domain: normalizeDomainName(domain || 'Consulting'),
       subDomain: subDomain || '',
       fileName: file ? file.name : null,
       fileSizeBytes: fileSizeBytes,
@@ -696,13 +819,13 @@
     });
 
     let jdTitle = 'Custom Target Job Description';
-    let jdDomain = targetRole || 'Consulting';
+    let jdDomain = normalizeDomainName((result && result.roleMeta && result.roleMeta.shortLabel) || targetRole || 'Consulting');
     let jdSubDomain = '';
     let jdLevels = '';
 
     if (jdObject) {
       jdTitle = jdObject.role || jdTitle;
-      jdDomain = jdObject.domain || jdDomain;
+      jdDomain = normalizeDomainName(jdObject.domainName || jdObject.domain || jdDomain);
       jdSubDomain = jdObject.subDomain || '';
       jdLevels = Array.isArray(jdObject.levels) ? jdObject.levels.join(' / ') : (jdObject.levels || '');
     } else if (jdFile) {
@@ -712,6 +835,8 @@
     } else if (jdTab === 'domain') {
       jdTitle = `${(targetRole || 'Placement').toUpperCase()} Placement Benchmark`;
     }
+
+    jdDomain = normalizeDomainName(jdDomain);
 
     const recordedJd = await recordJobDescription({
       file: jdFile,
@@ -954,9 +1079,12 @@
 
     if (filters.domain && filters.domain !== 'all') {
       const dom = filters.domain.toLowerCase();
+      const normFilterDom = normalizeDomainName(filters.domain).toLowerCase();
       filtered = filtered.filter(item => {
-        const itemDom = (item.jobDescription && item.jobDescription.domain || '').toLowerCase();
-        return itemDom.includes(dom) || (item.tags || []).some(t => t.includes(dom));
+        const rawItemDom = (item.jobDescription && item.jobDescription.domain || '');
+        const itemDom = rawItemDom.toLowerCase();
+        const normItemDom = normalizeDomainName(rawItemDom).toLowerCase();
+        return normItemDom === normFilterDom || itemDom.includes(dom) || (item.tags || []).some(t => t.includes(dom));
       });
     }
 
@@ -1138,9 +1266,12 @@
 
     if (filters.domain && filters.domain !== 'all') {
       const dom = filters.domain.toLowerCase().trim();
+      const normFilterDom = normalizeDomainName(filters.domain).toLowerCase();
       records = records.filter(item => {
-        const itemDom = (item.domain || '').toLowerCase().trim();
-        return itemDom.includes(dom);
+        const rawItemDom = (item.domain || '');
+        const itemDom = rawItemDom.toLowerCase().trim();
+        const normItemDom = normalizeDomainName(rawItemDom).toLowerCase();
+        return normItemDom === normFilterDom || itemDom.includes(dom);
       });
     }
 
@@ -1251,7 +1382,7 @@
       if (score >= 80) readyCount++;
       else if (score >= 65) compCount++;
 
-      const dom = (item.jobDescription && item.jobDescription.domain) || 'Consulting';
+      const dom = normalizeDomainName((item.jobDescription && item.jobDescription.domain) || 'Consulting');
       domainCounts[dom] = (domainCounts[dom] || 0) + 1;
     });
 
@@ -1338,7 +1469,7 @@
       // Track target JD from assessment
       if (a.jobDescription) {
         c.targetJdsCount++;
-        const dom = a.jobDescription.domain || 'Consulting';
+        const dom = normalizeDomainName(a.jobDescription.domain || 'Consulting');
         c.jdDomains[dom] = (c.jdDomains[dom] || 0) + 1;
       }
 
@@ -1357,7 +1488,7 @@
       const c = getOrCreateCohort(inst, type);
       if (!c) return;
       c.targetJdsCount++;
-      const dom = j.domain || 'Consulting';
+      const dom = normalizeDomainName(j.domain || 'Consulting');
       c.jdDomains[dom] = (c.jdDomains[dom] || 0) + 1;
     });
 
@@ -1453,7 +1584,7 @@
         escapeCsv(item.resume && item.resume.fileType),
         escapeCsv(item.resume && item.resume.wordCount),
         escapeCsv(item.jobDescription && item.jobDescription.title),
-        escapeCsv(item.jobDescription && item.jobDescription.domain),
+        escapeCsv(normalizeDomainName(item.jobDescription && item.jobDescription.domain)),
         escapeCsv(rep.totalScore),
         escapeCsv(rep.band),
         escapeCsv(getDimScore('quantified')),
@@ -1623,6 +1754,7 @@ www.mycareercompany.com`;
     deleteJobDescription: deleteJobDescription,
     calculateStats: calculateStats,
     calculateCohortStats: calculateCohortStats,
+    normalizeDomain: normalizeDomainName,
     exportToCsv: exportToCsv,
     exportToJson: exportToJson,
     getTeamNotificationData: getTeamNotificationData,

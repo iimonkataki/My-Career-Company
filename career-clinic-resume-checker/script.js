@@ -4476,7 +4476,7 @@ www.mycareercompany.com`;
     card.setAttribute('data-id', item.id);
 
     const title = item.title || item.fileName || 'Target Job Description';
-    const domain = item.domain || 'Consulting';
+    const domain = (window.RepositoryService && typeof window.RepositoryService.normalizeDomain === 'function') ? window.RepositoryService.normalizeDomain(item.domain || 'Consulting') : (item.domain || 'Consulting');
     const evalEmail = (item.evaluator && item.evaluator.email) || 'evaluator@mycareercompany.com';
     const evalInitials = domain.substring(0, 2).toUpperCase();
     const timeSaved = item.formattedTime || (item.createdAt ? new Date(item.createdAt).toLocaleString('en-IN') : 'Saved');
@@ -4558,7 +4558,7 @@ www.mycareercompany.com`;
     const typeBadgeClass = resumeType === 'PDF' ? 'badge-pdf' : (resumeType === 'DOCX' ? 'badge-docx' : 'badge-text');
 
     const jdTitle = (item.jobDescription && item.jobDescription.title) || 'Target Job Description';
-    const jdDomain = (item.jobDescription && item.jobDescription.domain) || 'General';
+    const jdDomain = (window.RepositoryService && typeof window.RepositoryService.normalizeDomain === 'function') ? window.RepositoryService.normalizeDomain((item.jobDescription && item.jobDescription.domain) || 'General') : ((item.jobDescription && item.jobDescription.domain) || 'General');
 
     const evalEmail = (item.evaluator && item.evaluator.email) || 'evaluator@mycareercompany.com';
     const evalName = item.candidateName || (item.evaluator && item.evaluator.name) || evalEmail.split('@')[0];
