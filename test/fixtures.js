@@ -247,3 +247,64 @@ Desired qualifications
 • Strong PowerPoint and Excel skills` },
   J10_DELOITTE_LINK_ONLY: { url: 'https://southasiacareers.deloitte.com/job/Delhi-Deputy-Manager-IT-M&A-Delhi-M&A-Deal-Transformation-&-Post-Merger-integration/59723944/', title: '', text: 'https://southasiacareers.deloitte.com/job/Delhi-Deputy-Manager-IT-M&A-Delhi-M&A-Deal-Transformation-&-Post-Merger-integration/59723944/' }
 };
+
+// v3.3: product-management resumes (the reported 0% case) in four styles
+Object.assign(module.exports.resumes, {
+PM1_FINTECH_PM: { profile:{status:'Working Professional'}, text:`RAHUL MEHTA
+rahul.mehta@gmail.com | +91 98200 11223 | linkedin.com/in/rahulmehta | Bengaluru
+PROFESSIONAL EXPERIENCE
+Razorpay | Product Manager – Payments | Apr 2023 – Present
+• Launched UPI AutoPay mandates for subscription merchants, growing monthly mandate volume from 0.4M to 2.1M in 9 months
+• Wrote PRDs and user stories for the checkout revamp; prioritised the roadmap with 3 engineering squads using RICE
+• Ran 14 A/B tests on the payment page with Mixpanel and SQL, lifting checkout conversion by 6.5%
+• Partnered with design on Figma wireframes and with sales on go-to-market for 1,200 enterprise merchants
+Cred | Associate Product Manager | Jul 2021 – Mar 2023
+• Owned the rewards catalogue: defined success metrics (DAU/MAU, redemption rate) and shipped 9 features in 2-week sprints on Jira
+• Conducted 40+ user interviews to identify drop-offs in onboarding; redesign cut time-to-first-reward by 35%
+EDUCATION
+B.Tech, Computer Science | NIT Trichy | 2017 – 2021
+SKILLS
+Product roadmap, PRD, A/B testing, SQL, Mixpanel, Amplitude, Jira, Figma, Agile/Scrum, user research` },
+ PM2_MBA_PM_INTERN: { profile:{status:'College Student'}, text:`ANANYA IYER
+ananya.iyer@iimb.ac.in | +91 99000 12345
+EDUCATION
+MBA (PGP) | IIM Bangalore | 2025 – 2027
+B.E. Information Technology | PSG College of Technology | 2018 – 2022
+SUMMER INTERNSHIP
+Swiggy | Product Management Intern – Instamart | Apr 2026 – Jun 2026
+• Identified search-to-cart drop-off of 38% through funnel analysis in SQL and Amplitude; proposed 3 fixes adopted in the Q3 roadmap
+• Wrote the PRD for "frequently bought together" and ran an A/B test on 5% traffic, lifting basket size by 4.2%
+WORK EXPERIENCE
+Infosys | Software Engineer | Aug 2022 – May 2025
+• Built REST APIs for a banking client's loan-origination platform; reduced processing time by 22%
+• Worked with the product owner on backlog grooming and sprint planning for a 9-member Agile team
+POSITIONS OF RESPONSIBILITY
+• Coordinator, Product Club (IIM Bangalore): organised a product teardown competition with 600+ participants
+SKILLS
+Product strategy, user research, SQL, Amplitude, Jira, Figma, Python` },
+ PM3_PRODUCT_OWNER: { profile:{status:'Working Professional'}, text:`VIKRAM SINGH
+vikram.singh@outlook.com | +91 98110 44556 | Pune
+EXPERIENCE
+TCS | Product Owner – Digital Banking | Jan 2021 – Present
+• Own the product backlog for the retail mobile banking app (4M users); write user stories and acceptance criteria for 3 Scrum teams
+• Defined the release roadmap with the client CXO team; delivered 11 releases on schedule with 98% UAT pass rate
+• Introduced NPS tracking and in-app feedback, raising app-store rating from 3.6 to 4.4
+Capgemini | Business Analyst | Jun 2017 – Dec 2020
+• Gathered requirements and wrote BRDs for a core-banking migration; mapped 120 processes
+CERTIFICATIONS
+Certified Scrum Product Owner (CSPO), SAFe POPM
+EDUCATION
+MBA (Systems) | Symbiosis Institute of Business Management | 2015 – 2017` },
+ PM4_HEAD_OF_PRODUCT: { profile:{status:'Working Professional'}, text:`NEHA KAPOOR
+neha.kapoor@gmail.com | +91 98765 43210 | Gurugram
+EXPERIENCE
+Zomato | Head of Product – Hyperpure | Feb 2022 – Present
+• Lead a 14-member product and design team; own product strategy, OKRs and the ₹2,000 Cr GMV B2B ordering platform
+• Drove product-market fit for the supplier marketplace; retention improved from 41% to 63%
+MakeMyTrip | Group Product Manager | Jun 2017 – Jan 2022
+• Managed 5 product managers across flights and holidays; launched dynamic pricing which added ₹180 Cr revenue
+Flipkart | Product Manager | Jul 2013 – May 2017
+• Shipped the seller app for 50,000 sellers; owned discovery, experimentation and the quarterly roadmap
+EDUCATION
+MBA | ISB Hyderabad | 2012 – 2013` }
+});

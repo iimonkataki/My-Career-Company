@@ -1512,6 +1512,7 @@ DESIRED QUALIFICATIONS & COMPETENCIES
         }
         const page = await pdfDoc.getPage(pageNum);
         const textContent = await page.getTextContent();
+        const rfsPageText = (window.RFSv3Bridge && window.RFSv3Bridge.pageText) ? window.RFSv3Bridge.pageText(textContent.items, page.view[2] - page.view[0]) : null;
 
         let lastY, lastXEnd, text = '';
         for (const item of textContent.items) {
@@ -1528,6 +1529,7 @@ DESIRED QUALIFICATIONS & COMPETENCIES
           lastXEnd = x + (item.width || 0);
           if (item.hasEOL) { text += '\n'; lastY = undefined; lastXEnd = undefined; }
         }
+        if (rfsPageText) text = rfsPageText;   // v3.3: read two-column resumes column by column
         fullText += text + '\n\n';
       }
 
@@ -2654,7 +2656,7 @@ DESIRED QUALIFICATIONS & COMPETENCIES
     // Render Target Domain Keywords
     const keywordsRoleTitle = document.getElementById('keywordsRoleTitle');
     if (keywordsRoleTitle) {
-      keywordsRoleTitle.textContent = `Target Domain: ${roleMeta.label} Competencies`;
+      keywordsRoleTitle.textContent = `Target Domain: ${roleMeta.label}`;
     }
 
     const keywordMatchRatio = document.getElementById('keywordMatchRatio');
@@ -2978,7 +2980,18 @@ DESIRED QUALIFICATIONS & COMPETENCIES
         state.jdUrl = linkInputElem.value.trim();
       }
 
-      if (state.jdTab === 'upload' && state.jdFile && state.jdArrayBuffer) {
+      if (state.jdTab === 'upload' && !(state.jdFile && state.jdArrayBuffer)) {
+        const pasteTextarea = document.getElementById('jdPasteTextInput');
+        if (pasteTextarea && pasteTextarea.value.trim().length >= 20) {
+          jdTextToAnalyze = pasteTextarea.value.trim();
+        } else {
+          showError(
+            "Missing Job Description",
+            "Please upload a Job Description file (.PDF or .DOCX) or paste the JD text (minimum 20 characters) below."
+          );
+          return;
+        }
+      } else if (state.jdTab === 'upload' && state.jdFile && state.jdArrayBuffer) {
         if (state.jdExtractedText && state.jdExtractedText.length >= 30) {
           jdTextToAnalyze = state.jdExtractedText;
         } else {

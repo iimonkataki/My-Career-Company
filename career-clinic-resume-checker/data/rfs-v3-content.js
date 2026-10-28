@@ -568,7 +568,7 @@
   // Sub-areas inside a domain. Detected from the JD (title weighted 2x). Each adds role-specific skills, certifications and
   // projects so "IT M&A consulting" is never treated as generic "IT & Systems". List the most specific first.
   C.SUBAREAS = [
-    {key:'CON_ITMA', d:'CON', label:'IT M&A · deal technology', re:/\b(it|technology|tech)\b[^.\n]{0,30}\b(m&a|due diligence|dd|diligence|integration|separation|carve-?outs?)\b|\bm&a technology\b|\bit m&a\b|\btechnology (dd|due diligence)\b|\bit due diligence\b/,
+    {key:'CON_ITMA', d:'CON', label:'IT M&A', re:/\b(it|technology|tech)\b[^.\n]{0,30}\b(m&a|due diligence|dd|diligence|integration|separation|carve-?outs?)\b|\bm&a technology\b|\bit m&a\b|\btechnology (dd|due diligence)\b|\bit due diligence\b/,
      terms:['it due diligence','post-merger integration','separation','day 1 planning','it synergies','one-off costs','transition services agreement','it operating model','application rationalisation','infrastructure assessment','pmo','erp'],
      core:['it due diligence','post-merger integration','day 1 planning','it synergies'], certs:['TOGAF','ITIL4','AZ900','AWSCCP','PMP','CAPM','PRINCE2'], projects:'CON_ITMA'},
     {key:'CON_DEAL', d:'CON', label:'Deal advisory / M&A', re:/\bdeal (advisory|transformation)\b|\btransaction (services|advisory)\b|\bpost[- ]merger\b|\bpmi\b|\bcarve-?outs?\b|\b(commercial|operational|financial|vendor) due diligence\b|\bintegration (and|&) separation\b|\bm&a\b|\bsynerg/,
@@ -687,6 +687,37 @@
   C.PROJECTS.FIN_CREDIT = [
     {n:'Credit appraisal note on a listed mid-corporate borrower (CMA data, ratio and cash-flow analysis, covenant proposal)',s:['credit appraisal','financial statement analysis','cma data','underwriting'],lv:['CAMPUS','EARLY'],w:2,proof:'Credit note'},
     {n:'Early-warning dashboard for a 20-account portfolio (ratios, delays, covenant breaches)',s:['portfolio monitoring','dashboarding','financial statement analysis'],lv:['CAMPUS','EARLY','MID'],w:2,proof:'Dashboard'}];
+
+
+  /* ================================================================ v3.3 additions (title variants, founder badge) */
+  // Title variants and acronyms that recruiters and candidates actually use (checked before the generic title rules).
+  // [regex on the canonical role title, {domain: strength}] (strength 1 = unambiguous title for that domain).
+  C.TITLE_VARIANTS = [
+    [/\b(apm|associate pm|associate product manager|spm|senior pm|gpm|group pm|group product manager|principal pm|principal product manager|lead pm|staff pm|product manager|product lead|product owner|head of product|product head|director,? product|director of product|vp,? product|vice president,? product|chief product officer|cpo)\b/, {PM: 1}],
+    [/\b(growth|platform|technical|data|ai|ml|payments|consumer|b2b|saas) (pm|product manager)\b/, {PM: 1}],
+    [/(^|[^a-z])pm([^a-z]|$)/, {PM: 0.85}],                                    // "PM – Payments", "Senior PM" (project manager is handled below)
+    [/\b(technical program manager|tpm)\b/, {PM: 0.7, ITS: 0.6}],
+    [/\b(product analyst|product specialist|product operations|product ops)\b/, {PM: 0.75, BA: 0.5}],
+    [/\b(project manager|project lead|pmo)\b/, {OPS: 0.7, ITS: 0.5, PM: 0}],
+    [/\b(engagement manager|associate consultant|strategy analyst|strategy associate|management consultant|consulting analyst)\b/, {CON: 1}],
+    [/\b(fp&a|financial analyst|credit (analyst|manager|officer)|treasury|controller|chartered accountant|\bca\b|equity research|portfolio manager)\b/, {FIN: 0.9}],
+    [/\b(investment banking|ib analyst|m&a (analyst|associate)|ecm|dcm)\b/, {IB: 1}],
+    [/\b(abm|brand manager|assistant brand manager|growth marketer|performance marketer|digital marketing manager|marketing manager)\b/, {MKT: 1}],
+    [/\b(asm|tsm|rsm|zsm|area sales manager|territory sales manager|kam|key account manager|bdm|bde|business development (manager|executive)|sales manager|account executive|sdr|bdr)\b/, {SAL: 1}],
+    [/\b(hrbp|hr business partner|talent acquisition|recruiter|talent partner|hr generalist|l&d|c&b)\b/, {HR: 1}],
+    [/\b(data analyst|business analyst|data scientist|analytics (manager|consultant|lead)|bi (analyst|developer)|decision scientist)\b/, {BA: 0.9}],
+    [/\b(sap (fico|mm|sd|consultant)|systems analyst|solution architect|it consultant|functional consultant)\b/, {ITS: 1}],
+    [/\b(customer success|csm|client success|account manager)\b/, {CSM: 0.85}],
+    [/\b(chief of staff|founder'?s office|management trainee|general manager|business head)\b/, {GM: 0.85}],
+    [/\b(procurement|category buyer|demand planner|supply planner|supply chain|logistics manager|s&op)\b/, {SCM: 1}],
+    [/\b(operations manager|process excellence|six sigma|ops manager|service delivery)\b/, {OPS: 0.9}],
+    [/\b(category manager|marketplace|seller success)\b/, {ECM: 0.8}],
+    [/\b(esg|sustainability)\b/, {ESG: 1}],
+    [/\b(legal counsel|company secretary|compliance (officer|manager)|associate lawyer|advocate)\b/, {LEG: 1}]
+  ];
+  // Founder / venture experience is shown as a badge (Entrepreneurship is not a suitability domain).
+  C.FOUNDER_RE = /\b(founder|co-founder|cofounder|founding member|bootstrapped|raised (a )?(seed|pre-seed|angel|series [ab])|my own (startup|venture|business)|started (a|my) (startup|venture|company)|entrepreneur)\b/;
+  C.SUITABILITY_EXCLUDE = ['ENT'];
 
   if (typeof module === 'object' && module.exports) { module.exports = C; } else { root.RFS_CONTENT = C; }
 })(this);

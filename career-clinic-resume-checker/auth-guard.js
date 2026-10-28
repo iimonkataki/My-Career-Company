@@ -327,16 +327,16 @@
 
     // 4. Update Header with Role Badge (Co-Founder vs Verified User) & Sign Out button
     if (els.headerUserWidget) {
-      const initials = (user.displayName || user.email || 'CC')
-        .split(' ')
-        .map(n => n[0])
-        .join('')
-        .substring(0, 2)
-        .toUpperCase();
+      const rawName = (user.displayName || user.email || 'CC').trim();
+      const nameParts = rawName.includes('@')
+        ? rawName.split('@')[0].split(/[._\-\s]+/).filter(Boolean)
+        : rawName.split(/\s+/).filter(Boolean);
+      const initials = (nameParts.length >= 2
+        ? (nameParts[0][0] + nameParts[nameParts.length - 1][0])
+        : (nameParts[0] || 'CC').substring(0, 2)
+      ).toUpperCase();
 
-      const avatarHtml = user.photoURL
-        ? `<img src="${user.photoURL}" alt="${user.displayName}" class="auth-admin-avatar-img">`
-        : `<span class="auth-admin-avatar-initials">${initials}</span>`;
+      const avatarHtml = `<span class="auth-admin-avatar-initials">${initials}</span>`;
 
       const roleBadgeHtml = userIsCoFounder
         ? `<span class="auth-admin-tag cofounder-badge">👑 Co-Founder</span>`

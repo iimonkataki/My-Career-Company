@@ -10,7 +10,8 @@ var MATRIX = {
   R4_MID_SALES: ['SAL-MID', 'MKT-MID', 'SAL-CAMPUS', 'J5_MT_SALES_FMCG', 'J8_QCOMM_CATEGORY'],
   R5_SENIOR_HR: ['HR-SENIOR', 'HR-MID', 'GM-SENIOR'],
   R6_XLRI_HR_FRESHER: ['HR-CAMPUS', 'MKT-CAMPUS', 'CON-CAMPUS', 'LEG-CAMPUS', 'J6_ESG_ANALYST'],
-  R7_CONSULT_MA_CREDIT_PDFSPLIT: ['J10_DELOITTE_LINK_ONLY', 'J9_DELOITTE_IT_MA', 'CON-EARLY', 'FIN-EARLY', 'IB-EARLY']
+  R7_CONSULT_MA_CREDIT_PDFSPLIT: ['J10_DELOITTE_LINK_ONLY', 'J9_DELOITTE_IT_MA', 'CON-EARLY', 'FIN-EARLY', 'IB-EARLY'],
+  PM1_FINTECH_PM: ['PM-EARLY', 'BA-EARLY', 'MKT-EARLY'], PM2_MBA_PM_INTERN: ['PM-CAMPUS', 'CON-CAMPUS'], PM3_PRODUCT_OWNER: ['PM-MID', 'ITS-MID'], PM4_HEAD_OF_PRODUCT: ['PM-SENIOR', 'GM-SENIOR']
 };
 var rows = [], v3Scores = [], perResume = {};
 Object.keys(MATRIX).forEach(function (rk) {
@@ -44,7 +45,7 @@ Object.keys(F.customJds).forEach(function (k) {
 });
 
 console.log('\n=== RESUME DOMAIN SUITABILITY (top 3): current vs v3 ===');
-Object.keys(F.resumes).forEach(function (k) {
+Object.keys(MATRIX).forEach(function (k) {
   var o = LEG.calculateDomainSuitability(F.resumes[k].text, 'consulting').slice(0, 3).map(function (x) { return x.key + ' ' + x.score; });
   var rep = rows.filter(function (x) { return x.resume === k; })[0].rep;
   var n = rep.domainSuitability.ranking.slice(0, 3).map(function (x) { return x.code + ' ' + x.score; });
@@ -94,4 +95,21 @@ ok('Thin / link-only JD shows a "paste the full JD" advisory', r10.advisories.so
 console.log('\n=== ACCEPTANCE CHECKS (feedback document) ===');
 checks.forEach(function (c) { console.log((c[0] === 'PASS' ? '✔ ' : '✘ ') + c[0] + '  ' + c[1] + (c[2] ? '  →  ' + c[2] : '')); });
 console.log(checks.filter(function (c) { return c[0] === 'PASS'; }).length + ' / ' + checks.length + ' checks passed');
+
+/* ---------- v3.3 checks: product management 0% bug, title variants, Entrepreneurship removed */
+['PM1_FINTECH_PM', 'PM2_MBA_PM_INTERN', 'PM3_PRODUCT_OWNER', 'PM4_HEAD_OF_PRODUCT'].forEach(function (k) {
+  var r = F.resumes[k], rep = E.analyse({ resumeText: r.text, pageCount: 1, profile: r.profile, jd: { mode: 'library', jdId: 'PM-EARLY' }, today: TODAY });
+  var all = rep.domainSuitability.ranking, pm = all.filter(function (x) { return x.code === 'PM'; })[0];
+  ok('v3.3  ' + k + ': Product Management is the top domain (never 0%)', all[0].code === 'PM' && pm.score >= 60, 'PM ' + pm.score);
+});
+(function () {
+  var mk = function (title) { return 'NAME\nname@x.com | +91 98200 00000\nEXPERIENCE\nAcme Tech | ' + title + ' | Jan 2022 – Present\n• Shipped onboarding revamp and owned the quarterly roadmap with engineering\nEDUCATION\nMBA | XLRI | 2019 – 2021'; };
+  var res = ['Senior PM', 'PM – Payments', 'Associate Product Manager (APM)', 'Product Owner', 'Technical Program Manager'].map(function (t) {
+    var rep = E.analyse({ resumeText: mk(t), pageCount: 1, profile: { status: 'Working Professional' }, jd: { mode: 'library', jdId: 'PM-EARLY' }, today: TODAY });
+    return [t, rep.domainSuitability.ranking[0].code, rep.domainSuitability.ranking.filter(function (x) { return x.code === 'PM'; })[0].score]; });
+  ok('v3.3  PM title variants (Senior PM, PM – Payments, APM, Product Owner, TPM) read as Product Management', res.every(function (x) { return x[1] === 'PM' && x[2] >= 45; }), res.map(function (x) { return x[0] + ' ' + x[2]; }).join(' · '));
+  var rep = E.analyse({ resumeText: F.resumes.PM1_FINTECH_PM.text, pageCount: 1, profile: { status: 'Working Professional' }, jd: { mode: 'library', jdId: 'PM-EARLY' }, today: TODAY });
+  ok('v3.3  Entrepreneurship removed from domain suitability; all 27 other domains returned', !rep.domainSuitability.ranking.some(function (x) { return x.code === 'ENT'; }) && rep.domainSuitability.ranking.length === 27, rep.domainSuitability.ranking.length + ' domains');
+})();
+console.log(checks.filter(function (c) { return c[0] === 'PASS'; }).length + ' / ' + checks.length + ' checks passed (incl. v3.3)');
 module.exports = rows;

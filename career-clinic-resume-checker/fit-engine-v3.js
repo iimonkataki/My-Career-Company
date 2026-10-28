@@ -16,7 +16,7 @@
   }
 })(this, function (C, COMPANIES, SCHOOLS) {
   'use strict';
-  var VERSION = 'RFS-3.2.0';
+  var VERSION = 'RFS-3.3.0';
   var DCODES = Object.keys(C.DOMAINS);
   var LEVEL_ORDER = ['CAMPUS', 'EARLY', 'MID', 'SENIOR'];
 
@@ -474,9 +474,19 @@
     Z.allC = [Z.titleC, Z.respC, Z.reqC, Z.bodyC].join('\n');
     return Z;
   }
+  function titleVariant(titleC, d) {   // v3.3: acronyms and real-world title variants ("Senior PM", "APM", "ASM", "HRBP" …)
+    var best = null, isProject = /\b(project manager|project lead|pmo)\b/.test(titleC);
+    (C.TITLE_VARIANTS || []).forEach(function (tv) {
+      if (!tv[0].test(titleC) || tv[1][d] === undefined) return;
+      if (d === 'PM' && isProject && !/\bproduct\b/.test(titleC)) return;        // "PM" in "Project Manager (PM)" is not product
+      best = Math.max(best === null ? 0 : best, tv[1][d]);
+    });
+    return best;
+  }
   function titleDomainScore(titleC, d) {
     var D = IDX.dom[d];
     for (var i = 0; i < D.strongTitles.length; i++) if (compilePhrase(D.strongTitles[i]).test(titleC)) return 1;
+    var tvs = titleVariant(titleC, d); if (tvs !== null && tvs > 0) return tvs;
     var fw = C.TITLE_FUNCTION_WORDS;
     var hybrid = /\b(product analyst|business analyst|research analyst|relationship manager|program manager|account manager|associate consultant)\b/.test(titleC);
     for (var j = 0; j < fw.length; j++) { if (fw[j][1] === d && compilePhrase(fw[j][0]).test(titleC)) { return firstFunctionWord(titleC) === d ? (hybrid ? 0.4 : 0.85) : 0.3; } }
@@ -799,19 +809,27 @@
     // No full-time roles (fresher): redistribute title/company/bullets weight to internships & projects
     var Wl = Object.assign({}, W);
     if (!ft.length) { Wl.intern += Wl.title + Wl.company + Wl.bullets * 0.5; Wl.bullets *= 0.5; Wl.title = 0; Wl.company = 0; }
-    var out = DCODES.map(function (d) {
+    var SUIT = DCODES.filter(function (d) { return (C.SUITABILITY_EXCLUDE || []).indexOf(d) < 0; });
+    var fullC = R.canon || '';
+    var out = SUIT.map(function (d) {
       var E = 0, contrib = [];
       Object.keys(Wl).forEach(function (k) { var v = Wl[k] * S[d][k]; E += v; if (S[d][k] > 0.05) contrib.push([k, v]); });
       contrib.sort(function (a, b) { return b[1] - a[1]; });
       var evidence = [];
       contrib.forEach(function (x) { (EV[d][x[0]] || []).slice(0, x[0] === 'title' ? 2 : 1).forEach(function (t) { if (evidence.length < 4) evidence.push(x[0] === 'bullets' ? 'Experience: ' + t : x[0] === 'title' ? 'Role: ' + t : x[0] === 'company' ? 'Employer: ' + t : t); }); });
-      return { d: d, name: domName(d), score: Math.round(100 * (1 - Math.exp(-3.4 * E))), E: E, signals: contrib.slice(0, 3).map(function (x) { return x[0]; }), evidence: evidence, raw: S[d] };
+      var sc = Math.round(100 * (1 - Math.exp(-3.4 * E)));
+      // v3.3 evidence floor: domain vocabulary anywhere in the resume keeps a real profile from showing ~0%
+      // (protects against scrambled two-column PDFs, unusual section headings and unrecognised titles)
+      var lx = domainLexScore(fullC, d), floor = lx.hits.length >= 3 ? Math.round(75 * (1 - Math.exp(-2.2 * lx.s))) : 0;
+      if (floor > sc) { sc = floor; if (!evidence.length) evidence.push('Domain vocabulary: ' + lx.hits.slice(0, 3).map(disp).join(', ')); }
+      if (sc < 15 && (S[d].title >= 0.6 || lx.hits.length >= 2)) sc = 15;                // never "0%" when title or core skills are present
+      return { d: d, name: domName(d), score: sc, E: E, signals: contrib.slice(0, 3).map(function (x) { return x[0]; }), evidence: evidence, raw: S[d] };
     }).sort(function (a, b) { return b.score - a.score; });
     out.forEach(function (x) { x.tier = x.score >= 70 ? 'Strong Fit' : x.score >= 45 ? 'Moderate Fit' : 'Developing Fit'; });
     var top = out[0], second = out[1], nSig = top.signals.length;
     var conf = (top.score - second.score >= 15 && nSig >= 3) ? 'HIGH' : (top.score - second.score >= 7 || nSig >= 2) ? 'MEDIUM' : 'LOW';
     // Past (roles) vs emerging (MBA specialisation, internships, certifications, clubs) → career-switcher detection
-    function argmax(keys) { var b = null, bv = 0; DCODES.forEach(function (d) { var v = keys.reduce(function (a, k) { return a + S[d][k]; }, 0); if (v > bv) { bv = v; b = d; } }); return bv > 0.35 ? b : null; }
+    function argmax(keys) { var b = null, bv = 0; SUIT.forEach(function (d) { var v = keys.reduce(function (a, k) { return a + S[d][k]; }, 0); if (v > bv) { bv = v; b = d; } }); return bv > 0.35 ? b : null; }
     var past = ft.length ? argmax(['title', 'company', 'bullets']) : null, emerging = argmax(['spec', 'intern', 'certs', 'clubs']);
     return { ranking: out, top: out.slice(0, 3), confidence: conf, userLevel: lvl, pastDomain: past, emergingDomain: emerging,
              switcher: !!(past && emerging && past !== emerging && C.DOMAINS[past].adj.indexOf(emerging) < 0) };
@@ -1401,7 +1419,8 @@
     if (P.thin) report.advisories.push({ type: 'JD_THIN', text: (P.link && !P.link.readable ? 'We could not read a job title from this link.' : 'We could only read the job title from this link (' + (P.displayTitle || P.title) + ').') +
       ' Websites cannot open other companies\' job pages from your browser, so skills were inferred from the title' + (P.subArea ? ' and the ' + P.subArea.label + ' benchmark' : ' and the ' + domName(P.domain) + ' benchmark') + '. Paste the full JD text for an exact match.' });
     if (P.askUser) report.advisories.push({ type: 'CONFIRM_DOMAIN', text: 'We are not fully sure this JD is ' + domName(P.domain) + '. Please confirm the target domain.' });
-    report.domainSuitability = { ranking: VX.DS.ranking.slice(0, 6).map(function (x) { return { code: x.d, name: x.name, score: x.score, tier: x.tier, signals: x.signals, evidence: x.evidence }; }),
+    report.badges = C.FOUNDER_RE.test(R.canon) ? [{ key: 'FOUNDER', label: 'Founder / venture experience', text: 'Your resume shows founder or venture-building experience. Recruiters for General Management, Product, Sales and Consulting roles value this; describe the venture\'s customers, revenue or funding in numbers.' }] : [];
+    report.domainSuitability = { ranking: VX.DS.ranking.map(function (x) { return { code: x.d, name: x.name, score: x.score, tier: x.tier, signals: x.signals, evidence: x.evidence }; }),
       confidence: VX.DS.confidence, insight: suitabilityInsight(VX.DS, P.domain, R), pastDomain: VX.DS.pastDomain, emergingDomain: VX.DS.emergingDomain, switcher: VX.DS.switcher };
     report._certs = suggestCertifications(R, P, VX);
     report.certifications = report._certs;

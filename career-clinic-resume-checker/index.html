@@ -343,7 +343,7 @@
           <div class="intake-header">
             <span class="intake-badge badge-jd">INPUT C</span>
             <h3 class="intake-title">Target Job Description (JD)</h3>
-            <p class="intake-desc">Upload JD document, paste JD text, provide job link, or choose domain benchmark</p>
+            <p class="intake-desc">Upload or paste a JD, or choose a domain benchmark</p>
           </div>
 
           <!-- JD Tabs -->
@@ -351,14 +351,11 @@
             <button type="button" class="mini-tab active" id="tabJdDomain" role="tab" aria-selected="true">
               Choose company, domain &amp; level
             </button>
-            <button type="button" class="mini-tab" id="tabJdLink" role="tab" aria-selected="false">
+            <button type="button" class="mini-tab" id="tabJdLink" role="tab" aria-selected="false" hidden style="display:none">
               Share a JD link
             </button>
-            <button type="button" class="mini-tab" id="tabJdPaste" role="tab" aria-selected="false">
-              Paste JD text
-            </button>
             <button type="button" class="mini-tab" id="tabJdUpload" role="tab" aria-selected="false">
-              Upload JD file
+              Upload or paste a JD
             </button>
           </div>
 
@@ -385,10 +382,6 @@
               </div>
             </div>
 
-            <div style="text-align: center; margin-top: 10px; font-size: 12px; color: var(--color-text-muted);">
-              Prefer to paste text? <button type="button" class="btn-link-action" id="switchToPasteJdBtn" style="color: var(--color-gold-light); font-weight: 600; text-decoration: underline; background: none; border: none; cursor: pointer; font-size: 12px;">Paste JD text</button>
-            </div>
-
             <!-- Selected JD File Indicator -->
             <div id="jdFileInfoBox" class="file-info-box" style="display:none;">
               <div class="file-info-left">
@@ -399,6 +392,19 @@
                 </div>
               </div>
               <button type="button" class="file-remove-btn" id="jdFileRemoveBtn" title="Remove JD file">&times;</button>
+            </div>
+
+            <!-- Separate Box Below Upload JD Box to Paste JD Text -->
+            <div class="paste-container" style="margin-top: 16px;">
+              <label for="jdPasteTextInput" class="form-label">
+                Or Paste Job Description Text Below
+              </label>
+              <textarea id="jdPasteTextInput" class="resume-textarea" rows="6"
+                placeholder="Paste the specific job description, responsibilities, and required qualifications here..."></textarea>
+              <div class="textarea-footer">
+                <span class="word-counter" id="jdPasteWordCounter">0 words</span>
+                <span class="field-hint">Supports full job specs up to 20,000 characters</span>
+              </div>
             </div>
           </div>
 
@@ -552,18 +558,6 @@
                     <!-- Synced with domain select -->
                   </select>
                 </div>
-              </div>
-
-              <label for="jdPasteTextInput" class="form-label" style="margin-top: 8px;">
-                Paste Specific Job Description Text (from LinkedIn, Naukri, or Company Portal)
-              </label>
-              <textarea id="jdPasteTextInput" class="resume-textarea" rows="8"
-                placeholder="Paste the complete job description text including About the Role, Requirements, Responsibilities, and Qualifications..."></textarea>
-              <div class="textarea-footer">
-                <span class="word-counter" id="jdPasteWordCounter">0 words</span>
-                <button type="button" class="sample-load-btn" id="loadSamplePasteJdBtn">
-                  &#10024; Load Sample Consulting JD
-                </button>
               </div>
             </div>
           </div>
@@ -825,6 +819,9 @@
           <!-- Dynamically populated alignment insights -->
         </div>
       </div>
+
+      <!-- Resume Fit Score v3.3: ATS score, formatting issues, optimizer, guides, LinkedIn optimizer (filled by rfs-v3-bridge.js) -->
+      <div id="rfsExtraDiagnostics"></div>
 
       <!-- Institutional Disclaimer -->
       <aside class="disclaimer-banner" role="note">
@@ -1322,18 +1319,18 @@
   </footer>
 
   <!-- Auth Guard & Email Whitelist Protection -->
-  <script src="auth-guard.js"></script>
+  <script src="auth-guard.js?v=3.3"></script>
 
   <!-- Application Logic & Firebase Repository Service -->
   <script src="jd-database.js"></script>
   <script src="jd-database-v3.js"></script>
   <script src="repository-service.js"></script>
-  <script src="data/rfs-v3-content.js?v=3.2"></script>
-  <script src="data/rfs-v3-companies.js?v=3.2"></script>
-  <script src="data/rfs-v3-schools.js?v=3.2"></script>
-  <script src="fit-engine-v3.js?v=3.2"></script>
-  <script src="rfs-v3-bridge.js?v=3.2"></script>
-  <script src="script.js?v=3.2.1"></script>
+  <script src="data/rfs-v3-content.js?v=3.3"></script>
+  <script src="data/rfs-v3-companies.js?v=3.3"></script>
+  <script src="data/rfs-v3-schools.js?v=3.3"></script>
+  <script src="fit-engine-v3.js?v=3.3"></script>
+  <script src="rfs-v3-bridge.js?v=3.3"></script>
+  <script src="script.js?v=3.3"></script>
 </body>
 
 </html>
