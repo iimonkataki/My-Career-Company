@@ -44,29 +44,144 @@ export async function mountAdmin(root, { user, svc }) {
     renderRequestFilters(A);
     renderList(A);
     renderDetail(A);
-    document.getElementById('count-requests').textContent = String(list.length);
+    updateRepoStats(A);
   }, (err) => {
     console.error('[GetReferred] watchRequests', err);
     setListMessage(A, 'Could not load requests. ' + svc.friendlyError(err));
   });
 }
 
+function updateRepoStats(A) {
+  const list = A.requests || [];
+  const totalCount = list.length;
+  const newCount = list.filter((r) => (r.status || 'new') === 'new').length;
+  const emailedCount = list.filter((r) => r.status === 'poc_emailed').length;
+  const referredCount = list.filter((r) => r.status === 'referred').length;
+  const companiesCount = (A.companies && A.companies.length) || 0;
+
+  const setTxt = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = String(val);
+  };
+  setTxt('count-requests', totalCount);
+  setTxt('count-companies', companiesCount);
+  setTxt('repoStatTotal', totalCount);
+  setTxt('repoStatNew', newCount);
+  setTxt('repoStatEmailed', emailedCount);
+  setTxt('repoStatReferred', referredCount);
+  setTxt('repoStatCompanies', companiesCount);
+}
+
+function openTeamNotifySummaryModal(A) {
+  const modal = document.getElementById('teamNotifyModal');
+  if (!modal) return;
+  const list = A.requests || [];
+  const totalCount = list.length;
+  const newCount = list.filter((r) => (r.status || 'new') === 'new').length;
+  const emailedCount = list.filter((r) => r.status === 'poc_emailed').length;
+  const referredCount = list.filter((r) => r.status === 'referred').length;
+  const recent = list.slice(0, 5).map((r, idx) =>
+    `${idx + 1}. ${r.fullName} — ${r.company} (Job ID: ${r.jobId}) [${statusLabel(r.status || 'new')}]`
+  ).join('\n') || 'No referral requests submitted yet.';
+
+  const toEmails = 'upam.patra@gmail.com,iimonkataki@mycareercompany.com,ibonkataki@mycareercompany.com,anirbanroy@mycareercompany.com';
+  const subject = `[Career Clinic] Get Referred™ Repository Digest — ${totalCount} Total Requests (${newCount} New)`;
+  const body = `Dear Co-Founders,
+
+Here is the latest status digest from the Career Clinic — Get Referred™ Referral Repository:
+
+• Total Referral Requests: ${totalCount}
+• New / Pending Action: ${newCount}
+• POC Emailed: ${emailedCount}
+• Marked Referred: ${referredCount}
+• Active Partner Companies: ${(A.companies && A.companies.length) || 0}
+
+Latest Requests:
+${recent}
+
+Open Referral Repository:
+https://www.mycareercompany.com/getreferred#admin
+
+Best regards,
+${A.adminName}
+My Career Company`;
+
+  const subjEl = document.getElementById('notifySubjectInput');
+  const bodyEl = document.getElementById('notifyBodyTextarea');
+  const gmailBtn = document.getElementById('modalGmailComposeBtn');
+  const outlookBtn = document.getElementById('modalOutlookWebBtn');
+  const mailtoBtn = document.getElementById('modalMailtoBtn');
+  const copyNote = document.getElementById('notifyCopySuccessNote');
+
+  if (subjEl) subjEl.value = subject;
+  if (bodyEl) bodyEl.value = body;
+  if (copyNote) copyNote.style.display = 'none';
+  if (gmailBtn) {
+    gmailBtn.href = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(toEmails)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }
+  if (outlookBtn) {
+    outlookBtn.href = `https://outlook.office.com/mail/deeplink/compose?to=${encodeURIComponent(toEmails)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }
+  if (mailtoBtn) {
+    mailtoBtn.href = `mailto:${toEmails}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }
+  modal.style.display = 'flex';
+}
+
 /* ===================== shell ===================== */
 
 function buildShell(A) {
-  const subTab = (id, label, countId) => h('button', {
-    class: 'subtab', type: 'button', role: 'tab', id: 'subtab-' + id, 'aria-selected': String(A.view === id),
-    onclick: () => switchView(A, id),
-  }, label, countId ? h('span', { class: 'subtab-count', id: countId }, '0') : null);
+  const statCard = (id, label) => h('div', { class: 'repo-stat-card' },
+    h('div', { class: 'repo-stat-num', id }, '0'),
+    h('div', { class: 'repo-stat-label' }, label));
 
   return h('div', { class: 'admin' },
-    h('div', { class: 'admin-head' },
-      h('div', {},
-        h('h2', { class: 'admin-title' }, 'Referral Repository'),
-        h('p', { class: 'admin-sub' }, `Signed in as ${A.user.email}`)),
-      h('div', { class: 'subtabs', role: 'tablist', 'aria-label': 'Admin sections' },
-        subTab('requests', 'Requests', 'count-requests'),
-        subTab('database', 'Companies & POCs'))),
+    h('div', { class: 'repo-header-block' },
+      h('div', { class: 'repo-header-meta' },
+        h('div', { class: 'repo-eyebrow' }, 'CAREER CLINIC • INSTITUTIONAL ARCHIVE'),
+        h('h1', { class: 'repo-title' }, 'Referral Repository & Archive'),
+        h('p', { class: 'repo-subtitle' }, 'Secure cloud repository linking all candidate referral requests, uploaded resumes, target job IDs, and alumni POC directories to Google Firebase.'),
+        h('div', { class: 'repo-security-badges' },
+          h('span', { class: 'badge-repo-sec' }, '🔒 Firebase Firestore & Storage Linked'),
+          h('span', { class: 'badge-repo-sec' }, '👥 Restricted to 4 Authorized Reviewers'))),
+      h('div', { class: 'repo-header-actions' },
+        h('button', {
+          type: 'button', class: 'btn-primary', id: 'repoNotifyTeamBtn',
+          onclick: () => openTeamNotifySummaryModal(A),
+        }, h('span', { class: 'btn-icon' }, '📢'), ' Notify Team on Email'),
+        h('button', {
+          type: 'button', class: 'btn-outline', id: 'repoExportCsvBtn',
+          onclick: () => exportCsv(A),
+        }, h('span', { class: 'btn-icon' }, '📥'), ' Export CSV'),
+        h('button', {
+          type: 'button', class: 'btn-outline', id: 'repoRefreshBtn',
+          onclick: async () => {
+            await reloadDatabase(A);
+            renderRequestFilters(A);
+            renderList(A);
+            renderDetail(A);
+            if (A.view === 'database') renderDatabase(A);
+            toast('Repository refreshed');
+          },
+        }, h('span', { class: 'btn-icon' }, '🔄'), ' Refresh'))),
+
+    h('div', { class: 'repo-stats-grid' },
+      statCard('repoStatTotal', 'Referral Requests'),
+      statCard('repoStatNew', 'New / Pending'),
+      statCard('repoStatEmailed', 'POC Emailed'),
+      statCard('repoStatReferred', 'Referred'),
+      statCard('repoStatCompanies', 'Partner Companies')),
+
+    h('div', { class: 'repo-category-tabs', role: 'tablist', 'aria-label': 'Admin sections' },
+      h('button', {
+        class: 'repo-cat-tab active', type: 'button', role: 'tab', id: 'subtab-requests', 'aria-selected': 'true',
+        onclick: () => switchView(A, 'requests'),
+      }, '📊 Referral Requests ( ', h('span', { id: 'count-requests' }, '0'), ' )'),
+      h('button', {
+        class: 'repo-cat-tab', type: 'button', role: 'tab', id: 'subtab-database', 'aria-selected': 'false',
+        onclick: () => switchView(A, 'database'),
+      }, '🏢 Companies & POCs ( ', h('span', { id: 'count-companies' }, '0'), ' )')),
+
     h('div', { id: 'admin-view-requests' }, buildRequestsView(A)),
     h('div', { id: 'admin-view-database', hidden: true }, buildDatabaseView(A)),
     buildEmailDialog(A));
@@ -75,8 +190,13 @@ function buildShell(A) {
 function switchView(A, id) {
   A.view = id;
   ['requests', 'database'].forEach((v) => {
-    document.getElementById('subtab-' + v).setAttribute('aria-selected', String(v === id));
-    document.getElementById('admin-view-' + v).hidden = v !== id;
+    const btn = document.getElementById('subtab-' + v);
+    if (btn) {
+      btn.setAttribute('aria-selected', String(v === id));
+      btn.classList.toggle('active', v === id);
+    }
+    const pane = document.getElementById('admin-view-' + v);
+    if (pane) pane.hidden = v !== id;
   });
   if (id === 'database') renderDatabase(A);
 }
@@ -87,6 +207,7 @@ async function reloadDatabase(A) {
     A.pocs = pocData.pocs;
     A.pocMeta = pocData;
     A.companies = pub.companies;
+    updateRepoStats(A);
   } catch (e) {
     console.error('[GetReferred] load database', e);
     toast('Could not load the POC database. ' + A.svc.friendlyError(e), 'error');
@@ -97,17 +218,29 @@ async function reloadDatabase(A) {
 
 function buildRequestsView(A) {
   const search = h('input', {
-    type: 'search', id: 'req-search', placeholder: 'Search name, email, job ID or reference', 'aria-label': 'Search requests',
+    type: 'search', id: 'req-search', class: 'repo-search-input',
+    placeholder: 'Search by candidate name, email, company, job ID, or reference...', 'aria-label': 'Search requests',
     oninput: (e) => { A.filters.q = e.target.value; renderList(A); },
   });
-  const company = h('select', { id: 'req-company', 'aria-label': 'Filter by company', onchange: (e) => { A.filters.company = e.target.value; renderList(A); } });
-  const status = h('select', { id: 'req-status', 'aria-label': 'Filter by status', onchange: (e) => { A.filters.status = e.target.value; renderList(A); } },
-    h('option', { value: '' }, 'All statuses'),
+  const company = h('select', { id: 'req-company', class: 'repo-select', 'aria-label': 'Filter by company', onchange: (e) => { A.filters.company = e.target.value; renderList(A); } });
+  const status = h('select', { id: 'req-status', class: 'repo-select', 'aria-label': 'Filter by status', onchange: (e) => { A.filters.status = e.target.value; renderList(A); } },
+    h('option', { value: '' }, 'All Statuses'),
     REQUEST_STATUSES.map((s) => h('option', { value: s.value }, s.label)));
-  const exportBtn = h('button', { type: 'button', class: 'button button-ghost', onclick: () => exportCsv(A) }, 'Export CSV');
+  const exportBtn = h('button', { type: 'button', class: 'btn-outline', onclick: () => exportCsv(A) }, '📥 Export CSV');
 
   return h('div', { class: 'requests' },
-    h('div', { class: 'toolbar' }, search, company, status, exportBtn),
+    h('div', { class: 'repo-toolbar' },
+      h('div', { class: 'repo-search-group' },
+        h('span', { class: 'repo-search-icon' }, '🔍'),
+        search),
+      h('div', { class: 'repo-filters-group' },
+        h('div', { class: 'repo-filter-item' },
+          h('label', { class: 'repo-filter-label', for: 'req-company' }, 'Company:'),
+          company),
+        h('div', { class: 'repo-filter-item' },
+          h('label', { class: 'repo-filter-label', for: 'req-status' }, 'Status:'),
+          status),
+        exportBtn)),
     h('div', { class: 'split' },
       h('div', { class: 'list-pane' }, h('ul', { class: 'req-list', id: 'req-list', 'aria-label': 'Referral requests' })),
       h('div', { class: 'detail-pane', id: 'req-detail', tabindex: '-1' },

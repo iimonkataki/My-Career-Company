@@ -15,8 +15,8 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="/get-referred/style.css?v=2.2">
-  <script type="module" src="/get-referred/app.js?v=2.2"></script>
+  <link rel="stylesheet" href="/get-referred/style.css?v=2.3">
+  <script type="module" src="/get-referred/app.js?v=2.3"></script>
 </head>
 
 <body>
@@ -439,7 +439,7 @@
     </section>
 
     <!-- ===================== TAB 2: REFERRAL REPOSITORY (CO-FOUNDERS ONLY) ===================== -->
-    <section id="view-admin" role="tabpanel" aria-labelledby="tab-admin" hidden>
+    <section class="repository-section" id="view-admin" role="tabpanel" aria-labelledby="tab-admin" hidden>
       <div id="admin-root">
         <div class="signin-card" id="admin-signin">
           <h2>Referral Repository</h2>
@@ -456,9 +456,9 @@
         <div class="access-header-eyebrow">ADMINISTRATIVE CONSOLE &bull; WHITELIST CONTROLLER</div>
         <h2 class="access-title">Access Management &amp; Whitelisted Users</h2>
         <p class="access-subtitle">
-          Manage authorized accounts permitted to access the <strong>Get Referred&trade; Portal</strong>
-          (<code>www.mycareercompany.com/getreferred</code>). Grant new user access with automated invitation emails or
-          revoke existing access. Primary Co-Founders retain permanent administrative rights.
+          Manage authorized accounts permitted to access the <strong>Get Referred&trade; Portal</strong>. Grant new user
+          access with automated invitation emails or revoke existing access. Primary Co-Founders retain permanent
+          administrative rights.
         </p>
 
         <!-- Access Stats Bar -->
@@ -484,33 +484,33 @@
           <div class="access-add-icon">➕</div>
           <div>
             <h3 class="access-add-title">Grant Access to New User</h3>
-            <p class="access-add-sub">Enter the candidate, student, or coordinator Google email address. An official
-              welcome email with the direct Get Referred&trade; portal link will be dispatched automatically.</p>
+            <p class="access-add-sub">Enter the candidate, faculty, or evaluator Google email address. An access
+              notification will be queued and ready to dispatch with the portal URL.</p>
           </div>
         </div>
 
         <form id="accessGrantForm" class="access-grant-form">
           <div class="access-form-grid">
             <div class="form-group">
-              <label for="newAccessEmail" class="label">Email Address (Google Account) <span
+              <label for="newAccessEmail" class="form-label">Email Address (Google Account) <span
                   class="required-star">*</span></label>
-              <input type="email" id="newAccessEmail" placeholder="e.g. candidate@iima.ac.in or student@gmail.com"
-                required>
+              <input type="email" id="newAccessEmail" class="form-input-text"
+                placeholder="e.g. candidate@iima.ac.in or recruiter@company.com" required>
             </div>
             <div class="form-group">
-              <label for="newAccessName" class="label">Full Name / Designation <span
-                  class="optional">(Optional)</span></label>
-              <input type="text" id="newAccessName" placeholder="e.g. Rahul Sharma (MBA Candidate)">
+              <label for="newAccessName" class="form-label">Full Name / Designation (Optional)</label>
+              <input type="text" id="newAccessName" class="form-input-text"
+                placeholder="e.g. Rahul Sharma (MBA Candidate)">
             </div>
             <div class="form-group">
-              <label for="newAccessInstitution" class="label">College / Company <span
-                  class="optional">(Optional)</span></label>
-              <input type="text" id="newAccessInstitution" placeholder="e.g. IIM Ahmedabad or McKinsey">
+              <label for="newAccessInstitution" class="form-label">College / Company (Optional)</label>
+              <input type="text" id="newAccessInstitution" class="form-input-text"
+                placeholder="e.g. IIM Ahmedabad or McKinsey">
             </div>
           </div>
 
           <div class="access-form-actions">
-            <button type="submit" class="button button-primary" id="btnGrantAccess">
+            <button type="submit" class="btn-primary" id="btnGrantAccess">
               <span class="btn-icon">✉️</span> Grant Access &amp; Send Invitation
             </button>
             <span class="access-grant-status" id="accessGrantStatus" style="display: none;"></span>
@@ -523,7 +523,7 @@
         <div class="access-table-header">
           <h3 class="access-table-title">Authorized Email Accounts (<span id="accessTableCount">4</span>)</h3>
           <div class="access-table-search">
-            <input type="search" id="accessSearchInput" class="repo-search-input"
+            <input type="text" id="accessSearchInput" class="repo-search-input"
               placeholder="Search access list by email, name, or affiliation...">
           </div>
         </div>
@@ -591,22 +591,88 @@
           <textarea class="notify-textarea" id="inviteBodyTextarea" readonly rows="8"></textarea>
         </div>
 
-        <div class="invite-dispatch-status-badge">
+        <div class="invite-dispatch-status-badge" id="inviteDispatchStatusBadge">
           <span class="dispatch-dot"></span>
           <span>Automated Email Dispatched from <strong>support@mycareercompany.com</strong></span>
         </div>
 
         <div class="notify-actions-bar">
-          <button type="button" class="button button-primary" id="modalResendInviteAutomatedBtn">
+          <button type="button" class="btn-primary btn-notify-send" id="modalResendInviteAutomatedBtn">
             <span class="btn-icon">✉️</span> Resend Automated Email
           </button>
-          <button type="button" class="button button-ghost" id="modalCopyInviteEmailBtn">
+          <button type="button" class="btn-outline" id="modalCopyInviteEmailBtn">
             <span class="btn-icon">📋</span> Copy Message
           </button>
-          <button type="button" class="button button-ghost" id="modalCopyPortalLinkBtn">
+          <button type="button" class="btn-outline" id="modalCopyPortalLinkBtn">
             <span class="btn-icon">🔗</span> Copy Portal Link
           </button>
           <span class="copy-success-note" id="inviteCopySuccessNote" style="display: none;">✓ Copied!</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Team Notification Modal (Matching Resume Fit Score™ Repository) -->
+  <div class="modal-overlay" id="teamNotifyModal" style="display: none;" role="dialog" aria-modal="true"
+    aria-labelledby="notifyModalTitle">
+    <div class="modal-card modal-notify-card">
+      <div class="modal-header">
+        <div class="modal-header-text">
+          <div class="modal-eyebrow">ADMINISTRATIVE ACCESS &bull; NOTIFICATION HUB</div>
+          <h3 class="modal-title" id="notifyModalTitle">📢 Notify Authorized Evaluators</h3>
+        </div>
+        <button type="button" class="modal-close-btn" id="modalCloseNotifyBtn" aria-label="Close modal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <p class="notify-intro">
+          Send the official notification email to the 4 whitelisted Co-Founders with direct access credentials and link
+          to the Get Referred&trade; Repository &amp; Portal.
+        </p>
+
+        <div class="notify-recipients-box">
+          <span class="notify-recipients-label">Authorized Recipients (Strict Whitelist):</span>
+          <div class="notify-chips">
+            <span class="notify-chip">upam.patra@gmail.com</span>
+            <span class="notify-chip">iimonkataki@mycareercompany.com</span>
+            <span class="notify-chip">anirbanroy@mycareercompany.com</span>
+            <span class="notify-chip">ibonkataki@mycareercompany.com</span>
+          </div>
+        </div>
+
+        <div class="notify-preview-group">
+          <label class="notify-field-label">Subject:</label>
+          <input type="text" class="notify-input" id="notifySubjectInput" readonly
+            value="[Career Clinic] Get Referred™ Repository & Portal Access Activated">
+        </div>
+
+        <div class="notify-preview-group">
+          <label class="notify-field-label">Message Preview:</label>
+          <textarea class="notify-textarea" id="notifyBodyTextarea" readonly
+            rows="8">Dear Founding Team,
+
+The Career Clinic Get Referred™ Portal & Referral Repository is live and linked to Google Firebase.
+
+Direct Portal URL: https://www.mycareercompany.com/getreferred
+Repository URL: https://www.mycareercompany.com/getreferred#admin
+Access Management URL: https://www.mycareercompany.com/getreferred#access
+
+Sign in with your authorized Google account to review incoming referral requests, route candidate profiles to verified IIM Alumni & corporate POCs, and manage candidate access permissions.
+
+Warm regards,
+My Career Company — Institutional Desk
+support@mycareercompany.com</textarea>
+        </div>
+
+        <div class="notify-actions-bar">
+          <a href="mailto:upam.patra@gmail.com,iimonkataki@mycareercompany.com,anirbanroy@mycareercompany.com,ibonkataki@mycareercompany.com?subject=%5BCareer%20Clinic%5D%20Get%20Referred%E2%84%A2%20Repository%20%26%20Portal%20Access%20Activated&body=Dear%20Founding%20Team%2C%0A%0AThe%20Career%20Clinic%20Get%20Referred%E2%84%A2%20Portal%20%26%20Referral%20Repository%20is%20live%20and%20linked%20to%20Google%20Firebase.%0A%0ADirect%20Portal%20URL%3A%20https%3A%2F%2Fwww.mycareercompany.com%2Fgetreferred%0ARepository%20URL%3A%20https%3A%2F%2Fwww.mycareercompany.com%2Fgetreferred%23admin%0AAccess%20Management%3A%20https%3A%2F%2Fwww.mycareercompany.com%2Fgetreferred%23access%0A%0AWarm%20regards%2C%0AMy%20Career%20Company"
+            id="modalSendMailtoBtn" class="btn-primary btn-notify-send" target="_blank">
+            <span class="btn-icon">✉️</span> Open in Email Client (Pre-filled Mailto)
+          </a>
+          <button type="button" class="btn-outline" id="modalCopyEmailBtn">
+            <span class="btn-icon">📋</span> Copy Email to Clipboard
+          </button>
+          <span class="copy-success-note" id="notifyCopySuccessNote" style="display: none;">✓ Copied to clipboard!</span>
         </div>
       </div>
     </div>

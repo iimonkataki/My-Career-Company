@@ -307,7 +307,7 @@ svc.onAuth(async (user) => {
     if (!state.adminMounted) {
       state.adminMounted = true;
       try {
-        const mod = await import('./admin.js?v=2.1');
+        const mod = await import('./admin.js?v=2.3');
         await mod.mountAdmin($('admin-root'), { user, svc });
       } catch (e) {
         state.adminMounted = false;
@@ -333,17 +333,44 @@ svc.onAuth(async (user) => {
 
 async function loadAccessView() {
   if (!state.user || !svc.isAdminEmail(state.user.email)) return;
+  const tbody = $('accessTableBody');
+  const statTotal = $('accessStatTotal');
+  const statCoFounders = $('accessStatCoFounders');
+  const statEvaluators = $('accessStatEvaluators');
+  const tableCount = $('accessTableCount');
+
+  if (tbody) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; padding: 24px; color: var(--color-gold-light);">
+          Loading authorized access whitelist...
+        </td>
+      </tr>
+    `;
+  }
+
   try {
     const users = await svc.fetchAllowedUsers();
     state.allowedUsers = users;
-    const totalEl = $('accessTotalUsersCount');
-    const dynamicEl = $('accessDynamicCount');
-    if (totalEl) totalEl.textContent = String(users.length);
-    if (dynamicEl) dynamicEl.textContent = String(users.filter((u) => !u.isFounder).length);
+    const foundersCount = users.filter((u) => u.isFounder).length;
+    const grantedCount = users.filter((u) => !u.isFounder).length;
+    if (statTotal) statTotal.textContent = String(users.length);
+    if (statCoFounders) statCoFounders.textContent = String(foundersCount);
+    if (statEvaluators) statEvaluators.textContent = String(grantedCount);
+    if (tableCount) tableCount.textContent = String(users.length);
     renderAccessTable(users, ($('accessSearchInput') && $('accessSearchInput').value) || '');
   } catch (err) {
     console.error('[GetReferred] loadAccessView failed', err);
     toast('Could not load access directory: ' + svc.friendlyError(err), 'error');
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 24px; color: #FFA4A4;">
+            Failed to load access whitelist: ${escapeHtml(svc.friendlyError(err))}
+          </td>
+        </tr>
+      `;
+    }
   }
 }
 
@@ -366,46 +393,96 @@ function renderAccessTable(users, query = '') {
   }
 
   tbody.innerHTML = filtered.map((u) => {
-    const nameStr = u.name || u.email.split('@')[0];
-    const parts = nameStr.split(/[\s._-]+/).filter(Boolean);
-    const initials = (parts.length >= 2 ? parts[0][0] + parts[parts.length - 1][0] : (parts[0] || 'U').slice(0, 2)).toUpperCase();
-    const roleBadge = u.isFounder
-      ? `<span class="badge-founder">👑 Co-Founder</span>`
-      : `<span class="badge-granted">👤 Candidate / User</span>`;
-    const grantedDate = u.isFounder
-      ? 'Permanent'
-      : (u.grantedAt ? new Date(u.grantedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Active');
-    const actionsHtml = u.isFounder
-      ? `<span class="action-locked">Permanent Co-Founder</span>`
-      : `<button type="button" class="btn-resend" data-resend-email="${escapeHtml(u.email)}" data-resend-name="${escapeHtml(u.name || '')}" data-resend-inst="${escapeHtml(u.institution || '')}">✉️ Invite</button>
-         <button type="button" class="btn-revoke" data-revoke-email="${escapeHtml(u.email)}">Revoke</button>`;
+    if (u.isFounder) {
+      const displayName = u.name || u.email.split('@')[0];
+      const initials = displayName.split(' ').map((w) => w[0]).join('').toUpperCase().substring(0, 2);
+      const inst = u.institution || 'My Career Company';
+      return `
+        <tr class="access-row-founder">
+          <td>
+            <div class="access-user-cell">
+              <div class="access-user-avatar" style="background: rgba(212, 175, 124, 0.25); color: var(--color-gold-light);">${escapeHtml(initials)}</div>
+              <div>
+                <div style="font-weight: 700; color: #FFF;">${escapeHtml(displayName)}</div>
+                <div style="font-size: 11.5px; color: var(--color-gold-light); font-family: monospace;">${escapeHtml(u.email)}</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="badge-founder">Co-Founder (Owner)</span></td>
+          <td><span style="color: var(--color-text-secondary);">${escapeHtml(inst)}</span></td>
+          <td><span style="color: var(--color-text-muted); font-size: 11.5px;">Permanent</span></td>
+          <td><span class="status-active">● Active</span></td>
+          <td><span class="action-locked">🔒 Primary Owner</span></td>
+        </tr>
+      `;
+    }
+
+    const displayName = u.name || u.email.split('@')[0];
+    const initials = displayName.substring(0, 2).toUpperCase();
+    const inst = u.institution || '—';
+    const grantedDate = u.grantedAt
+      ? new Date(u.grantedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+      : 'Active';
 
     return `
-      <tr>
+      <tr class="access-row-granted" data-email="${escapeHtml(u.email)}">
         <td>
           <div class="access-user-cell">
-            <div class="access-user-avatar">${escapeHtml(initials)}</div>
-            <div class="access-user-details">
-              <span class="access-user-name">${escapeHtml(u.name || 'Authorized User')}</span>
-              ${u.institution ? `<span class="access-user-inst">${escapeHtml(u.institution)}</span>` : ''}
+            <div class="access-user-avatar" style="background: rgba(66, 133, 244, 0.2); color: #8AB4F8;">${escapeHtml(initials)}</div>
+            <div>
+              <div style="font-weight: 700; color: #FFF;">${escapeHtml(displayName)}</div>
+              <div style="font-size: 11.5px; color: #8AB4F8; font-family: monospace;">${escapeHtml(u.email)}</div>
             </div>
           </div>
         </td>
-        <td><span class="access-user-email">${escapeHtml(u.email)}</span></td>
-        <td>${roleBadge}</td>
-        <td><span class="status-active">Active</span></td>
-        <td>${escapeHtml(grantedDate)}</td>
-        <td style="text-align: right;">${actionsHtml}</td>
+        <td><span class="badge-granted">Granted User</span></td>
+        <td><span style="color: var(--color-text-secondary);">${escapeHtml(inst)}</span></td>
+        <td><span style="color: var(--color-text-muted); font-size: 11.5px;">${escapeHtml(grantedDate)}</span></td>
+        <td><span class="status-active">● Active</span></td>
+        <td>
+          <button type="button" class="btn-resend" data-resend-email="${escapeHtml(u.email)}" data-resend-name="${escapeHtml(displayName)}" data-resend-inst="${escapeHtml(inst)}" title="Open invitation email">
+            ✉️ Invite
+          </button>
+          <button type="button" class="btn-revoke" data-revoke-email="${escapeHtml(u.email)}" title="Revoke access for this user">
+            Revoke
+          </button>
+        </td>
       </tr>
     `;
   }).join('');
 
   tbody.querySelectorAll('[data-resend-email]').forEach((btn) => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const email = btn.getAttribute('data-resend-email');
       const name = btn.getAttribute('data-resend-name');
       const inst = btn.getAttribute('data-resend-inst');
-      openAccessInviteModal(email, name, inst, false);
+
+      btn.disabled = true;
+      const origHtml = btn.innerHTML;
+      btn.innerHTML = 'Sending...';
+      try {
+        await svc.sendInvitationEmail(email, {
+          name,
+          institution: inst === '—' ? '' : inst,
+          grantedBy: (state.user && state.user.email) || 'Co-Founder',
+        });
+        btn.innerHTML = '✓ Sent!';
+        const statusEl = $('accessGrantStatus');
+        if (statusEl) {
+          statusEl.style.display = 'inline-flex';
+          statusEl.className = 'access-grant-status success-banner';
+          statusEl.innerHTML = `✓ <strong>Invitation Re-Dispatched:</strong> Automated email sent from <code>support@mycareercompany.com</code> to <strong>${escapeHtml(email)}</strong>.`;
+        }
+        openAccessInviteModal(email, name, inst === '—' ? '' : inst, true);
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.innerHTML = origHtml;
+        }, 3000);
+      } catch (err) {
+        toast('Could not send invitation email: ' + svc.friendlyError(err), 'error');
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+      }
     });
   });
 
@@ -413,7 +490,7 @@ function renderAccessTable(users, query = '') {
     btn.addEventListener('click', async () => {
       const email = btn.getAttribute('data-revoke-email');
       if (!email) return;
-      if (!confirm(`Revoke Get Referred™ portal access for ${email}?`)) return;
+      if (!confirm(`Are you sure you want to revoke access for ${email}? This user will no longer be permitted to log into the portal.`)) return;
       btn.disabled = true;
       btn.textContent = 'Revoking…';
       try {
@@ -435,11 +512,12 @@ function openAccessInviteModal(email, name = '', institution = '', autoDispatche
   const { subject, textBody } = svc.buildInvitationEmail(email, { name, institution });
   state.activeInviteContext = { email, name, institution, subject, textBody };
 
-  if ($('inviteModalRecipientEmail')) $('inviteModalRecipientEmail').textContent = email;
-  if ($('inviteModalSubject')) $('inviteModalSubject').value = subject;
-  if ($('inviteModalBody')) $('inviteModalBody').value = textBody;
+  if ($('inviteRecipientEmail')) $('inviteRecipientEmail').textContent = email;
+  if ($('inviteToInput')) $('inviteToInput').value = email;
+  if ($('inviteSubjectInput')) $('inviteSubjectInput').value = subject;
+  if ($('inviteBodyTextarea')) $('inviteBodyTextarea').value = textBody;
   if ($('inviteDispatchStatusBadge')) {
-    $('inviteDispatchStatusBadge').style.display = autoDispatched ? 'block' : 'none';
+    $('inviteDispatchStatusBadge').style.display = autoDispatched ? 'inline-flex' : 'none';
   }
   if ($('inviteCopySuccessNote')) $('inviteCopySuccessNote').style.display = 'none';
   modal.style.display = 'flex';
@@ -454,10 +532,10 @@ if ($('accessSearchInput')) {
 if ($('accessGrantForm')) {
   $('accessGrantForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const emailInput = $('accessNewEmail');
-    const nameInput = $('accessNewName');
-    const instInput = $('accessNewInstitution');
-    const submitBtn = $('accessGrantSubmitBtn');
+    const emailInput = $('newAccessEmail');
+    const nameInput = $('newAccessName');
+    const instInput = $('newAccessInstitution');
+    const submitBtn = $('btnGrantAccess');
     const statusEl = $('accessGrantStatus');
 
     const rawEmail = (emailInput && emailInput.value || '').trim().toLowerCase();
@@ -471,7 +549,7 @@ if ($('accessGrantForm')) {
 
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Granting Access & Sending Invite…';
+      submitBtn.innerHTML = '<span>⏳</span> GRANTING ACCESS & SENDING INVITATION...';
     }
     if (statusEl) statusEl.style.display = 'none';
 
@@ -485,8 +563,9 @@ if ($('accessGrantForm')) {
       if (nameInput) nameInput.value = '';
       if (instInput) instInput.value = '';
       if (statusEl) {
-        statusEl.textContent = `✓ Access granted to ${rawEmail} and welcome email dispatched from support@mycareercompany.com.`;
-        statusEl.style.display = 'block';
+        statusEl.style.display = 'inline-flex';
+        statusEl.className = 'access-grant-status success-banner';
+        statusEl.innerHTML = `✓ <strong>Access Granted:</strong> Automated welcome email sent from <code>support@mycareercompany.com</code> to <strong>${escapeHtml(rawEmail)}</strong>.`;
       }
       await loadAccessView();
       openAccessInviteModal(rawEmail, name, institution, true);
@@ -496,7 +575,7 @@ if ($('accessGrantForm')) {
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = '<span>➕</span> Grant Access';
+        submitBtn.innerHTML = '<span class="btn-icon">✉️</span> GRANT ACCESS &amp; SEND INVITATION';
       }
     }
   });
@@ -525,7 +604,7 @@ if ($('modalResendInviteAutomatedBtn')) {
         institution: ctx.institution,
         grantedBy: (state.user && state.user.email) || 'Co-Founder',
       });
-      if ($('inviteDispatchStatusBadge')) $('inviteDispatchStatusBadge').style.display = 'block';
+      if ($('inviteDispatchStatusBadge')) $('inviteDispatchStatusBadge').style.display = 'inline-flex';
       toast(`Automated welcome email sent to ${ctx.email}`);
     } catch (err) {
       toast('Could not resend email: ' + svc.friendlyError(err), 'error');
@@ -537,10 +616,10 @@ if ($('modalResendInviteAutomatedBtn')) {
 }
 if ($('modalCopyInviteEmailBtn')) {
   $('modalCopyInviteEmailBtn').addEventListener('click', async () => {
-    const subj = ($('inviteModalSubject') && $('inviteModalSubject').value) || '';
-    const body = ($('inviteModalBody') && $('inviteModalBody').value) || '';
+    const subj = ($('inviteSubjectInput') && $('inviteSubjectInput').value) || '';
+    const body = ($('inviteBodyTextarea') && $('inviteBodyTextarea').value) || '';
     await navigator.clipboard.writeText(`Subject: ${subj}\n\n${body}`);
-    if ($('inviteCopySuccessNote')) $('inviteCopySuccessNote').style.display = 'block';
+    if ($('inviteCopySuccessNote')) $('inviteCopySuccessNote').style.display = 'inline';
     toast('Invitation message copied');
   });
 }
@@ -548,6 +627,25 @@ if ($('modalCopyPortalLinkBtn')) {
   $('modalCopyPortalLinkBtn').addEventListener('click', async () => {
     await navigator.clipboard.writeText('https://www.mycareercompany.com/getreferred');
     toast('Portal link copied');
+  });
+}
+if ($('modalCloseNotifyBtn')) {
+  $('modalCloseNotifyBtn').addEventListener('click', () => {
+    if ($('teamNotifyModal')) $('teamNotifyModal').style.display = 'none';
+  });
+}
+if ($('teamNotifyModal')) {
+  $('teamNotifyModal').addEventListener('click', (e) => {
+    if (e.target === $('teamNotifyModal')) $('teamNotifyModal').style.display = 'none';
+  });
+}
+if ($('modalCopyEmailBtn')) {
+  $('modalCopyEmailBtn').addEventListener('click', async () => {
+    const subj = ($('notifySubjectInput') && $('notifySubjectInput').value) || '';
+    const body = ($('notifyBodyTextarea') && $('notifyBodyTextarea').value) || '';
+    await navigator.clipboard.writeText(`Subject: ${subj}\n\n${body}`);
+    if ($('notifyCopySuccessNote')) $('notifyCopySuccessNote').style.display = 'inline';
+    toast('Team notification copied');
   });
 }
 

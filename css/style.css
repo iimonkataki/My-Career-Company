@@ -596,15 +596,36 @@ h1, h2, h3, h4, h5, h6 {
   padding: 26px;
   box-shadow: var(--shadow-xl);
   backdrop-filter: blur(16px);
+  margin-top: 8px;
 }
 
 .preview-top-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 20px;
   padding-bottom: 14px;
   border-bottom: 1px solid rgba(212, 175, 124, 0.18);
   margin-bottom: 18px;
+}
+
+.preview-eyebrow-pill {
+  margin-bottom: 0 !important;
+  font-size: 0.58rem !important;
+  letter-spacing: 0.08em !important;
+  padding: 5px 12px !important;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.preview-domain-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--color-gold);
+  text-align: right;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .preview-cluster {
@@ -621,8 +642,8 @@ h1, h2, h3, h4, h5, h6 {
 
 .circle-score-box {
   position: relative;
-  width: 94px;
-  height: 94px;
+  width: 98px;
+  height: 98px;
 }
 
 .circle-score-svg {
@@ -639,24 +660,27 @@ h1, h2, h3, h4, h5, h6 {
   align-items: center;
   justify-content: center;
   text-align: center;
+  padding: 10px;
 }
 
 .circle-score-inner strong {
-  font-size: 1.6rem;
+  font-size: 1.45rem;
   line-height: 1;
   color: var(--color-ivory);
 }
 
 .circle-score-inner span {
-  font-size: 0.62rem;
+  font-size: 0.56rem;
   color: var(--color-text-inverse-muted);
+  margin-top: 1px;
 }
 
 .circle-score-inner small {
-  font-size: 0.55rem;
+  font-size: 0.48rem;
   font-weight: 700;
   color: var(--color-gold);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
+  margin-top: 2px;
 }
 
 /* Dimension Micro-bars */
@@ -2590,9 +2614,9 @@ h1, h2, h3, h4, h5, h6 {
 .hero-dashboard-action-top {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   position: relative;
   z-index: 5;
 }
