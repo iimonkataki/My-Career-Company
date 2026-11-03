@@ -1,4 +1,4 @@
-/* My Career Company · Get Referred portal · app shell + user flow (v2.0) */
+/* My Career Company · Get Referred™ portal · app shell + user flow (v2.1) */
 import * as svc from './firebase-service.js?v=2.0';
 import {
   validateRequest, buildRequestDoc, resolveFileType, validateFile, formatBytes, looksFirstPerson,
@@ -20,12 +20,30 @@ const state = {
   user: null,
 };
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 /* ===================== tabs ===================== */
 
 function showTab(name) {
-  const isAdmin = name === 'admin';
-  $('tab-user').setAttribute('aria-selected', String(!isAdmin));
-  $('tab-admin').setAttribute('aria-selected', String(isAdmin));
+  const isAdmin = name === 'admin' && state.user && svc.isAdminEmail(state.user.email);
+  const tabUser = $('tab-user');
+  const tabAdmin = $('tab-admin');
+  if (tabUser) {
+    tabUser.setAttribute('aria-selected', String(!isAdmin));
+    tabUser.classList.toggle('active', !isAdmin);
+  }
+  if (tabAdmin) {
+    tabAdmin.setAttribute('aria-selected', String(isAdmin));
+    tabAdmin.classList.toggle('active', isAdmin);
+  }
   $('view-user').hidden = isAdmin;
   $('view-admin').hidden = !isAdmin;
   const wanted = isAdmin ? '#admin' : '';
@@ -36,62 +54,197 @@ $('tab-user').addEventListener('click', () => showTab('user'));
 $('tab-admin').addEventListener('click', () => showTab('admin'));
 window.addEventListener('hashchange', () => showTab(location.hash === '#admin' ? 'admin' : 'user'));
 
-/* ===================== auth + admin ===================== */
+/* ===================== auth gate + top-right account widget ===================== */
 
-async function doSignIn(errEl) {
+function showLockedState() {
+  const mainEl = $('main');
+  const headerEl = $('siteHeader');
+  const gate = $('authGateOverlay');
+  const gateLoading = $('authGateLoading');
+  const gateLoginCard = $('authGateLoginCard');
+  const gateErrorCard = $('authGateErrorCard');
+  const widget = $('headerUserWidget');
+  const tabAdmin = $('tab-admin');
+  const headerNav = $('headerNav');
+
+  if (mainEl) mainEl.style.display = 'none';
+  if (headerEl) headerEl.style.opacity = '0.4';
+  if (gate) {
+    gate.style.display = 'flex';
+    gate.setAttribute('aria-hidden', 'false');
+  }
+  if (gateLoading) gateLoading.style.display = 'none';
+  if (gateLoginCard) gateLoginCard.style.display = 'block';
+  if (gateErrorCard) gateErrorCard.style.display = 'none';
+  if (widget) widget.innerHTML = '';
+  if (tabAdmin) {
+    tabAdmin.hidden = true;
+    tabAdmin.style.display = 'none';
+  }
+  if (headerNav) headerNav.classList.add('single-tab');
+}
+
+function showAuthorizedState(user) {
+  const mainEl = $('main');
+  const headerEl = $('siteHeader');
+  const gate = $('authGateOverlay');
+  const widget = $('headerUserWidget');
+  const tabAdmin = $('tab-admin');
+  const headerNav = $('headerNav');
+  const admin = !!user && svc.isAdminEmail(user.email);
+
+  if (gate) {
+    gate.style.display = 'none';
+    gate.setAttribute('aria-hidden', 'true');
+  }
+  if (mainEl) {
+    mainEl.style.display = '';
+    mainEl.style.visibility = 'visible';
+  }
+  if (headerEl) headerEl.style.opacity = '1';
+
+  if (tabAdmin) {
+    tabAdmin.hidden = !admin;
+    tabAdmin.style.display = admin ? 'inline-flex' : 'none';
+  }
+  if (headerNav) {
+    headerNav.classList.toggle('single-tab', !admin);
+  }
+
+  if (widget) {
+    const rawName = (user.displayName || user.email || 'CC').trim();
+    const nameParts = rawName.includes('@')
+      ? rawName.split('@')[0].split(/[._\-\s]+/).filter(Boolean)
+      : rawName.split(/\s+/).filter(Boolean);
+    const initials = (nameParts.length >= 2
+      ? (nameParts[0][0] + nameParts[nameParts.length - 1][0])
+      : (nameParts[0] || 'CC').substring(0, 2)
+    ).toUpperCase();
+
+    const avatarHtml = `<span class="auth-admin-avatar-initials">${escapeHtml(initials)}</span>`;
+    const roleBadgeHtml = admin
+      ? `<span class="auth-admin-tag cofounder-badge">👑 Co-Founder</span>`
+      : `<span class="auth-admin-tag user-tag">👤 Verified User</span>`;
+
+    widget.innerHTML = `
+      <div class="auth-admin-pill" id="authAdminPill">
+        <div class="auth-admin-avatar">${avatarHtml}</div>
+        <div class="auth-admin-info">
+          <span class="auth-admin-name">${escapeHtml(user.displayName || user.email || 'Verified User')}</span>
+          ${roleBadgeHtml}
+        </div>
+        <button type="button" class="btn-admin-signout" id="adminSignOutBtn" title="Switch account / Sign Out">Sign Out</button>
+      </div>
+    `;
+
+    const signoutBtn = $('adminSignOutBtn');
+    if (signoutBtn) {
+      signoutBtn.addEventListener('click', async () => {
+        await svc.signOutUser();
+        toast('Signed out');
+      });
+    }
+  }
+
+  // Pre-fill candidate name and email in Step 4 if currently empty
+  if (user.displayName && $('full-name') && !$('full-name').value.trim()) {
+    $('full-name').value = user.displayName;
+  }
+  if (user.email && $('email') && !$('email').value.trim()) {
+    $('email').value = user.email;
+  }
+  renderSlip();
+}
+
+async function handleGoogleSignIn(errEl) {
   if (errEl) errEl.textContent = '';
+  const gateLoading = $('authGateLoading');
+  const gateLoadingText = $('authGateLoadingText');
+  const gateLoginCard = $('authGateLoginCard');
+  const gateErrorCard = $('authGateErrorCard');
+
+  if (gateErrorCard) gateErrorCard.style.display = 'none';
+  if (gateLoginCard) gateLoginCard.style.display = 'none';
+  if (gateLoading) {
+    gateLoading.style.display = 'flex';
+    if (gateLoadingText) gateLoadingText.textContent = 'Opening Google Account Chooser...';
+  }
+
   try {
-    const user = await svc.signInAdmin();
-    if (!svc.isAdminEmail(user.email)) {
-      await svc.signOutUser();
-      const msg = `${user.email} doesn't have admin access. Sign in with one of the four approved accounts.`;
-      if (errEl) errEl.textContent = msg;
-      toast(msg, 'error');
+    await svc.signInAdmin();
+  } catch (e) {
+    const code = (e && e.code) || '';
+    if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+      showLockedState();
       return;
     }
-    showTab('admin');
-  } catch (e) {
     const msg = svc.friendlyError(e);
     if (errEl) errEl.textContent = msg;
     toast(msg, 'error');
+    showLockedState();
   }
 }
 
-$('admin-signin-btn').addEventListener('click', () => doSignIn($('admin-signin-err')));
-$('team-signin').addEventListener('click', () => {
-  if (state.user && svc.isAdminEmail(state.user.email)) { showTab('admin'); window.scrollTo({ top: 0 }); return; }
-  showTab('admin');
-  doSignIn($('admin-signin-err'));
-});
-$('sign-out').addEventListener('click', async () => {
-  await svc.signOutUser();
-  toast('Signed out');
-});
+if ($('gateGoogleSignInBtn')) {
+  $('gateGoogleSignInBtn').addEventListener('click', () => handleGoogleSignIn());
+}
+if ($('gateTryAgainBtn')) {
+  $('gateTryAgainBtn').addEventListener('click', () => handleGoogleSignIn());
+}
+if ($('admin-signin-btn')) {
+  $('admin-signin-btn').addEventListener('click', () => handleGoogleSignIn($('admin-signin-err')));
+}
+if ($('team-signin')) {
+  $('team-signin').addEventListener('click', () => {
+    if (state.user && svc.isAdminEmail(state.user.email)) { showTab('admin'); window.scrollTo({ top: 0 }); return; }
+    handleGoogleSignIn($('admin-signin-err'));
+  });
+}
+if ($('sign-out')) {
+  $('sign-out').addEventListener('click', async () => {
+    await svc.signOutUser();
+    toast('Signed out');
+  });
+}
 
 svc.onAuth(async (user) => {
   state.user = user;
+  if (!user) {
+    if (state.adminMounted) {
+      location.reload();
+      return;
+    }
+    showLockedState();
+    return;
+  }
+
+  showAuthorizedState(user);
+
   const admin = !!user && svc.isAdminEmail(user.email);
-  $('tab-admin').hidden = !admin;
-  $('session').hidden = !admin;
-  $('session-email').textContent = admin ? user.email : '';
-  $('team-signin').textContent = admin ? 'Open referral desk' : 'Team sign-in';
+  if ($('session')) $('session').hidden = !admin;
+  if ($('session-email')) $('session-email').textContent = admin ? user.email : '';
+  if ($('team-signin')) $('team-signin').textContent = admin ? 'Open referral repository' : 'Team sign-in';
+
   if (admin) {
-    $('admin-signin').hidden = true;
+    if ($('admin-signin')) $('admin-signin').hidden = true;
     if (!state.adminMounted) {
       state.adminMounted = true;
       try {
-        const mod = await import('./admin.js?v=2.0');
+        const mod = await import('./admin.js?v=2.1');
         await mod.mountAdmin($('admin-root'), { user, svc });
       } catch (e) {
         state.adminMounted = false;
         console.error('[GetReferred] admin load failed', e);
-        toast('Could not open the referral desk: ' + svc.friendlyError(e), 'error');
+        toast('Could not open the referral repository: ' + svc.friendlyError(e), 'error');
       }
     }
+    if (location.hash === '#admin') {
+      showTab('admin');
+    }
   } else {
-    if (state.adminMounted) { location.reload(); return; } // clear admin data from the page on sign-out
-    $('admin-signin').hidden = false;
-    // A non-admin Google session (e.g. a Resume Fit Score evaluator) is left alone: the Admin tab simply stays hidden.
+    if (state.adminMounted) { location.reload(); return; }
+    if ($('admin-signin')) $('admin-signin').hidden = false;
+    showTab('user');
   }
 });
 
@@ -106,6 +259,9 @@ async function initCompanies() {
   try {
     const { companies } = await svc.loadCompanies();
     state.companies = companies;
+    if ($('heroCompanyCount') && companies.length > 0) {
+      $('heroCompanyCount').textContent = String(companies.length);
+    }
     sel.textContent = '';
     if (!companies.length) {
       sel.append(new Option('Company list coming soon', ''));
@@ -146,7 +302,7 @@ function renderPortal() {
   }
   const n = c.pocCount || 0;
   $('portal-meta').textContent = n
-    ? `We have ${n} referral contact${n === 1 ? '' : 's'} at ${c.name}.`
+    ? `✓ We have ${n} verified referral contact${n === 1 ? '' : 's'} at ${c.name}.`
     : '';
 }
 
@@ -335,14 +491,16 @@ $('referral-form').addEventListener('submit', async (e) => {
   } finally {
     state.submitting = false;
     btn.disabled = false;
-    btn.textContent = 'Send referral request';
+    btn.innerHTML = 'Send Referral Request &rarr;';
     setTimeout(() => { $('upload-progress').hidden = true; }, 600);
   }
 });
 
 function showSuccess(requestId, company, jobId) {
+  if ($('referralInputPanel')) $('referralInputPanel').hidden = true;
   $('request-layout').hidden = true;
-  document.querySelector('#view-user .hero').hidden = true;
+  const hero = document.querySelector('#view-user .hero');
+  if (hero) hero.hidden = true;
   $('success').hidden = false;
   $('success-ref').textContent = shortRef(requestId);
   $('success-text').textContent = `We'll share your profile with our referral contact at ${company ? company.name : 'the company'}${jobId ? ` for job ID ${jobId}` : ''}.`;
@@ -367,7 +525,9 @@ $('another-btn').addEventListener('click', () => {
   updateSteps();
   renderSlip();
   $('success').hidden = true;
-  document.querySelector('#view-user .hero').hidden = false;
+  const hero = document.querySelector('#view-user .hero');
+  if (hero) hero.hidden = false;
+  if ($('referralInputPanel')) $('referralInputPanel').hidden = false;
   $('request-layout').hidden = false;
   $('company-select').focus();
 });
@@ -387,7 +547,7 @@ placeSlip();
 
 /* ===================== boot ===================== */
 
-$('year').textContent = String(new Date().getFullYear());
+if ($('year')) $('year').textContent = String(new Date().getFullYear());
 if (!svc.configured) {
   const b = $('config-banner');
   b.hidden = false;

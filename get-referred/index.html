@@ -1,222 +1,434 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
-  <title>Get referred | My Career Company</title>
-  <meta name="description" content="Upload your resume, choose a company and a job opening, and My Career Company will pass your profile to a referral contact who works there.">
+  <title>Get Referred™ | Career Clinic by My Career Company</title>
+  <meta name="description"
+    content="Upload your resume, choose a target company and job opening, and My Career Company will route your profile to a verified IIM Alumni or corporate referral contact.">
   <link rel="canonical" href="https://www.mycareercompany.com/getreferred">
   <meta name="theme-color" content="#073D32">
+  <link rel="icon" type="image/png" href="/assets/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="/get-referred/style.css?v=2.0">
-  <script type="module" src="/get-referred/app.js?v=2.0"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="/get-referred/style.css?v=2.1">
+  <script type="module" src="/get-referred/app.js?v=2.1"></script>
 </head>
+
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
 
-  <header class="site-header">
-    <a class="brand" href="/" aria-label="My Career Company home">
-      <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
-        <path d="M9 45 C7 35 11 26 22 20 C24 31 20 40 9 45 Z" fill="#F8F6EF"/>
-        <path d="M17 46 C30 41 37 31 37 17 L37 3 C29 7 23 11 22 16 C26 15 28 18 28 24 C28 33 25 40 17 46 Z" fill="#D4AF7C"/>
-      </svg>
-      <span class="brand-word"><span class="brand-strong">MY CAREER</span> <span class="brand-light">COMPANY</span></span>
-    </a>
-    <nav class="site-nav" aria-label="Site">
-      <a href="/students">Students</a>
-      <a href="/institutions">Institutions</a>
-      <a href="/ResumeFitScore">Resume Fit Score</a>
-      <a href="/contact">Contact</a>
-    </nav>
+  <!-- Header / Institutional Brand Bar (Aligned with Resume Fit Score™ Portal) -->
+  <header class="site-header" id="siteHeader">
+    <div class="header-container">
+      <!-- 1. Left: Unified Brand Group (Logo + CAREER CLINIC · GET REFERRED™) -->
+      <div class="header-brand-group">
+        <a href="https://www.mycareercompany.com" target="_blank" rel="noopener" class="logo-anchor"
+          title="My Career Company">
+          <img src="/ResumeFitScore/brand-logo.png" alt="My Career Company" id="headerLogo" class="brand-logo"
+            onerror="this.src='/assets/brand-logo.png';">
+        </a>
+        <div class="header-brand-text">
+          <span class="program-title">CAREER CLINIC</span>
+          <span class="program-sep">&bull;</span>
+          <span class="program-tagline">GET REFERRED&trade;</span>
+        </div>
+      </div>
+
+      <!-- 2. Center: Portal Navigation Tabs (Get Referred vs Referral Repository) -->
+      <nav class="header-nav single-tab" id="headerNav" role="tablist" aria-label="Portal Navigation">
+        <button type="button" class="nav-tab active" role="tab" id="tab-user" aria-selected="true"
+          aria-controls="view-user">
+          <span class="nav-icon">🤝</span>
+          <span class="nav-text">Get Referred</span>
+        </button>
+        <button type="button" class="nav-tab" role="tab" id="tab-admin" aria-selected="false"
+          aria-controls="view-admin" style="display: none;" hidden>
+          <span class="nav-icon">📁</span>
+          <span class="nav-text">Referral Repository</span>
+        </button>
+      </nav>
+
+      <!-- 3. Right: Authorized Administrator / Verified User Profile Widget -->
+      <div class="header-user-widget" id="headerUserWidget"></div>
+    </div>
   </header>
 
-  <div class="tabbar-wrap">
-    <div class="tabbar" role="tablist" aria-label="Portal sections">
-      <button class="tab" role="tab" id="tab-user" aria-selected="true" aria-controls="view-user" type="button">Get referred</button>
-      <button class="tab" role="tab" id="tab-admin" aria-selected="false" aria-controls="view-admin" type="button" hidden>Admin</button>
-    </div>
-    <div class="session" id="session" hidden>
-      <span class="session-email" id="session-email"></span>
-      <button class="link-button" id="sign-out" type="button">Sign out</button>
+  <!-- Hidden Legacy Session Hooks (kept for compatibility) -->
+  <div class="session" id="session" hidden>
+    <span class="session-email" id="session-email"></span>
+    <button class="link-button" id="sign-out" type="button">Sign out</button>
+  </div>
+
+  <!-- Institutional Authentication Gate (Google Login) -->
+  <div id="authGateOverlay" class="auth-gate-overlay" role="dialog" aria-modal="true" style="display: flex;">
+    <div class="auth-gate-container">
+
+      <!-- Loading State (verifying Firebase session) -->
+      <div id="authGateLoading" class="auth-gate-card auth-gate-loading-card">
+        <div class="spinner"></div>
+        <div class="auth-loading-text" id="authGateLoadingText">Verifying Institutional Access...</div>
+      </div>
+
+      <!-- Login Card (shown when unauthenticated) -->
+      <div id="authGateLoginCard" class="auth-gate-card" style="display: none;">
+        <div class="auth-gate-brand">
+          <img src="/ResumeFitScore/brand-logo.png" alt="My Career Company" class="auth-gate-logo-img"
+            onerror="this.src='/assets/brand-logo.png';">
+          <div class="auth-gate-brand-meta">
+            <span class="auth-gate-org">MY CAREER COMPANY</span>
+            <span class="auth-gate-tagline">Career Clinic &bull; Institutional Portal</span>
+          </div>
+        </div>
+
+        <div class="auth-gate-content">
+          <div class="auth-gate-lock-icon" aria-hidden="true">🔒</div>
+          <h2 class="auth-gate-title">Sign In to Continue</h2>
+          <p class="auth-gate-desc">
+            Sign in with your Google account to access the <strong>Career Clinic &bull; Get Referred&trade;
+              Portal</strong> and connect with our IIM Alumni &amp; corporate referral network.
+          </p>
+        </div>
+
+        <div class="auth-gate-action">
+          <button type="button" class="btn-auth-google" id="gateGoogleSignInBtn">
+            <svg class="google-icon" width="20" height="20" viewBox="0 0 24 24">
+              <path fill="#4285F4"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+              <path fill="#34A853"
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+              <path fill="#FBBC05"
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+              <path fill="#EA4335"
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+            </svg>
+            <span>Sign In with Google</span>
+          </button>
+        </div>
+
+        <div class="auth-gate-footer">
+          <span>Choose from all active Google accounts or add a new account</span>
+        </div>
+      </div>
+
+      <!-- Error / Switch Account Card -->
+      <div id="authGateErrorCard" class="auth-gate-card auth-gate-error-card" style="display: none;">
+        <div class="auth-gate-brand">
+          <img src="/ResumeFitScore/brand-logo.png" alt="My Career Company" class="auth-gate-logo-img"
+            onerror="this.src='/assets/brand-logo.png';">
+          <div class="auth-gate-brand-meta">
+            <span class="auth-gate-org">MY CAREER COMPANY</span>
+            <span class="auth-gate-tagline">Career Clinic &bull; Institutional Portal</span>
+          </div>
+        </div>
+        <div class="auth-error-icon" aria-hidden="true">⛔</div>
+        <h2 class="auth-error-title">Access Denied</h2>
+        <p class="auth-error-desc">
+          The account <strong id="authDeniedEmailText" class="denied-email-highlight">user@domain.com</strong> could not
+          be verified.
+        </p>
+        <div class="auth-gate-action">
+          <button type="button" class="btn-auth-google" id="gateTryAgainBtn">
+            <svg class="google-icon" width="20" height="20" viewBox="0 0 24 24">
+              <path fill="#4285F4"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+              <path fill="#34A853"
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+              <path fill="#FBBC05"
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+              <path fill="#EA4335"
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+            </svg>
+            <span>Switch Account / Add Another Google Account</span>
+          </button>
+        </div>
+      </div>
+
     </div>
   </div>
 
   <div class="banner banner-error" id="config-banner" role="alert" hidden></div>
 
-  <main id="main">
+  <main class="main-content" id="main" style="display: none;">
     <!-- ===================== USER TAB ===================== -->
     <section id="view-user" role="tabpanel" aria-labelledby="tab-user">
-      <div class="hero">
-        <h1>Get referred for the job you want</h1>
-        <p class="hero-sub">Upload your resume, pick the company and the opening, and we'll pass your profile to someone who works there.</p>
+
+      <!-- Executive Hero Banner (Matches Resume Fit Score™ Hero) -->
+      <div class="hero-section hero">
+        <div class="hero-content">
+          <div class="hero-eyebrow">CAREER CLINIC &bull; IIM ALUMNI &amp; CORPORATE REFERRAL NETWORK</div>
+          <h1 class="hero-title">Get Referred&trade; for the Job You Want</h1>
+          <p class="hero-subtitle hero-sub">
+            Upload your resume, choose your target company and job opening, and My Career Company will pass your
+            profile directly to a verified referral contact who works there.
+          </p>
+        </div>
+
+        <div class="hero-stats">
+          <div class="stat-card">
+            <div class="stat-num" id="heroCompanyCount">50+</div>
+            <div class="stat-label">Partner Companies</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num">IIM</div>
+            <div class="stat-label">Alumni Network</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num">1:1</div>
+            <div class="stat-label">Direct POC Routing</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num">100%</div>
+            <div class="stat-label">Verified Contacts</div>
+          </div>
+        </div>
       </div>
 
-      <div class="layout" id="request-layout">
-        <form class="steps" id="referral-form" novalidate>
-          <!-- honeypot: real people never see or fill this -->
-          <div class="hp" aria-hidden="true">
-            <label for="website">Website</label>
-            <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+      <!-- Main Referral Intake Panel -->
+      <div class="diagnostic-input-panel" id="referralInputPanel">
+        <div class="panel-header">
+          <div class="panel-step">CANDIDATE REFERRAL DOSSIER</div>
+          <h2 class="panel-title">Submit Your Referral Request</h2>
+          <p class="panel-subtext">Complete the 5 steps below. The live preview slip on the right shows exactly what
+            your referral contact will receive.</p>
+        </div>
+
+        <div class="privacy-box-top">
+          <div class="privacy-icon" aria-hidden="true">&#128274;</div>
+          <div class="privacy-text">
+            <strong>Direct Alumni &amp; Corporate Routing:</strong> Your resume and recommendation note are shared
+            strictly with verified My Career Company referral contacts at the company you select.
           </div>
+        </div>
 
-          <!-- Step 1 -->
-          <fieldset class="step" id="step-1">
-            <legend class="step-title"><span class="step-num" aria-hidden="true">1</span>Upload your resume</legend>
-            <div class="step-body">
-              <label class="dropzone" id="resume-drop" for="resume-input">
-                <input type="file" id="resume-input" class="visually-hidden" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" aria-describedby="resume-hint err-resume">
-                <span class="dz-title">Choose a file or drop it here</span>
-                <span class="dz-hint" id="resume-hint">PDF or Word, up to 2 MB</span>
-              </label>
-              <div class="file-chip" id="resume-chip" hidden>
-                <span class="file-chip-name" id="resume-name"></span>
-                <span class="file-chip-size" id="resume-size"></span>
-                <button type="button" class="link-button" id="resume-remove">Remove</button>
-              </div>
-              <p class="field-error" id="err-resume" role="alert"></p>
+        <div class="layout" id="request-layout">
+          <form class="steps" id="referral-form" novalidate>
+            <!-- honeypot: real people never see or fill this -->
+            <div class="hp" aria-hidden="true">
+              <label for="website">Website</label>
+              <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
             </div>
-          </fieldset>
 
-          <!-- Step 2 -->
-          <fieldset class="step" id="step-2" disabled>
-            <legend class="step-title"><span class="step-num" aria-hidden="true">2</span>Choose the company</legend>
-            <div class="step-body">
-              <p class="locked-note">Upload your resume first.</p>
-              <label class="label" for="company-select">Company</label>
-              <select id="company-select" aria-describedby="err-company">
-                <option value="">Loading companies…</option>
-              </select>
-              <p class="field-error" id="err-company" role="alert"></p>
-
-              <div class="portal-card" id="portal-card" hidden>
-                <p class="portal-lead">Open <span id="portal-company"></span>'s careers site, find the opening you want and copy its job ID.</p>
-                <a class="button button-secondary" id="portal-link" href="#" target="_blank" rel="noopener noreferrer">Open careers site</a>
-                <p class="portal-meta" id="portal-meta"></p>
+            <!-- Step 1 -->
+            <fieldset class="step" id="step-1">
+              <legend class="step-title">
+                <span class="step-num" aria-hidden="true">1</span>
+                <span class="step-heading-group">
+                  <span class="intake-badge">STEP 01</span>
+                  <span class="step-heading-text">Upload your resume</span>
+                </span>
+              </legend>
+              <div class="step-body">
+                <label class="dropzone" id="resume-drop" for="resume-input">
+                  <input type="file" id="resume-input" class="visually-hidden"
+                    accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    aria-describedby="resume-hint err-resume">
+                  <div class="upload-icon-circle" aria-hidden="true">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                      stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="17 8 12 3 7 8"></polyline>
+                      <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                  </div>
+                  <span class="dz-title">Drop your resume here or <span class="browse-link">browse</span></span>
+                  <span class="dz-hint" id="resume-hint">Supports .PDF, .DOC and .DOCX up to 2 MB</span>
+                </label>
+                <div class="file-chip" id="resume-chip" hidden>
+                  <span class="file-chip-icon" aria-hidden="true">📄</span>
+                  <span class="file-chip-name" id="resume-name"></span>
+                  <span class="file-chip-size" id="resume-size"></span>
+                  <button type="button" class="link-button" id="resume-remove">Remove</button>
+                </div>
+                <p class="field-error" id="err-resume" role="alert"></p>
               </div>
-            </div>
-          </fieldset>
+            </fieldset>
 
-          <!-- Step 3 -->
-          <fieldset class="step" id="step-3" disabled>
-            <legend class="step-title"><span class="step-num" aria-hidden="true">3</span>Add the job ID</legend>
-            <div class="step-body">
-              <p class="locked-note">Choose a company first.</p>
-              <div class="grid-2">
+            <!-- Step 2 -->
+            <fieldset class="step" id="step-2" disabled>
+              <legend class="step-title">
+                <span class="step-num" aria-hidden="true">2</span>
+                <span class="step-heading-group">
+                  <span class="intake-badge">STEP 02</span>
+                  <span class="step-heading-text">Choose the company</span>
+                </span>
+              </legend>
+              <div class="step-body">
+                <p class="locked-note">Upload your resume first.</p>
+                <label class="label" for="company-select">Target Company <span class="required-star">*</span></label>
+                <select id="company-select" aria-describedby="err-company">
+                  <option value="">Loading companies…</option>
+                </select>
+                <p class="field-error" id="err-company" role="alert"></p>
+
+                <div class="portal-card" id="portal-card" hidden>
+                  <p class="portal-lead">Open <span id="portal-company"></span>'s careers site, find the opening you
+                    want and copy its job ID.</p>
+                  <a class="button button-secondary" id="portal-link" href="#" target="_blank"
+                    rel="noopener noreferrer">Open careers site</a>
+                  <p class="portal-meta" id="portal-meta"></p>
+                </div>
+              </div>
+            </fieldset>
+
+            <!-- Step 3 -->
+            <fieldset class="step" id="step-3" disabled>
+              <legend class="step-title">
+                <span class="step-num" aria-hidden="true">3</span>
+                <span class="step-heading-group">
+                  <span class="intake-badge">STEP 03</span>
+                  <span class="step-heading-text">Add the job ID</span>
+                </span>
+              </legend>
+              <div class="step-body">
+                <p class="locked-note">Choose a company first.</p>
+                <div class="grid-2">
+                  <div class="field">
+                    <label class="label" for="job-id">Job ID <span class="required-star">*</span></label>
+                    <input type="text" id="job-id" maxlength="100" autocomplete="off"
+                      placeholder="For example R00245871" aria-describedby="job-id-hint err-jobId">
+                    <p class="hint" id="job-id-hint">Shown on the job posting, often as "Job ID", "Req ID" or
+                      "Requisition number".</p>
+                    <p class="field-error" id="err-jobId" role="alert"></p>
+                  </div>
+                  <div class="field">
+                    <label class="label" for="job-title">Job title <span class="optional">optional</span></label>
+                    <input type="text" id="job-title" maxlength="150" autocomplete="off"
+                      placeholder="For example Business Analyst" aria-describedby="err-jobTitle">
+                    <p class="field-error" id="err-jobTitle" role="alert"></p>
+                  </div>
+                </div>
+              </div>
+            </fieldset>
+
+            <!-- Step 4 -->
+            <fieldset class="step" id="step-4" disabled>
+              <legend class="step-title">
+                <span class="step-num" aria-hidden="true">4</span>
+                <span class="step-heading-group">
+                  <span class="intake-badge">STEP 04</span>
+                  <span class="step-heading-text">Tell us about you</span>
+                </span>
+              </legend>
+              <div class="step-body">
+                <p class="locked-note">Choose a company first.</p>
                 <div class="field">
-                  <label class="label" for="job-id">Job ID</label>
-                  <input type="text" id="job-id" maxlength="100" autocomplete="off" placeholder="For example R00245871" aria-describedby="job-id-hint err-jobId">
-                  <p class="hint" id="job-id-hint">Shown on the job posting, often as "Job ID", "Req ID" or "Requisition number".</p>
-                  <p class="field-error" id="err-jobId" role="alert"></p>
+                  <label class="label" for="full-name">Full name <span class="required-star">*</span></label>
+                  <input type="text" id="full-name" maxlength="100" autocomplete="name" aria-describedby="err-fullName">
+                  <p class="field-error" id="err-fullName" role="alert"></p>
+                </div>
+                <div class="grid-2">
+                  <div class="field">
+                    <label class="label" for="email">Email <span class="required-star">*</span></label>
+                    <input type="email" id="email" maxlength="254" autocomplete="email" inputmode="email"
+                      placeholder="name@example.com" aria-describedby="err-email">
+                    <p class="field-error" id="err-email" role="alert"></p>
+                  </div>
+                  <div class="field">
+                    <label class="label" for="phone">Phone number <span class="required-star">*</span></label>
+                    <input type="tel" id="phone" maxlength="20" autocomplete="tel" inputmode="tel"
+                      placeholder="+91 98765 43210" aria-describedby="err-phone">
+                    <p class="field-error" id="err-phone" role="alert"></p>
+                  </div>
                 </div>
                 <div class="field">
-                  <label class="label" for="job-title">Job title <span class="optional">optional</span></label>
-                  <input type="text" id="job-title" maxlength="150" autocomplete="off" placeholder="For example Business Analyst" aria-describedby="err-jobTitle">
-                  <p class="field-error" id="err-jobTitle" role="alert"></p>
-                </div>
-              </div>
-            </div>
-          </fieldset>
-
-          <!-- Step 4 -->
-          <fieldset class="step" id="step-4" disabled>
-            <legend class="step-title"><span class="step-num" aria-hidden="true">4</span>Tell us about you</legend>
-            <div class="step-body">
-              <p class="locked-note">Choose a company first.</p>
-              <div class="field">
-                <label class="label" for="full-name">Full name</label>
-                <input type="text" id="full-name" maxlength="100" autocomplete="name" aria-describedby="err-fullName">
-                <p class="field-error" id="err-fullName" role="alert"></p>
-              </div>
-              <div class="grid-2">
-                <div class="field">
-                  <label class="label" for="email">Email</label>
-                  <input type="email" id="email" maxlength="254" autocomplete="email" inputmode="email" placeholder="name@example.com" aria-describedby="err-email">
-                  <p class="field-error" id="err-email" role="alert"></p>
+                  <label class="label" for="note">Note of recommendation <span class="required-star">*</span></label>
+                  <p class="hint" id="note-hint">Write it in the third person, as if someone else is recommending you.
+                    Two or three sentences on who you are and why you fit this role.</p>
+                  <textarea id="note" rows="5" maxlength="1500" aria-describedby="note-hint note-person err-note"
+                    placeholder="Riya is a final-year MBA student at XYZ School of Management with two years of brand marketing experience at ABC Foods. She led a sampling campaign that lifted trial by 18%, which makes her a strong fit for this role."></textarea>
+                  <div class="field-foot">
+                    <p class="soft-warn" id="note-person" aria-live="polite"></p>
+                    <span class="counter" id="note-count">0 / 1500</span>
+                  </div>
+                  <p class="field-error" id="err-note" role="alert"></p>
                 </div>
                 <div class="field">
-                  <label class="label" for="phone">Phone number</label>
-                  <input type="tel" id="phone" maxlength="20" autocomplete="tel" inputmode="tel" placeholder="+91 98765 43210" aria-describedby="err-phone">
-                  <p class="field-error" id="err-phone" role="alert"></p>
+                  <span class="label" id="cover-label">Cover letter <span class="optional">optional</span></span>
+                  <div class="segmented" role="radiogroup" aria-labelledby="cover-label">
+                    <label><input type="radio" name="cover-mode" value="none" checked> Skip</label>
+                    <label><input type="radio" name="cover-mode" value="file"> Upload a file</label>
+                    <label><input type="radio" name="cover-mode" value="text"> Write it here</label>
+                  </div>
+                  <div class="cover-file" id="cover-file-wrap" hidden>
+                    <input type="file" id="cover-input"
+                      accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      aria-label="Cover letter file">
+                    <p class="hint">PDF or Word, up to 1 MB</p>
+                  </div>
+                  <div class="cover-text" id="cover-text-wrap" hidden>
+                    <textarea id="cover-text" rows="7" maxlength="6000" aria-label="Cover letter text"></textarea>
+                  </div>
+                  <p class="field-error" id="err-cover" role="alert"></p>
                 </div>
               </div>
-              <div class="field">
-                <label class="label" for="note">Note of recommendation</label>
-                <p class="hint" id="note-hint">Write it in the third person, as if someone else is recommending you. Two or three sentences on who you are and why you fit this role.</p>
-                <textarea id="note" rows="5" maxlength="1500" aria-describedby="note-hint note-person err-note" placeholder="Riya is a final-year MBA student at XYZ School of Management with two years of brand marketing experience at ABC Foods. She led a sampling campaign that lifted trial by 18%, which makes her a strong fit for this role."></textarea>
-                <div class="field-foot">
-                  <p class="soft-warn" id="note-person" aria-live="polite"></p>
-                  <span class="counter" id="note-count">0 / 1500</span>
-                </div>
-                <p class="field-error" id="err-note" role="alert"></p>
-              </div>
-              <div class="field">
-                <span class="label" id="cover-label">Cover letter <span class="optional">optional</span></span>
-                <div class="segmented" role="radiogroup" aria-labelledby="cover-label">
-                  <label><input type="radio" name="cover-mode" value="none" checked> Skip</label>
-                  <label><input type="radio" name="cover-mode" value="file"> Upload a file</label>
-                  <label><input type="radio" name="cover-mode" value="text"> Write it here</label>
-                </div>
-                <div class="cover-file" id="cover-file-wrap" hidden>
-                  <input type="file" id="cover-input" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" aria-label="Cover letter file">
-                  <p class="hint">PDF or Word, up to 1 MB</p>
-                </div>
-                <div class="cover-text" id="cover-text-wrap" hidden>
-                  <textarea id="cover-text" rows="7" maxlength="6000" aria-label="Cover letter text"></textarea>
-                </div>
-                <p class="field-error" id="err-cover" role="alert"></p>
-              </div>
-            </div>
-          </fieldset>
+            </fieldset>
 
-          <!-- Step 5 -->
-          <fieldset class="step" id="step-5" disabled>
-            <legend class="step-title"><span class="step-num" aria-hidden="true">5</span>Send your request</legend>
-            <div class="step-body">
-              <p class="locked-note">Choose a company first.</p>
-              <label class="consent">
-                <input type="checkbox" id="consent" aria-describedby="err-consent">
-                <span>I agree that My Career Company may store my resume and the details above, and share them with its referral contacts at the company I chose, only to request a referral for this job. I can ask for my data to be deleted by writing to <a href="mailto:support@mycareercompany.com">support@mycareercompany.com</a>.</span>
-              </label>
-              <p class="field-error" id="err-consent" role="alert"></p>
-              <div class="submit-row">
-                <button type="submit" class="button button-primary" id="submit-btn">Send referral request</button>
-                <div class="progress" id="upload-progress" hidden>
-                  <div class="progress-bar"><span id="upload-bar"></span></div>
-                  <span class="progress-label" id="upload-label">Uploading…</span>
+            <!-- Step 5 -->
+            <fieldset class="step" id="step-5" disabled>
+              <legend class="step-title">
+                <span class="step-num" aria-hidden="true">5</span>
+                <span class="step-heading-group">
+                  <span class="intake-badge">STEP 05</span>
+                  <span class="step-heading-text">Send your request</span>
+                </span>
+              </legend>
+              <div class="step-body">
+                <p class="locked-note">Choose a company first.</p>
+                <label class="consent">
+                  <input type="checkbox" id="consent" aria-describedby="err-consent">
+                  <span>I agree that My Career Company may store my resume and the details above, and share them with
+                    its referral contacts at the company I chose, only to request a referral for this job. I can ask for
+                    my data to be deleted by writing to <a
+                      href="mailto:support@mycareercompany.com">support@mycareercompany.com</a>.</span>
+                </label>
+                <p class="field-error" id="err-consent" role="alert"></p>
+                <div class="submit-row">
+                  <button type="submit" class="button button-primary" id="submit-btn">Send Referral Request &rarr;</button>
+                  <div class="progress" id="upload-progress" hidden>
+                    <div class="progress-bar"><span id="upload-bar"></span></div>
+                    <span class="progress-label" id="upload-label">Uploading…</span>
+                  </div>
                 </div>
+                <p class="fine-print">Our contact reviews every request and decides whether to refer you. A referral
+                  isn't guaranteed.</p>
+                <p class="field-error" id="err-submit" role="alert"></p>
               </div>
-              <p class="fine-print">Our contact reviews every request and decides whether to refer you. A referral isn't guaranteed.</p>
-              <p class="field-error" id="err-submit" role="alert"></p>
-            </div>
-          </fieldset>
-        </form>
+            </fieldset>
+          </form>
 
-        <aside class="slip-col" aria-label="Preview of your referral request">
-          <div class="slip" id="slip">
-            <p class="slip-kicker">What your referral contact will see</p>
-            <h2 class="slip-title">Referral request</h2>
-            <dl class="slip-list">
-              <div><dt>Company</dt><dd id="slip-company" class="is-empty">Not chosen yet</dd></div>
-              <div><dt>Job ID</dt><dd id="slip-job" class="is-empty">—</dd></div>
-              <div><dt>Candidate</dt><dd id="slip-name" class="is-empty">Your name</dd></div>
-              <div><dt>Resume</dt><dd id="slip-resume" class="is-empty">Not added</dd></div>
-              <div><dt>Cover letter</dt><dd id="slip-cover" class="is-empty">Not included</dd></div>
-            </dl>
-            <div class="slip-note">
-              <p class="slip-note-label">Recommendation</p>
-              <p id="slip-note" class="is-empty">Your note of recommendation appears here.</p>
+          <aside class="slip-col" aria-label="Preview of your referral request">
+            <div class="slip" id="slip">
+              <p class="slip-kicker">WHAT YOUR REFERRAL CONTACT WILL SEE</p>
+              <h2 class="slip-title">Referral Request Dossier</h2>
+              <dl class="slip-list">
+                <div><dt>Company</dt><dd id="slip-company" class="is-empty">Not chosen yet</dd></div>
+                <div><dt>Job ID</dt><dd id="slip-job" class="is-empty">—</dd></div>
+                <div><dt>Candidate</dt><dd id="slip-name" class="is-empty">Your name</dd></div>
+                <div><dt>Resume</dt><dd id="slip-resume" class="is-empty">Not added</dd></div>
+                <div><dt>Cover letter</dt><dd id="slip-cover" class="is-empty">Not included</dd></div>
+              </dl>
+              <div class="slip-note">
+                <p class="slip-note-label">Recommendation</p>
+                <p id="slip-note" class="is-empty">Your note of recommendation appears here.</p>
+              </div>
             </div>
-          </div>
-        </aside>
+          </aside>
+        </div>
       </div>
 
-      <section class="success" id="success" hidden tabindex="-1" aria-labelledby="success-title">
+      <section class="success diagnostic-input-panel" id="success" hidden tabindex="-1"
+        aria-labelledby="success-title">
+        <div class="success-badge">✓ REFERRAL DOSSIER LOGGED</div>
         <h2 id="success-title">Request sent</h2>
         <p class="success-ref">Reference <strong id="success-ref"></strong></p>
         <p id="success-text"></p>
-        <p class="fine-print">Our contact reviews every request and decides whether to refer you. A referral isn't guaranteed. Keep applying through the company's site as usual.</p>
+        <p class="fine-print">Our contact reviews every request and decides whether to refer you. A referral isn't
+          guaranteed. Keep applying through the company's site as usual.</p>
         <div class="success-actions">
           <button type="button" class="button button-primary" id="another-btn">Request another referral</button>
         </div>
@@ -224,12 +436,12 @@
       </section>
     </section>
 
-    <!-- ===================== ADMIN TAB ===================== -->
+    <!-- ===================== ADMIN / REFERRAL REPOSITORY TAB ===================== -->
     <section id="view-admin" role="tabpanel" aria-labelledby="tab-admin" hidden>
       <div id="admin-root">
         <div class="signin-card" id="admin-signin">
-          <h2>Referral desk</h2>
-          <p>Sign in with an approved Google account to see referral requests and POC details.</p>
+          <h2>Referral Repository</h2>
+          <p>Sign in with an approved Co-Founder Google account to view referral requests and manage corporate POCs.</p>
           <button type="button" class="button button-primary" id="admin-signin-btn">Sign in with Google</button>
           <p class="field-error" id="admin-signin-err" role="alert"></p>
         </div>
@@ -237,14 +449,37 @@
     </section>
   </main>
 
+  <!-- Site Footer (Matches Resume Fit Score™ Institutional Footer) -->
   <footer class="site-footer">
-    <p>© <span id="year"></span> My Career Company. All rights reserved.</p>
-    <p><a href="mailto:support@mycareercompany.com">support@mycareercompany.com</a> <span class="sep" aria-hidden="true">|</span> <a href="tel:+918145295101">+91 81452 95101</a></p>
-    <p><button type="button" class="link-button" id="team-signin">Team sign-in</button></p>
+    <div class="footer-container">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <img src="/ResumeFitScore/brand-logo.png" alt="My Career Company" class="footer-brand-logo"
+            onerror="this.src='/assets/brand-logo.png';">
+          <div class="footer-logo">MY CAREER COMPANY</div>
+          <div class="footer-sub">Making career preparation more structured, personalised and measurable.</div>
+        </div>
+        <div class="footer-contact">
+          <div><strong>Institutional Inquiries:</strong> <a
+              href="mailto:support@mycareercompany.com">support@mycareercompany.com</a></div>
+          <div><strong>Direct Helpline:</strong> <a href="tel:+918145295101">+91 8145295101</a></div>
+          <div><strong>Web:</strong> <a href="https://www.mycareercompany.com" target="_blank"
+              rel="noopener">www.mycareercompany.com</a></div>
+        </div>
+      </div>
+      <div class="footer-divider"></div>
+      <div class="footer-bottom">
+        <div>&copy; <span id="year">2026</span> My Career Company. Get Referred&trade;, Resume Fit Score&trade; and
+          Career Clinic are institutional programs. All rights reserved.</div>
+        <div class="footer-note">Built for MBA &bull; PGDM &bull; EPGP &bull; MDP &bull; Executive Education cohorts in
+          India. <button type="button" class="link-button" id="team-signin" hidden>Team sign-in</button></div>
+      </div>
+    </div>
   </footer>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <noscript><p class="banner banner-error">This page needs JavaScript to send a referral request.</p></noscript>
 </body>
+
 </html>

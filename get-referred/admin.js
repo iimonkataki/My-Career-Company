@@ -62,7 +62,7 @@ function buildShell(A) {
   return h('div', { class: 'admin' },
     h('div', { class: 'admin-head' },
       h('div', {},
-        h('h2', { class: 'admin-title' }, 'Referral desk'),
+        h('h2', { class: 'admin-title' }, 'Referral Repository'),
         h('p', { class: 'admin-sub' }, `Signed in as ${A.user.email}`)),
       h('div', { class: 'subtabs', role: 'tablist', 'aria-label': 'Admin sections' },
         subTab('requests', 'Requests', 'count-requests'),

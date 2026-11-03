@@ -2588,7 +2588,9 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Home Page Hero Action (Above Dashboard Preview - Full Horizontal Width Matching Box Below) */
 .hero-dashboard-action-top {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   width: 100%;
   margin-bottom: 16px;
   position: relative;
@@ -2663,6 +2665,8 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   justify-content: flex-end;
   align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
 }
 
 /* Horizontal Green Box Action Button */
