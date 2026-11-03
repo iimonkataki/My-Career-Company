@@ -21,7 +21,10 @@
       "snippets/**",
       "RFS_v3*",
       "RFS_v3*/**",
-      "unpack-rfs.js"
+      "unpack-rfs.js",
+      "GetReferred_v2/**",
+      "GetReferred_v2_BUNDLE.txt",
+      "unpack-getreferred.cjs"
     ],
     "cleanUrls": true,
     "trailingSlash": false,
@@ -80,6 +83,10 @@
       {
         "source": "/placement-plan",
         "destination": "/placement-plan.html"
+      },
+      {
+        "source": "/getreferred",
+        "destination": "/get-referred/index.html"
       },
       {
         "source": "/ResumeFitScore/style.css",
@@ -187,6 +194,16 @@
       {
         "source": "/resumefitscore/**",
         "destination": "/ResumeFitScore",
+        "type": 301
+      },
+      {
+        "source": "/GetReferred",
+        "destination": "/getreferred",
+        "type": 301
+      },
+      {
+        "source": "/getReferred",
+        "destination": "/getreferred",
         "type": 301
       }
     ],

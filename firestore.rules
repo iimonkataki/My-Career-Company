@@ -55,6 +55,106 @@ service cloud.firestore {
       allow create, read: if isCoFounder();
     }
 
+// ===== My Career Company · Get Referred portal · Firestore rules (v2.0, free Spark plan) =====
+// ADD these lines INSIDE your existing:   match /databases/{database}/documents { ... }
+// Do NOT delete your existing rules. Rules for the same path combine with OR, so this is safe to add.
+// If you change the admin list, change it in firebase-config.js and apps-script/ReferralMailer.gs too.
+// No Cloud Storage rules are needed: resumes are stored in Firestore (collection referral_files).
+
+    function isReferralAdmin() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in [
+          'anirbanroy@mycareercompany.com',
+          'ibonkataki@mycareercompany.com',
+          'iimonkataki@mycareercompany.com',
+          'upam.patra@gmail.com'
+        ];
+    }
+
+    function isOptionalString(d, key, maxLen) {
+      return !(key in d) || (d[key] is string && d[key].size() <= maxLen);
+    }
+
+    // File description stored on the request. Resume max 2 MB, cover letter max 1 MB, at most 3 pieces.
+    function isFileMeta(m, maxBytes) {
+      return m is map
+        && m.keys().hasOnly(['name', 'size', 'type', 'chunks'])
+        && m.name is string && m.name.size() <= 200
+        && m.size is int && m.size > 0 && m.size <= maxBytes
+        && m.type in ['application/pdf', 'application/msword',
+                      'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+        && m.chunks is int && m.chunks >= 1 && m.chunks <= 3;
+    }
+
+    function isValidReferralRequest(d) {
+      return d.keys().hasOnly(['fullName', 'email', 'phone', 'company', 'companySlug', 'jobId', 'jobTitle',
+                               'recommendationNote', 'coverLetterText', 'coverLetterFile', 'resume',
+                               'portalUrl', 'consent', 'source', 'status', 'submittedAt'])
+        && d.keys().hasAll(['fullName', 'email', 'phone', 'company', 'companySlug', 'jobId',
+                            'recommendationNote', 'resume', 'consent', 'status', 'submittedAt'])
+        && d.fullName is string && d.fullName.size() >= 2 && d.fullName.size() <= 100
+        && d.email is string && d.email.size() <= 254 && d.email.matches('[^@\\s]+@[^@\\s]+[.][^@\\s]{2,}')
+        && d.phone is string && d.phone.size() >= 8 && d.phone.size() <= 20
+        && d.company is string && d.company.size() >= 1 && d.company.size() <= 120
+        && d.companySlug is string && d.companySlug.size() >= 1 && d.companySlug.size() <= 120
+        && d.jobId is string && d.jobId.size() >= 1 && d.jobId.size() <= 100
+        && d.recommendationNote is string && d.recommendationNote.size() >= 40 && d.recommendationNote.size() <= 1500
+        && isOptionalString(d, 'jobTitle', 150)
+        && isOptionalString(d, 'coverLetterText', 6000)
+        && isOptionalString(d, 'portalUrl', 500)
+        && isOptionalString(d, 'source', 40)
+        && isFileMeta(d.resume, 2097152)
+        && (!('coverLetterFile' in d) || isFileMeta(d.coverLetterFile, 1048576))
+        && d.consent == true
+        && d.status == 'new'
+        && d.submittedAt == request.time;
+    }
+
+    // One piece of an uploaded file. It can only be written in the SAME batch that creates its request
+    // (getAfter + submittedAt == request.time), and only up to the number of pieces the request declares.
+    function isValidReferralFile(fileId, f) {
+      return f.keys().hasOnly(['requestId', 'kind', 'index', 'data'])
+        && f.requestId is string && f.requestId.matches('[A-Za-z0-9]{10,40}')
+        && f.kind in ['resume', 'cover-letter']
+        && f.index is int && f.index >= 0 && f.index <= 2
+        && fileId == f.requestId + '_' + f.kind + '_' + string(f.index)
+        && f.data is string && f.data.size() > 0 && f.data.size() <= 950000
+        && belongsToRequestInThisBatch(f);
+    }
+
+    function belongsToRequestInThisBatch(f) {
+      return getAfter(/databases/$(database)/documents/referral_requests/$(f.requestId)).data.submittedAt == request.time
+        && ((f.kind == 'resume'
+              && f.index < getAfter(/databases/$(database)/documents/referral_requests/$(f.requestId)).data.resume.chunks)
+            || (f.kind == 'cover-letter'
+              && f.index < getAfter(/databases/$(database)/documents/referral_requests/$(f.requestId)).data.coverLetterFile.chunks));
+    }
+
+    // Visitors can only CREATE a request. Only admins can read, update or delete.
+    match /referral_requests/{requestId} {
+      allow create: if isValidReferralRequest(request.resource.data);
+      allow read, update, delete: if isReferralAdmin();
+    }
+
+    // Resume and cover letter pieces. Visitors create (with their request); only admins read or delete.
+    match /referral_files/{fileId} {
+      allow create: if isValidReferralFile(fileId, request.resource.data);
+      allow read, delete: if isReferralAdmin();
+    }
+
+    // Company list shown on the public page (names, job portal links, POC counts). No personal data.
+    match /referral_public/{docId} {
+      allow read: if true;
+      allow write: if isReferralAdmin();
+    }
+
+    // POC names, phones, emails. Admins only.
+    match /referral_private/{docId} {
+      allow read, write: if isReferralAdmin();
+    }
+// ===== end Get Referred block =====
+
     // Default: require co-founder credentials
     match /{document=**} {
       allow read, write: if isCoFounder();
