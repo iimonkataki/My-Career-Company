@@ -1,5 +1,6 @@
 /* My Career Company · Get Referred™ portal · app shell + user flow (v2.1) */
-import * as svc from './firebase-service.js?v=2.2';
+import * as svc from './firebase-service.js?v=2.4';
+import { REFERRAL_DEFAULT_COMPANIES, renderTripleMarquee } from '/js/company-logos.js?v=2.4';
 import {
   validateRequest, buildRequestDoc, resolveFileType, validateFile, formatBytes, looksFirstPerson,
   shortRef, cleanText, NOTE_MAX, CORE_VERSION, MAX_RESUME_BYTES, MAX_COVER_BYTES,
@@ -307,7 +308,7 @@ svc.onAuth(async (user) => {
     if (!state.adminMounted) {
       state.adminMounted = true;
       try {
-        const mod = await import('./admin.js?v=2.3');
+        const mod = await import('./admin.js?v=2.4');
         await mod.mountAdmin($('admin-root'), { user, svc });
       } catch (e) {
         state.adminMounted = false;
@@ -651,8 +652,18 @@ if ($('modalCopyEmailBtn')) {
 
 /* ===================== companies ===================== */
 
+function renderGetReferredMarquee(companiesList) {
+  const container = $('getReferredMarqueeContainer');
+  if (!container) return;
+  const listToRender = Array.isArray(companiesList) && companiesList.length > 0
+    ? companiesList
+    : REFERRAL_DEFAULT_COMPANIES;
+  renderTripleMarquee(container, listToRender);
+}
+
 async function initCompanies() {
   const sel = $('company-select');
+  renderGetReferredMarquee(REFERRAL_DEFAULT_COMPANIES);
   if (!svc.configured) {
     sel.innerHTML = '<option value="">Company list unavailable</option>';
     return;
@@ -660,8 +671,13 @@ async function initCompanies() {
   try {
     const { companies } = await svc.loadCompanies();
     state.companies = companies;
-    if ($('heroCompanyCount') && companies.length > 0) {
-      $('heroCompanyCount').textContent = String(companies.length);
+    if (companies && companies.length > 0) {
+      renderGetReferredMarquee(companies);
+      if ($('heroCompanyCount')) {
+        $('heroCompanyCount').textContent = String(companies.length);
+      }
+    } else if ($('heroCompanyCount')) {
+      $('heroCompanyCount').textContent = String(REFERRAL_DEFAULT_COMPANIES.length);
     }
     sel.textContent = '';
     if (!companies.length) {
@@ -678,6 +694,8 @@ async function initCompanies() {
     $('err-company').textContent = 'We could not load the company list. Refresh the page to try again.';
   }
 }
+
+window.refreshGetReferredCompanies = initCompanies;
 
 $('company-select').addEventListener('change', (e) => {
   state.company = state.companies.find((c) => c.slug === e.target.value) || null;
@@ -899,6 +917,7 @@ $('referral-form').addEventListener('submit', async (e) => {
 
 function showSuccess(requestId, company, jobId) {
   if ($('referralInputPanel')) $('referralInputPanel').hidden = true;
+  if ($('referralMarqueeSection')) $('referralMarqueeSection').hidden = true;
   $('request-layout').hidden = true;
   const hero = document.querySelector('#view-user .hero');
   if (hero) hero.hidden = true;
@@ -929,6 +948,7 @@ $('another-btn').addEventListener('click', () => {
   const hero = document.querySelector('#view-user .hero');
   if (hero) hero.hidden = false;
   if ($('referralInputPanel')) $('referralInputPanel').hidden = false;
+  if ($('referralMarqueeSection')) $('referralMarqueeSection').hidden = false;
   $('request-layout').hidden = false;
   $('company-select').focus();
 });

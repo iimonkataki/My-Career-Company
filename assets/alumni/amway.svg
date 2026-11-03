@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="160" height="160">
+  <rect width="160" height="160" rx="24" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <text x="80" y="86" font-family="Georgia, Times New Roman, serif" font-size="34" font-weight="900" fill="#1B365D" text-anchor="middle">Amway</text>
+  <path d="M26 108 Q80 88 134 102" fill="none" stroke="#E31837" stroke-width="8" stroke-linecap="round"/>
+</svg>

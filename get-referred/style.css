@@ -3505,3 +3505,148 @@ input[type="file"]::file-selector-button:hover {
     font-size: 10px;
   }
 }
+
+
+/* ==========================================================================
+   GET REFERRED™ 3-ROW MOVING PARTNER COMPANY MARQUEE
+   ========================================================================== */
+.referral-network-marquee-section {
+  background: linear-gradient(180deg, rgba(7, 61, 50, 0.72) 0%, rgba(5, 42, 34, 0.88) 100%);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-xl);
+  padding: 26px 0 22px;
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  position: relative;
+}
+
+.referral-marquee-header {
+  text-align: center;
+  padding: 0 24px;
+  margin-bottom: 18px;
+}
+
+.referral-marquee-eyebrow {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-gold-primary);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: rgba(212, 175, 124, 0.12);
+  border: 1px solid rgba(212, 175, 124, 0.3);
+  padding: 5px 14px;
+  border-radius: 999px;
+  margin-bottom: 8px;
+}
+
+.referral-marquee-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-text-primary);
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
+}
+
+.referral-marquee-sub {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  max-width: 680px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+.referral-network-marquee-section .alumni-marquee-container {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  padding: 6px 0 2px;
+  mask-image: linear-gradient(to right, transparent, black 7%, black 93%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 7%, black 93%, transparent);
+}
+
+.referral-network-marquee-section .alumni-marquee-row {
+  display: flex;
+  overflow: hidden;
+  user-select: none;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.referral-network-marquee-section .alumni-marquee-row:last-child {
+  margin-bottom: 0;
+}
+
+.referral-network-marquee-section .alumni-marquee-track {
+  display: flex;
+  flex-shrink: 0;
+  gap: 14px;
+  align-items: center;
+  min-width: 100%;
+  animation: getReferredScrollLeft 75s linear infinite;
+}
+
+.referral-network-marquee-section .alumni-marquee-track.reverse {
+  animation: getReferredScrollRight 80s linear infinite;
+}
+
+.referral-network-marquee-section .alumni-marquee-row:hover .alumni-marquee-track {
+  animation-play-state: paused;
+}
+
+@keyframes getReferredScrollLeft {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-100% - 14px));
+  }
+}
+
+@keyframes getReferredScrollRight {
+  from {
+    transform: translateX(calc(-100% - 14px));
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.referral-network-marquee-section .alumni-company-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #FFFFFF;
+  border: 1px solid rgba(212, 175, 124, 0.55);
+  padding: 7px 16px;
+  border-radius: 999px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.22);
+  white-space: nowrap;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.referral-network-marquee-section .alumni-company-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-gold-primary);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+.referral-network-marquee-section .alumni-logo-img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.referral-network-marquee-section .alumni-company-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #073D32;
+  letter-spacing: -0.01em;
+}
+
+#referralInputPanel {
+  margin-top: 4px;
+}

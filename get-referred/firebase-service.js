@@ -35,8 +35,18 @@ function need() {
 
 /* ---------- auth & access whitelist ---------- */
 
+export const PRIMARY_COFOUNDERS = [
+  { email: 'ibonkataki@mycareercompany.com', name: 'Ibon Kataki', role: 'Co-Founder & Admin', institution: 'My Career Company', isFounder: true, status: 'active' },
+  { email: 'iimonkataki@mycareercompany.com', name: 'Iimon Kataki', role: 'Co-Founder & Admin', institution: 'My Career Company', isFounder: true, status: 'active' },
+  { email: 'anirbanroy@mycareercompany.com', name: 'Anirban Roy', role: 'Co-Founder & Admin', institution: 'My Career Company', isFounder: true, status: 'active' },
+  { email: 'upam.patra@gmail.com', name: 'Upamanyu Patra', role: 'Co-Founder & Admin', institution: 'My Career Company', isFounder: true, status: 'active' },
+];
+
 export function isAdminEmail(email) {
-  return !!email && ADMIN_EMAILS.map((e) => e.toLowerCase()).includes(String(email).toLowerCase().trim());
+  if (!email) return false;
+  const clean = String(email).toLowerCase().trim();
+  return PRIMARY_COFOUNDERS.some((f) => f.email === clean) ||
+    ADMIN_EMAILS.map((e) => e.toLowerCase()).includes(clean);
 }
 
 export async function isEmailPermitted(email) {
@@ -86,29 +96,40 @@ function escapeHtml(str) {
 
 export async function fetchAllowedUsers() {
   need();
-  const list = [];
+  const grantedMap = new Map();
   try {
     const snap = await getDocs(collection(db, COL_ALLOWED_USERS));
     snap.forEach((d) => {
-      list.push({ id: d.id, ...d.data() });
+      const data = d.data() || {};
+      const email = String(data.email || d.id || '').toLowerCase().trim();
+      if (email && !isAdminEmail(email)) {
+        grantedMap.set(email, { id: d.id, ...data, email, isFounder: false });
+      }
     });
   } catch (err) {
     console.warn('[GetReferred] Fetch referral_allowed_users note:', err);
+    try {
+      const cached = JSON.parse(localStorage.getItem('CC_GETREFERRED_ALLOWED_USERS_CACHE') || '[]');
+      cached.forEach((item) => {
+        const email = String(item.email || item.id || '').toLowerCase().trim();
+        if (email && !isAdminEmail(email) && !grantedMap.has(email)) {
+          grantedMap.set(email, { ...item, email, isFounder: false });
+        }
+      });
+    } catch (_) {}
   }
+
+  const grantedList = Array.from(grantedMap.values()).sort((a, b) => {
+    const ta = a.grantedAt ? new Date(a.grantedAt).getTime() : 0;
+    const tb = b.grantedAt ? new Date(b.grantedAt).getTime() : 0;
+    return tb - ta;
+  });
+
   try {
-    const cached = JSON.parse(localStorage.getItem('CC_GETREFERRED_ALLOWED_USERS_CACHE') || '[]');
-    const map = new Map();
-    list.forEach((item) => map.set(item.email || item.id, item));
-    cached.forEach((item) => {
-      const k = item.email || item.id;
-      if (!map.has(k)) map.set(k, item);
-    });
-    const merged = Array.from(map.values());
-    localStorage.setItem('CC_GETREFERRED_ALLOWED_USERS_CACHE', JSON.stringify(merged));
-    return merged;
-  } catch (_) {
-    return list;
-  }
+    localStorage.setItem('CC_GETREFERRED_ALLOWED_USERS_CACHE', JSON.stringify(grantedList));
+  } catch (_) {}
+
+  return [...PRIMARY_COFOUNDERS, ...grantedList];
 }
 
 export function buildInvitationEmail(cleanEmail, metadata = {}) {
@@ -187,6 +208,9 @@ www.mycareercompany.com`;
 </html>`;
 
   return {
+    subject,
+    textBody: plainText,
+    htmlBody: html,
     to: [cleanEmail],
     from: 'Career Clinic <support@mycareercompany.com>',
     replyTo: 'support@mycareercompany.com',

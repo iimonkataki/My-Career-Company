@@ -742,6 +742,9 @@ function renderPreview(A) {
             try {
               await A.svc.publishDatabase(A.parsed, A.user.email, A.parsedFileName);
               await reloadDatabase(A);
+              if (typeof window.refreshGetReferredCompanies === 'function') {
+                window.refreshGetReferredCompanies();
+              }
               A.parsed = null;
               document.getElementById('db-file').value = '';
               clear(document.getElementById('db-preview')).append(h('p', { class: 'banner banner-ok' }, 'Published. The public company list and POC details are now up to date.'));
