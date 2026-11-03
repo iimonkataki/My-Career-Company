@@ -15,8 +15,8 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="/get-referred/style.css?v=2.1">
-  <script type="module" src="/get-referred/app.js?v=2.1"></script>
+  <link rel="stylesheet" href="/get-referred/style.css?v=2.2">
+  <script type="module" src="/get-referred/app.js?v=2.2"></script>
 </head>
 
 <body>
@@ -39,7 +39,7 @@
         </div>
       </div>
 
-      <!-- 2. Center: Portal Navigation Tabs (Get Referred vs Referral Repository) -->
+      <!-- 2. Center: Portal Navigation Tabs (Get Referred vs Referral Repository vs Access) -->
       <nav class="header-nav single-tab" id="headerNav" role="tablist" aria-label="Portal Navigation">
         <button type="button" class="nav-tab active" role="tab" id="tab-user" aria-selected="true"
           aria-controls="view-user">
@@ -51,6 +51,11 @@
           <span class="nav-icon">📁</span>
           <span class="nav-text">Referral Repository</span>
         </button>
+        <button type="button" class="nav-tab" role="tab" id="tab-access" aria-selected="false"
+          aria-controls="view-access" style="display: none;" hidden>
+          <span class="nav-icon">🔑</span>
+          <span class="nav-text">Access</span>
+        </button>
       </nav>
 
       <!-- 3. Right: Authorized Administrator / Verified User Profile Widget -->
@@ -58,13 +63,7 @@
     </div>
   </header>
 
-  <!-- Hidden Legacy Session Hooks (kept for compatibility) -->
-  <div class="session" id="session" hidden>
-    <span class="session-email" id="session-email"></span>
-    <button class="link-button" id="sign-out" type="button">Sign out</button>
-  </div>
-
-  <!-- Institutional Authentication Gate (Google Login) -->
+  <!-- Institutional Authentication Gate (Restricted Access) -->
   <div id="authGateOverlay" class="auth-gate-overlay" role="dialog" aria-modal="true" style="display: flex;">
     <div class="auth-gate-container">
 
@@ -87,10 +86,10 @@
 
         <div class="auth-gate-content">
           <div class="auth-gate-lock-icon" aria-hidden="true">🔒</div>
-          <h2 class="auth-gate-title">Sign In to Continue</h2>
+          <h2 class="auth-gate-title">Restricted Access</h2>
           <p class="auth-gate-desc">
-            Sign in with your Google account to access the <strong>Career Clinic &bull; Get Referred&trade;
-              Portal</strong> and connect with our IIM Alumni &amp; corporate referral network.
+            The <strong>Get Referred&trade; Portal</strong> is restricted to authorized candidates, institutional
+            coordinators, and verified administrators.
           </p>
         </div>
 
@@ -115,7 +114,7 @@
         </div>
       </div>
 
-      <!-- Error / Switch Account Card -->
+      <!-- Access Denied Card (shown when an unauthorized email signs in) -->
       <div id="authGateErrorCard" class="auth-gate-card auth-gate-error-card" style="display: none;">
         <div class="auth-gate-brand">
           <img src="/ResumeFitScore/brand-logo.png" alt="My Career Company" class="auth-gate-logo-img"
@@ -128,8 +127,11 @@
         <div class="auth-error-icon" aria-hidden="true">⛔</div>
         <h2 class="auth-error-title">Access Denied</h2>
         <p class="auth-error-desc">
-          The account <strong id="authDeniedEmailText" class="denied-email-highlight">user@domain.com</strong> could not
-          be verified.
+          The account <strong id="authDeniedEmailText" class="denied-email-highlight">user@domain.com</strong> is not on
+          the authorized institutional access list.
+        </p>
+        <p class="auth-error-note">
+          Only permitted users can access this portal. If you have an approved account, please select or add it below.
         </p>
         <div class="auth-gate-action">
           <button type="button" class="btn-auth-google" id="gateTryAgainBtn">
@@ -154,7 +156,7 @@
   <div class="banner banner-error" id="config-banner" role="alert" hidden></div>
 
   <main class="main-content" id="main" style="display: none;">
-    <!-- ===================== USER TAB ===================== -->
+    <!-- ===================== TAB 1: GET REFERRED ===================== -->
     <section id="view-user" role="tabpanel" aria-labelledby="tab-user">
 
       <!-- Executive Hero Banner (Matches Resume Fit Score™ Hero) -->
@@ -436,7 +438,7 @@
       </section>
     </section>
 
-    <!-- ===================== ADMIN / REFERRAL REPOSITORY TAB ===================== -->
+    <!-- ===================== TAB 2: REFERRAL REPOSITORY (CO-FOUNDERS ONLY) ===================== -->
     <section id="view-admin" role="tabpanel" aria-labelledby="tab-admin" hidden>
       <div id="admin-root">
         <div class="signin-card" id="admin-signin">
@@ -447,7 +449,168 @@
         </div>
       </div>
     </section>
+
+    <!-- ===================== TAB 3: ACCESS MANAGEMENT CONSOLE (CO-FOUNDERS ONLY) ===================== -->
+    <section class="access-section" id="view-access" role="tabpanel" aria-labelledby="tab-access" hidden>
+      <div class="access-header-panel">
+        <div class="access-header-eyebrow">ADMINISTRATIVE CONSOLE &bull; WHITELIST CONTROLLER</div>
+        <h2 class="access-title">Access Management &amp; Whitelisted Users</h2>
+        <p class="access-subtitle">
+          Manage authorized accounts permitted to access the <strong>Get Referred&trade; Portal</strong>
+          (<code>www.mycareercompany.com/getreferred</code>). Grant new user access with automated invitation emails or
+          revoke existing access. Primary Co-Founders retain permanent administrative rights.
+        </p>
+
+        <!-- Access Stats Bar -->
+        <div class="access-stats-bar">
+          <div class="access-stat-card">
+            <div class="access-stat-num" id="accessStatTotal">4</div>
+            <div class="access-stat-label">Total Permitted Accounts</div>
+          </div>
+          <div class="access-stat-card">
+            <div class="access-stat-num" id="accessStatCoFounders">4</div>
+            <div class="access-stat-label">Co-Founders (Admin)</div>
+          </div>
+          <div class="access-stat-card">
+            <div class="access-stat-num" id="accessStatEvaluators">0</div>
+            <div class="access-stat-label">Granted Users</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add New User Card -->
+      <div class="access-add-card">
+        <div class="access-add-header">
+          <div class="access-add-icon">➕</div>
+          <div>
+            <h3 class="access-add-title">Grant Access to New User</h3>
+            <p class="access-add-sub">Enter the candidate, student, or coordinator Google email address. An official
+              welcome email with the direct Get Referred&trade; portal link will be dispatched automatically.</p>
+          </div>
+        </div>
+
+        <form id="accessGrantForm" class="access-grant-form">
+          <div class="access-form-grid">
+            <div class="form-group">
+              <label for="newAccessEmail" class="label">Email Address (Google Account) <span
+                  class="required-star">*</span></label>
+              <input type="email" id="newAccessEmail" placeholder="e.g. candidate@iima.ac.in or student@gmail.com"
+                required>
+            </div>
+            <div class="form-group">
+              <label for="newAccessName" class="label">Full Name / Designation <span
+                  class="optional">(Optional)</span></label>
+              <input type="text" id="newAccessName" placeholder="e.g. Rahul Sharma (MBA Candidate)">
+            </div>
+            <div class="form-group">
+              <label for="newAccessInstitution" class="label">College / Company <span
+                  class="optional">(Optional)</span></label>
+              <input type="text" id="newAccessInstitution" placeholder="e.g. IIM Ahmedabad or McKinsey">
+            </div>
+          </div>
+
+          <div class="access-form-actions">
+            <button type="submit" class="button button-primary" id="btnGrantAccess">
+              <span class="btn-icon">✉️</span> Grant Access &amp; Send Invitation
+            </button>
+            <span class="access-grant-status" id="accessGrantStatus" style="display: none;"></span>
+          </div>
+        </form>
+      </div>
+
+      <!-- Whitelist Table Container -->
+      <div class="access-table-container">
+        <div class="access-table-header">
+          <h3 class="access-table-title">Authorized Email Accounts (<span id="accessTableCount">4</span>)</h3>
+          <div class="access-table-search">
+            <input type="search" id="accessSearchInput" class="repo-search-input"
+              placeholder="Search access list by email, name, or affiliation...">
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="access-table" id="accessUsersTable">
+            <thead>
+              <tr>
+                <th>Account / Email</th>
+                <th>Role &amp; Permissions</th>
+                <th>College / Company</th>
+                <th>Granted On</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="accessTableBody">
+              <!-- Rendered dynamically by app.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
   </main>
+
+  <!-- Access Granted & Invitation Email Modal -->
+  <div class="modal-overlay" id="accessInviteModal" style="display: none;" role="dialog" aria-modal="true"
+    aria-labelledby="accessInviteModalTitle">
+    <div class="modal-card modal-notify-card">
+      <div class="modal-header">
+        <div class="modal-header-text">
+          <div class="modal-eyebrow">ACCESS GRANTED &bull; EMAIL INVITATION DISPATCH</div>
+          <h3 class="modal-title" id="accessInviteModalTitle">🎉 Access Granted to Get Referred&trade; Portal</h3>
+        </div>
+        <button type="button" class="modal-close-btn" id="modalCloseAccessInviteBtn"
+          aria-label="Close modal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="invite-banner-success">
+          <span class="invite-success-icon">✓</span>
+          <div>
+            <strong>Access Activated!</strong> The email <span id="inviteRecipientEmail"
+              class="denied-email-highlight">user@domain.com</span> has been granted access.
+          </div>
+        </div>
+
+        <p class="notify-intro">
+          Send the official invitation email with portal access instructions and direct access URL:
+        </p>
+
+        <div class="notify-preview-group">
+          <label class="notify-field-label">Recipient:</label>
+          <input type="text" class="notify-input" id="inviteToInput" readonly>
+        </div>
+
+        <div class="notify-preview-group">
+          <label class="notify-field-label">Subject:</label>
+          <input type="text" class="notify-input" id="inviteSubjectInput" readonly
+            value="[Career Clinic] Access Granted to Get Referred™ Portal">
+        </div>
+
+        <div class="notify-preview-group">
+          <label class="notify-field-label">Invitation Message Preview:</label>
+          <textarea class="notify-textarea" id="inviteBodyTextarea" readonly rows="8"></textarea>
+        </div>
+
+        <div class="invite-dispatch-status-badge">
+          <span class="dispatch-dot"></span>
+          <span>Automated Email Dispatched from <strong>support@mycareercompany.com</strong></span>
+        </div>
+
+        <div class="notify-actions-bar">
+          <button type="button" class="button button-primary" id="modalResendInviteAutomatedBtn">
+            <span class="btn-icon">✉️</span> Resend Automated Email
+          </button>
+          <button type="button" class="button button-ghost" id="modalCopyInviteEmailBtn">
+            <span class="btn-icon">📋</span> Copy Message
+          </button>
+          <button type="button" class="button button-ghost" id="modalCopyPortalLinkBtn">
+            <span class="btn-icon">🔗</span> Copy Portal Link
+          </button>
+          <span class="copy-success-note" id="inviteCopySuccessNote" style="display: none;">✓ Copied!</span>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Site Footer (Matches Resume Fit Score™ Institutional Footer) -->
   <footer class="site-footer">
@@ -472,7 +635,7 @@
         <div>&copy; <span id="year">2026</span> My Career Company. Get Referred&trade;, Resume Fit Score&trade; and
           Career Clinic are institutional programs. All rights reserved.</div>
         <div class="footer-note">Built for MBA &bull; PGDM &bull; EPGP &bull; MDP &bull; Executive Education cohorts in
-          India. <button type="button" class="link-button" id="team-signin" hidden>Team sign-in</button></div>
+          India.</div>
       </div>
     </div>
   </footer>

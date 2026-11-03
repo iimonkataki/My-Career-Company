@@ -1,5 +1,5 @@
 /* My Career Company · Get Referred™ portal · app shell + user flow (v2.1) */
-import * as svc from './firebase-service.js?v=2.0';
+import * as svc from './firebase-service.js?v=2.2';
 import {
   validateRequest, buildRequestDoc, resolveFileType, validateFile, formatBytes, looksFirstPerson,
   shortRef, cleanText, NOTE_MAX, CORE_VERSION, MAX_RESUME_BYTES, MAX_COVER_BYTES,
@@ -18,6 +18,9 @@ const state = {
   submitting: false,
   adminMounted: false,
   user: null,
+  signingOutRejectedUser: false,
+  allowedUsers: [],
+  activeInviteContext: null,
 };
 
 function escapeHtml(str) {
@@ -33,26 +36,48 @@ function escapeHtml(str) {
 /* ===================== tabs ===================== */
 
 function showTab(name) {
-  const isAdmin = name === 'admin' && state.user && svc.isAdminEmail(state.user.email);
+  const admin = !!(state.user && svc.isAdminEmail(state.user.email));
+  const activeTab = admin && (name === 'admin' || name === 'access') ? name : 'user';
   const tabUser = $('tab-user');
   const tabAdmin = $('tab-admin');
+  const tabAccess = $('tab-access');
+  const viewUser = $('view-user');
+  const viewAdmin = $('view-admin');
+  const viewAccess = $('view-access');
+
   if (tabUser) {
-    tabUser.setAttribute('aria-selected', String(!isAdmin));
-    tabUser.classList.toggle('active', !isAdmin);
+    tabUser.setAttribute('aria-selected', String(activeTab === 'user'));
+    tabUser.classList.toggle('active', activeTab === 'user');
   }
   if (tabAdmin) {
-    tabAdmin.setAttribute('aria-selected', String(isAdmin));
-    tabAdmin.classList.toggle('active', isAdmin);
+    tabAdmin.setAttribute('aria-selected', String(activeTab === 'admin'));
+    tabAdmin.classList.toggle('active', activeTab === 'admin');
   }
-  $('view-user').hidden = isAdmin;
-  $('view-admin').hidden = !isAdmin;
-  const wanted = isAdmin ? '#admin' : '';
+  if (tabAccess) {
+    tabAccess.setAttribute('aria-selected', String(activeTab === 'access'));
+    tabAccess.classList.toggle('active', activeTab === 'access');
+  }
+
+  if (viewUser) viewUser.hidden = activeTab !== 'user';
+  if (viewAdmin) viewAdmin.hidden = activeTab !== 'admin';
+  if (viewAccess) viewAccess.hidden = activeTab !== 'access';
+
+  if (activeTab === 'access') {
+    loadAccessView();
+  }
+
+  const wanted = activeTab === 'admin' ? '#admin' : activeTab === 'access' ? '#access' : '';
   if (location.hash !== wanted) history.replaceState(null, '', location.pathname + location.search + wanted);
 }
 
 $('tab-user').addEventListener('click', () => showTab('user'));
 $('tab-admin').addEventListener('click', () => showTab('admin'));
-window.addEventListener('hashchange', () => showTab(location.hash === '#admin' ? 'admin' : 'user'));
+if ($('tab-access')) $('tab-access').addEventListener('click', () => showTab('access'));
+window.addEventListener('hashchange', () => {
+  if (location.hash === '#admin') showTab('admin');
+  else if (location.hash === '#access') showTab('access');
+  else showTab('user');
+});
 
 /* ===================== auth gate + top-right account widget ===================== */
 
@@ -65,6 +90,7 @@ function showLockedState() {
   const gateErrorCard = $('authGateErrorCard');
   const widget = $('headerUserWidget');
   const tabAdmin = $('tab-admin');
+  const tabAccess = $('tab-access');
   const headerNav = $('headerNav');
 
   if (mainEl) mainEl.style.display = 'none';
@@ -81,6 +107,45 @@ function showLockedState() {
     tabAdmin.hidden = true;
     tabAdmin.style.display = 'none';
   }
+  if (tabAccess) {
+    tabAccess.hidden = true;
+    tabAccess.style.display = 'none';
+  }
+  if (headerNav) headerNav.classList.add('single-tab');
+}
+
+function showDeniedState(rejectedEmail) {
+  const mainEl = $('main');
+  const headerEl = $('siteHeader');
+  const gate = $('authGateOverlay');
+  const gateLoading = $('authGateLoading');
+  const gateLoginCard = $('authGateLoginCard');
+  const gateErrorCard = $('authGateErrorCard');
+  const deniedEmailEl = $('authDeniedEmailText');
+  const widget = $('headerUserWidget');
+  const tabAdmin = $('tab-admin');
+  const tabAccess = $('tab-access');
+  const headerNav = $('headerNav');
+
+  if (mainEl) mainEl.style.display = 'none';
+  if (headerEl) headerEl.style.opacity = '0.4';
+  if (gate) {
+    gate.style.display = 'flex';
+    gate.setAttribute('aria-hidden', 'false');
+  }
+  if (gateLoading) gateLoading.style.display = 'none';
+  if (gateLoginCard) gateLoginCard.style.display = 'none';
+  if (gateErrorCard) gateErrorCard.style.display = 'block';
+  if (deniedEmailEl) deniedEmailEl.textContent = rejectedEmail || 'Unknown Account';
+  if (widget) widget.innerHTML = '';
+  if (tabAdmin) {
+    tabAdmin.hidden = true;
+    tabAdmin.style.display = 'none';
+  }
+  if (tabAccess) {
+    tabAccess.hidden = true;
+    tabAccess.style.display = 'none';
+  }
   if (headerNav) headerNav.classList.add('single-tab');
 }
 
@@ -90,6 +155,7 @@ function showAuthorizedState(user) {
   const gate = $('authGateOverlay');
   const widget = $('headerUserWidget');
   const tabAdmin = $('tab-admin');
+  const tabAccess = $('tab-access');
   const headerNav = $('headerNav');
   const admin = !!user && svc.isAdminEmail(user.email);
 
@@ -106,6 +172,10 @@ function showAuthorizedState(user) {
   if (tabAdmin) {
     tabAdmin.hidden = !admin;
     tabAdmin.style.display = admin ? 'inline-flex' : 'none';
+  }
+  if (tabAccess) {
+    tabAccess.hidden = !admin;
+    tabAccess.style.display = admin ? 'inline-flex' : 'none';
   }
   if (headerNav) {
     headerNav.classList.toggle('single-tab', !admin);
@@ -200,16 +270,14 @@ if ($('team-signin')) {
     handleGoogleSignIn($('admin-signin-err'));
   });
 }
-if ($('sign-out')) {
-  $('sign-out').addEventListener('click', async () => {
-    await svc.signOutUser();
-    toast('Signed out');
-  });
-}
 
 svc.onAuth(async (user) => {
-  state.user = user;
   if (!user) {
+    state.user = null;
+    if (state.signingOutRejectedUser) {
+      state.signingOutRejectedUser = false;
+      return;
+    }
     if (state.adminMounted) {
       location.reload();
       return;
@@ -218,11 +286,20 @@ svc.onAuth(async (user) => {
     return;
   }
 
+  const permitted = await svc.isEmailPermitted(user.email);
+  if (!permitted) {
+    const rejectedEmail = user.email;
+    state.user = null;
+    state.signingOutRejectedUser = true;
+    await svc.signOutUser();
+    showDeniedState(rejectedEmail);
+    return;
+  }
+
+  state.user = user;
   showAuthorizedState(user);
 
   const admin = !!user && svc.isAdminEmail(user.email);
-  if ($('session')) $('session').hidden = !admin;
-  if ($('session-email')) $('session-email').textContent = admin ? user.email : '';
   if ($('team-signin')) $('team-signin').textContent = admin ? 'Open referral repository' : 'Team sign-in';
 
   if (admin) {
@@ -240,6 +317,10 @@ svc.onAuth(async (user) => {
     }
     if (location.hash === '#admin') {
       showTab('admin');
+    } else if (location.hash === '#access') {
+      showTab('access');
+    } else {
+      showTab('user');
     }
   } else {
     if (state.adminMounted) { location.reload(); return; }
@@ -247,6 +328,228 @@ svc.onAuth(async (user) => {
     showTab('user');
   }
 });
+
+/* ===================== candidate access management console ===================== */
+
+async function loadAccessView() {
+  if (!state.user || !svc.isAdminEmail(state.user.email)) return;
+  try {
+    const users = await svc.fetchAllowedUsers();
+    state.allowedUsers = users;
+    const totalEl = $('accessTotalUsersCount');
+    const dynamicEl = $('accessDynamicCount');
+    if (totalEl) totalEl.textContent = String(users.length);
+    if (dynamicEl) dynamicEl.textContent = String(users.filter((u) => !u.isFounder).length);
+    renderAccessTable(users, ($('accessSearchInput') && $('accessSearchInput').value) || '');
+  } catch (err) {
+    console.error('[GetReferred] loadAccessView failed', err);
+    toast('Could not load access directory: ' + svc.friendlyError(err), 'error');
+  }
+}
+
+function renderAccessTable(users, query = '') {
+  const tbody = $('accessTableBody');
+  if (!tbody) return;
+  const q = String(query || '').trim().toLowerCase();
+  const filtered = q
+    ? users.filter((u) =>
+        (u.email || '').toLowerCase().includes(q) ||
+        (u.name || '').toLowerCase().includes(q) ||
+        (u.institution || '').toLowerCase().includes(q) ||
+        (u.role || '').toLowerCase().includes(q)
+      )
+    : users;
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 28px; color: var(--color-text-muted);">No matching accounts found.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((u) => {
+    const nameStr = u.name || u.email.split('@')[0];
+    const parts = nameStr.split(/[\s._-]+/).filter(Boolean);
+    const initials = (parts.length >= 2 ? parts[0][0] + parts[parts.length - 1][0] : (parts[0] || 'U').slice(0, 2)).toUpperCase();
+    const roleBadge = u.isFounder
+      ? `<span class="badge-founder">👑 Co-Founder</span>`
+      : `<span class="badge-granted">👤 Candidate / User</span>`;
+    const grantedDate = u.isFounder
+      ? 'Permanent'
+      : (u.grantedAt ? new Date(u.grantedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Active');
+    const actionsHtml = u.isFounder
+      ? `<span class="action-locked">Permanent Co-Founder</span>`
+      : `<button type="button" class="btn-resend" data-resend-email="${escapeHtml(u.email)}" data-resend-name="${escapeHtml(u.name || '')}" data-resend-inst="${escapeHtml(u.institution || '')}">✉️ Invite</button>
+         <button type="button" class="btn-revoke" data-revoke-email="${escapeHtml(u.email)}">Revoke</button>`;
+
+    return `
+      <tr>
+        <td>
+          <div class="access-user-cell">
+            <div class="access-user-avatar">${escapeHtml(initials)}</div>
+            <div class="access-user-details">
+              <span class="access-user-name">${escapeHtml(u.name || 'Authorized User')}</span>
+              ${u.institution ? `<span class="access-user-inst">${escapeHtml(u.institution)}</span>` : ''}
+            </div>
+          </div>
+        </td>
+        <td><span class="access-user-email">${escapeHtml(u.email)}</span></td>
+        <td>${roleBadge}</td>
+        <td><span class="status-active">Active</span></td>
+        <td>${escapeHtml(grantedDate)}</td>
+        <td style="text-align: right;">${actionsHtml}</td>
+      </tr>
+    `;
+  }).join('');
+
+  tbody.querySelectorAll('[data-resend-email]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const email = btn.getAttribute('data-resend-email');
+      const name = btn.getAttribute('data-resend-name');
+      const inst = btn.getAttribute('data-resend-inst');
+      openAccessInviteModal(email, name, inst, false);
+    });
+  });
+
+  tbody.querySelectorAll('[data-revoke-email]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const email = btn.getAttribute('data-revoke-email');
+      if (!email) return;
+      if (!confirm(`Revoke Get Referred™ portal access for ${email}?`)) return;
+      btn.disabled = true;
+      btn.textContent = 'Revoking…';
+      try {
+        await svc.revokeUserAccess(email);
+        toast(`Revoked access for ${email}`);
+        await loadAccessView();
+      } catch (err) {
+        toast('Could not revoke access: ' + svc.friendlyError(err), 'error');
+        btn.disabled = false;
+        btn.textContent = 'Revoke';
+      }
+    });
+  });
+}
+
+function openAccessInviteModal(email, name = '', institution = '', autoDispatched = true) {
+  const modal = $('accessInviteModal');
+  if (!modal) return;
+  const { subject, textBody } = svc.buildInvitationEmail(email, { name, institution });
+  state.activeInviteContext = { email, name, institution, subject, textBody };
+
+  if ($('inviteModalRecipientEmail')) $('inviteModalRecipientEmail').textContent = email;
+  if ($('inviteModalSubject')) $('inviteModalSubject').value = subject;
+  if ($('inviteModalBody')) $('inviteModalBody').value = textBody;
+  if ($('inviteDispatchStatusBadge')) {
+    $('inviteDispatchStatusBadge').style.display = autoDispatched ? 'block' : 'none';
+  }
+  if ($('inviteCopySuccessNote')) $('inviteCopySuccessNote').style.display = 'none';
+  modal.style.display = 'flex';
+}
+
+if ($('accessSearchInput')) {
+  $('accessSearchInput').addEventListener('input', (e) => {
+    renderAccessTable(state.allowedUsers, e.target.value);
+  });
+}
+
+if ($('accessGrantForm')) {
+  $('accessGrantForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const emailInput = $('accessNewEmail');
+    const nameInput = $('accessNewName');
+    const instInput = $('accessNewInstitution');
+    const submitBtn = $('accessGrantSubmitBtn');
+    const statusEl = $('accessGrantStatus');
+
+    const rawEmail = (emailInput && emailInput.value || '').trim().toLowerCase();
+    const name = (nameInput && nameInput.value || '').trim();
+    const institution = (instInput && instInput.value || '').trim();
+
+    if (!rawEmail || !rawEmail.includes('@')) {
+      toast('Please enter a valid Google Email ID.', 'error');
+      return;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Granting Access & Sending Invite…';
+    }
+    if (statusEl) statusEl.style.display = 'none';
+
+    try {
+      await svc.grantUserAccess(rawEmail, {
+        name,
+        institution,
+        grantedBy: (state.user && state.user.email) || 'Co-Founder',
+      });
+      if (emailInput) emailInput.value = '';
+      if (nameInput) nameInput.value = '';
+      if (instInput) instInput.value = '';
+      if (statusEl) {
+        statusEl.textContent = `✓ Access granted to ${rawEmail} and welcome email dispatched from support@mycareercompany.com.`;
+        statusEl.style.display = 'block';
+      }
+      await loadAccessView();
+      openAccessInviteModal(rawEmail, name, institution, true);
+    } catch (err) {
+      console.error('[GetReferred] grantUserAccess failed', err);
+      toast('Could not grant access: ' + svc.friendlyError(err), 'error');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>➕</span> Grant Access';
+      }
+    }
+  });
+}
+
+if ($('modalCloseAccessInviteBtn')) {
+  $('modalCloseAccessInviteBtn').addEventListener('click', () => {
+    if ($('accessInviteModal')) $('accessInviteModal').style.display = 'none';
+  });
+}
+if ($('accessInviteModal')) {
+  $('accessInviteModal').addEventListener('click', (e) => {
+    if (e.target === $('accessInviteModal')) $('accessInviteModal').style.display = 'none';
+  });
+}
+if ($('modalResendInviteAutomatedBtn')) {
+  $('modalResendInviteAutomatedBtn').addEventListener('click', async () => {
+    const ctx = state.activeInviteContext;
+    if (!ctx || !ctx.email) return;
+    const btn = $('modalResendInviteAutomatedBtn');
+    btn.disabled = true;
+    btn.textContent = 'Sending Automated Email…';
+    try {
+      await svc.sendInvitationEmail(ctx.email, {
+        name: ctx.name,
+        institution: ctx.institution,
+        grantedBy: (state.user && state.user.email) || 'Co-Founder',
+      });
+      if ($('inviteDispatchStatusBadge')) $('inviteDispatchStatusBadge').style.display = 'block';
+      toast(`Automated welcome email sent to ${ctx.email}`);
+    } catch (err) {
+      toast('Could not resend email: ' + svc.friendlyError(err), 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '🔄 Resend Automated Email Now';
+    }
+  });
+}
+if ($('modalCopyInviteEmailBtn')) {
+  $('modalCopyInviteEmailBtn').addEventListener('click', async () => {
+    const subj = ($('inviteModalSubject') && $('inviteModalSubject').value) || '';
+    const body = ($('inviteModalBody') && $('inviteModalBody').value) || '';
+    await navigator.clipboard.writeText(`Subject: ${subj}\n\n${body}`);
+    if ($('inviteCopySuccessNote')) $('inviteCopySuccessNote').style.display = 'block';
+    toast('Invitation message copied');
+  });
+}
+if ($('modalCopyPortalLinkBtn')) {
+  $('modalCopyPortalLinkBtn').addEventListener('click', async () => {
+    await navigator.clipboard.writeText('https://www.mycareercompany.com/getreferred');
+    toast('Portal link copied');
+  });
+}
 
 /* ===================== companies ===================== */
 
@@ -553,7 +856,7 @@ if (!svc.configured) {
   b.hidden = false;
   b.textContent = 'Setup needed: paste the Firebase project config into get-referred/firebase-config.js.';
 }
-showTab(location.hash === '#admin' ? 'admin' : 'user');
+showTab(location.hash === '#admin' ? 'admin' : location.hash === '#access' ? 'access' : 'user');
 updateSteps();
 renderSlip();
 initCompanies();
