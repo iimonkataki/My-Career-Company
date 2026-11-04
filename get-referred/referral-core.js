@@ -416,7 +416,9 @@ export function sortPocs(pocs) {
 
 /* ---------- email drafting ---------- */
 
-/** Email to the POC: "You have a referral request at {company} from {candidate}". Resume is attached by the mailer. */
+/** Email to the POC (first email they get): "You have received a referral request from My Career Company". */
+export const STATUS_URL = 'https://www.mycareercompany.com/getreferred#status';
+
 export function buildReferralEmail({ request, poc, company, adminName }) {
   const cand = request.fullName;
   const candFirst = firstName(cand) || 'the candidate';
@@ -424,12 +426,12 @@ export function buildReferralEmail({ request, poc, company, adminName }) {
   const companyName = (company && company.name) || request.company;
   const portal = request.portalUrl || (company && company.portalUrl) || '';
 
-  const subject = `Referral request at ${companyName}: ${cand} (Job ID ${request.jobId})`;
+  const subject = `Referral request from My Career Company: ${cand} for ${companyName} (Job ID ${request.jobId})`;
 
   const lines = [];
   lines.push(`Hi ${pocFirst},`);
   lines.push('');
-  lines.push(`You have a new referral request at ${companyName} from ${cand}, shared through My Career Company.`);
+  lines.push(`You have received a referral request from My Career Company for the role below at ${companyName}.`);
   lines.push('');
   lines.push(`Candidate: ${cand}`);
   if (request.jobTitle) lines.push(`Role: ${request.jobTitle}`);
@@ -450,6 +452,8 @@ export function buildReferralEmail({ request, poc, company, adminName }) {
   lines.push('');
   lines.push(`If the profile looks like a fit, could you refer ${candFirst} for job ID ${request.jobId} through ${companyName}'s referral system? If it isn't a fit, a quick reply helps us let ${candFirst} know.`);
   lines.push('');
+  lines.push(`Once you have referred ${candFirst}, please mark it as done in Status of Referrals: ${STATUS_URL} (sign in with Google using this email address; uploading proof is optional). This is how your referral counts towards your My Career Company payouts.`);
+  lines.push('');
   lines.push('Thank you for your help.');
   lines.push('');
   lines.push('Best regards,');
@@ -461,20 +465,23 @@ export function buildReferralEmail({ request, poc, company, adminName }) {
   return { subject, text, html: textToEmailHtml(text) };
 }
 
-/** Email to the candidate confirming their profile was shared. Does not name the POC or promise a referral. */
+/** Second email to the candidate: their details have been shared with the POC. Does not name the POC or promise a referral. */
 export function buildCandidateEmail({ request, company, adminName, ref }) {
   const candFirst = firstName(request.fullName) || 'there';
   const companyName = (company && company.name) || request.company;
   const job = request.jobTitle ? `job ID ${request.jobId} (${request.jobTitle})` : `job ID ${request.jobId}`;
 
-  const subject = `Your referral request for ${companyName} has been shared`;
+  const subject = `Your details have been shared with the referral POC at ${companyName}`;
   const lines = [];
   lines.push(`Hi ${candFirst},`);
   lines.push('');
-  lines.push(`Good news: we've shared your profile with our referral contact at ${companyName} for ${job}.`);
+  lines.push(`Good news: My Career Company has shared your details with the referral POC for the company you requested: ${companyName}, ${job}.`);
   lines.push('');
   lines.push('What happens next');
-  lines.push(`Our contact will review your resume and, if it's a good fit, refer you through ${companyName}'s referral system. This usually takes a few days. The decision is theirs, so a referral isn't guaranteed.`);
+  lines.push(`The POC will review your resume and, if it's a good fit, refer you through ${companyName}'s referral system. The decision is theirs, so a referral isn't guaranteed.`);
+  lines.push('');
+  lines.push('Track your request');
+  lines.push(`Sign in with Google at ${STATUS_URL} using ${request.email} to see when the POC has referred you (our team switches on Status of Referrals for your account).`);
   lines.push('');
   lines.push('While you wait');
   lines.push(`- Watch your inbox (and spam folder) for emails from ${companyName}'s careers team, and respond quickly if they ask you to complete an application.`);

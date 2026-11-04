@@ -16,6 +16,7 @@
     href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="/get-referred/style.css?v=2.5">
+  <link rel="stylesheet" href="/get-referred/portal-ext.css?v=3.0"><!-- v3 -->
   <script type="module" src="/get-referred/app.js?v=2.5"></script>
 </head>
 
@@ -40,11 +41,22 @@
       </div>
 
       <!-- 2. Center: Portal Navigation Tabs (Get Referred vs Referral Repository vs Access) -->
-      <nav class="header-nav single-tab" id="headerNav" role="tablist" aria-label="Portal Navigation">
+      <nav class="header-nav" id="headerNav" role="tablist" aria-label="Portal Navigation">
         <button type="button" class="nav-tab active" role="tab" id="tab-user" aria-selected="true"
           aria-controls="view-user">
           <span class="nav-icon">🤝</span>
           <span class="nav-text">Get Referred</span>
+        </button>
+        <!-- v3: Status of Referrals (signed in + access granted) and Refer and Earn (everyone) -->
+        <button type="button" class="nav-tab" role="tab" id="tab-status" aria-selected="false"
+          aria-controls="view-status" style="display: none;" hidden>
+          <span class="nav-icon">📊</span>
+          <span class="nav-text">Status of Referrals</span>
+        </button>
+        <button type="button" class="nav-tab" role="tab" id="tab-refer" aria-selected="false"
+          aria-controls="view-refer">
+          <span class="nav-icon">💰</span>
+          <span class="nav-text">Refer and Earn</span>
         </button>
         <button type="button" class="nav-tab" role="tab" id="tab-admin" aria-selected="false"
           aria-controls="view-admin" style="display: none;" hidden>
@@ -64,7 +76,7 @@
   </header>
 
   <!-- Institutional Authentication Gate (Restricted Access) -->
-  <div id="authGateOverlay" class="auth-gate-overlay" role="dialog" aria-modal="true" style="display: flex;">
+  <div id="authGateOverlay" class="auth-gate-overlay" role="dialog" aria-modal="true" style="display: none;">
     <div class="auth-gate-container">
 
       <!-- Loading State (verifying Firebase session) -->
@@ -86,10 +98,10 @@
 
         <div class="auth-gate-content">
           <div class="auth-gate-lock-icon" aria-hidden="true">🔒</div>
-          <h2 class="auth-gate-title">Restricted Access</h2>
+          <h2 class="auth-gate-title">Sign in to Status of Referrals</h2>
           <p class="auth-gate-desc">
-            The <strong>Get Referred&trade; Portal</strong> is restricted to authorized candidates, institutional
-            coordinators, and verified administrators.
+            <strong>Status of Referrals</strong> is available to candidates and referral partners whose access has been
+            switched on by My Career Company. Sign in with the Google account for the email we have on file.
           </p>
         </div>
 
@@ -112,6 +124,7 @@
         <div class="auth-gate-footer">
           <span>Choose from all active Google accounts or add a new account</span>
         </div>
+        <button type="button" class="auth-gate-back" id="authGateBackBtn">&larr; Back to the portal</button>
       </div>
 
       <!-- Access Denied Card (shown when an unauthorized email signs in) -->
@@ -125,13 +138,14 @@
           </div>
         </div>
         <div class="auth-error-icon" aria-hidden="true">⛔</div>
-        <h2 class="auth-error-title">Access Denied</h2>
+        <h2 class="auth-error-title">No Status access yet</h2>
         <p class="auth-error-desc">
-          The account <strong id="authDeniedEmailText" class="denied-email-highlight">user@domain.com</strong> is not on
-          the authorized institutional access list.
+          The account <strong id="authDeniedEmailText" class="denied-email-highlight">user@domain.com</strong> doesn't have
+          access to Status of Referrals yet.
         </p>
         <p class="auth-error-note">
-          Only permitted users can access this portal. If you have an approved account, please select or add it below.
+          Get Referred and Refer and Earn are open to everyone. Our team switches on Status of Referrals for candidates who
+          have submitted a request and for approved referral partners. If you have another approved account, choose it below.
         </p>
         <div class="auth-gate-action">
           <button type="button" class="btn-auth-google" id="gateTryAgainBtn">
@@ -148,6 +162,7 @@
             <span>Switch Account / Add Another Google Account</span>
           </button>
         </div>
+        <button type="button" class="auth-gate-back" id="authGateContinueBtn">Continue to the portal &rarr;</button>
       </div>
 
     </div>
@@ -155,7 +170,7 @@
 
   <div class="banner banner-error" id="config-banner" role="alert" hidden></div>
 
-  <main class="main-content" id="main" style="display: none;">
+  <main class="main-content" id="main">
     <!-- ===================== TAB 1: GET REFERRED ===================== -->
     <section id="view-user" role="tabpanel" aria-labelledby="tab-user">
 
@@ -649,6 +664,12 @@
         <p class="hint">Your resume and contact details stay filled in for the next request.</p>
       </section>
     </section>
+
+    <!-- ===================== v3: STATUS OF REFERRALS (signed in + access) ===================== -->
+    <section class="access-section gr-view" id="view-status" role="tabpanel" aria-labelledby="tab-status" hidden></section>
+
+    <!-- ===================== v3: REFER AND EARN (everyone) ===================== -->
+    <section class="gr-view" id="view-refer" role="tabpanel" aria-labelledby="tab-refer" hidden></section>
 
     <!-- ===================== TAB 2: REFERRAL REPOSITORY (CO-FOUNDERS ONLY) ===================== -->
     <section class="repository-section" id="view-admin" role="tabpanel" aria-labelledby="tab-admin" hidden>

@@ -24,7 +24,10 @@
       "unpack-rfs.js",
       "GetReferred_v2/**",
       "GetReferred_v2_BUNDLE.txt",
-      "unpack-getreferred.cjs"
+      "unpack-getreferred.cjs",
+      "GetReferred_v3_BUNDLE.txt",
+      "install-getreferred-v3.cjs",
+      "getreferred-v3-backup/**"
     ],
     "cleanUrls": true,
     "trailingSlash": false,

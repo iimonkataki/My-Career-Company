@@ -6,6 +6,7 @@ import {
   shortRef, cleanText, NOTE_MAX, CORE_VERSION, MAX_RESUME_BYTES, MAX_COVER_BYTES,
 } from './referral-core.js?v=2.0';
 import { toast } from './ui.js?v=2.0';
+import * as ext from './portal-ext.js?v=3.0'; // v3
 
 const $ = (id) => document.getElementById(id);
 const MIN_FILL_MS = 4000; // bots submit instantly; people take longer than this
@@ -37,48 +38,32 @@ function escapeHtml(str) {
 /* ===================== tabs ===================== */
 
 function showTab(name) {
-  const admin = !!(state.user && svc.isAdminEmail(state.user.email));
-  const activeTab = admin && (name === 'admin' || name === 'access') ? name : 'user';
-  const tabUser = $('tab-user');
-  const tabAdmin = $('tab-admin');
-  const tabAccess = $('tab-access');
-  const viewUser = $('view-user');
-  const viewAdmin = $('view-admin');
-  const viewAccess = $('view-access');
-
-  if (tabUser) {
-    tabUser.setAttribute('aria-selected', String(activeTab === 'user'));
-    tabUser.classList.toggle('active', activeTab === 'user');
+  // v3: five tabs. ext.canSee() decides what this visitor may open.
+  const tabs = ['user', 'status', 'refer', 'admin', 'access'];
+  const activeTab = tabs.includes(name) && ext.canSee(name) ? name : 'user';
+  for (const t of tabs) {
+    const btn = $('tab-' + t);
+    const view = $('view-' + t);
+    if (btn) {
+      btn.setAttribute('aria-selected', String(activeTab === t));
+      btn.classList.toggle('active', activeTab === t);
+    }
+    if (view) view.hidden = activeTab !== t;
   }
-  if (tabAdmin) {
-    tabAdmin.setAttribute('aria-selected', String(activeTab === 'admin'));
-    tabAdmin.classList.toggle('active', activeTab === 'admin');
-  }
-  if (tabAccess) {
-    tabAccess.setAttribute('aria-selected', String(activeTab === 'access'));
-    tabAccess.classList.toggle('active', activeTab === 'access');
-  }
-
-  if (viewUser) viewUser.hidden = activeTab !== 'user';
-  if (viewAdmin) viewAdmin.hidden = activeTab !== 'admin';
-  if (viewAccess) viewAccess.hidden = activeTab !== 'access';
 
   if (activeTab === 'access') {
     loadAccessView();
   }
+  ext.onTabShown(activeTab);
 
-  const wanted = activeTab === 'admin' ? '#admin' : activeTab === 'access' ? '#access' : '';
+  const wanted = ext.hashFor(activeTab);
   if (location.hash !== wanted) history.replaceState(null, '', location.pathname + location.search + wanted);
 }
 
 $('tab-user').addEventListener('click', () => showTab('user'));
 $('tab-admin').addEventListener('click', () => showTab('admin'));
 if ($('tab-access')) $('tab-access').addEventListener('click', () => showTab('access'));
-window.addEventListener('hashchange', () => {
-  if (location.hash === '#admin') showTab('admin');
-  else if (location.hash === '#access') showTab('access');
-  else showTab('user');
-});
+window.addEventListener('hashchange', () => showTab(ext.tabFromHash(location.hash)));
 
 /* ===================== auth gate + top-right account widget ===================== */
 
@@ -246,13 +231,13 @@ async function handleGoogleSignIn(errEl) {
   } catch (e) {
     const code = (e && e.code) || '';
     if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
-      showLockedState();
+      ext.showPublicState(); // v3: cancelling sign-in returns to the open portal
       return;
     }
     const msg = svc.friendlyError(e);
     if (errEl) errEl.textContent = msg;
     toast(msg, 'error');
-    showLockedState();
+    ext.showPublicState();
   }
 }
 
@@ -283,22 +268,17 @@ svc.onAuth(async (user) => {
       location.reload();
       return;
     }
-    showLockedState();
+    // v3: no sign-in needed for Get Referred and Refer and Earn
+    ext.showPublicState();
+    await ext.onAuthChanged(null);
+    showTab(ext.tabFromHash(location.hash));
     return;
   }
 
-  const permitted = await svc.isEmailPermitted(user.email);
-  if (!permitted) {
-    const rejectedEmail = user.email;
-    state.user = null;
-    state.signingOutRejectedUser = true;
-    await svc.signOutUser();
-    showDeniedState(rejectedEmail);
-    return;
-  }
-
+  // v3: no global gate. Any Google account can use the portal; Status of Referrals needs access (see ext).
   state.user = user;
   showAuthorizedState(user);
+  await ext.onAuthChanged(user);
 
   const admin = !!user && svc.isAdminEmail(user.email);
   if ($('team-signin')) $('team-signin').textContent = admin ? 'Open referral repository' : 'Team sign-in';
@@ -309,24 +289,18 @@ svc.onAuth(async (user) => {
       state.adminMounted = true;
       try {
         const mod = await import('./admin.js?v=2.4');
-        await mod.mountAdmin($('admin-root'), { user, svc });
+        await mod.mountAdmin($('admin-root'), { user, svc, ext });
       } catch (e) {
         state.adminMounted = false;
         console.error('[GetReferred] admin load failed', e);
         toast('Could not open the referral repository: ' + svc.friendlyError(e), 'error');
       }
     }
-    if (location.hash === '#admin') {
-      showTab('admin');
-    } else if (location.hash === '#access') {
-      showTab('access');
-    } else {
-      showTab('user');
-    }
+    showTab(ext.tabFromHash(location.hash));
   } else {
     if (state.adminMounted) { location.reload(); return; }
     if ($('admin-signin')) $('admin-signin').hidden = false;
-    showTab('user');
+    showTab(ext.tabFromHash(location.hash));
   }
 });
 
@@ -901,9 +875,10 @@ $('referral-form').addEventListener('submit', async (e) => {
     }
     setProgress(0.45, 'Sending your request…');
     const data = buildRequestDoc(form, state.company, { resume: resume.meta, coverLetter: cover ? cover.meta : null });
-    await svc.submitRequest(requestId, data, { resume, 'cover-letter': cover });
+    await svc.submitRequest(requestId, data, { resume, 'cover-letter': cover }, ext.submitExtras(requestId, data));
     setProgress(1, 'Done');
     showSuccess(requestId, state.company, data.jobId);
+    ext.afterSubmit(requestId, data); // v3: "we have received your request" email
   } catch (err) {
     console.error('[GetReferred] submit failed', err);
     $('err-submit').textContent = `We couldn't send your request. ${svc.friendlyError(err)} If it keeps failing, email support@mycareercompany.com.`;
@@ -974,7 +949,8 @@ if (!svc.configured) {
   b.hidden = false;
   b.textContent = 'Setup needed: paste the Firebase project config into get-referred/firebase-config.js.';
 }
-showTab(location.hash === '#admin' ? 'admin' : location.hash === '#access' ? 'access' : 'user');
+ext.initExt({ svc, showTab, signIn: handleGoogleSignIn }); // v3
+showTab(ext.tabFromHash(location.hash));
 updateSteps();
 renderSlip();
 initCompanies();

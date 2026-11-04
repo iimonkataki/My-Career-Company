@@ -18,9 +18,9 @@ const STATUS_CLASS = {
   'Ex employee': 'badge-ex',
 };
 
-export async function mountAdmin(root, { user, svc }) {
+export async function mountAdmin(root, { user, svc, ext }) {
   const A = {
-    user, svc, root,
+    user, svc, root, ext,
     adminName: ADMIN_NAMES[String(user.email).toLowerCase()] || user.displayName || user.email,
     requests: [],
     pocs: [],
@@ -391,6 +391,7 @@ function renderDetail(A) {
         : h('p', { class: 'banner banner-warn' }, `No POCs for ${r.company} in the published database. Upload the latest file under Companies & POCs.`)),
 
     emailHistory(A, r),
+    A.ext && A.ext.adminStatusPanel ? A.ext.adminStatusPanel(r) : null, // v3 live status
 
     h('section', { class: 'detail-section' },
       h('h4', {}, 'Admin notes'),
@@ -591,6 +592,10 @@ async function openEmail(A, r, p) {
         poc: { ...d.poc, html: textToEmailHtml(d.poc.text), replyTo: A.user.email, attachments },
         candidate: d.candidate ? { ...d.candidate, html: textToEmailHtml(d.candidate.text), replyTo: SUPPORT_EMAIL } : null,
       });
+      if (A.ext && A.ext.onPocEmailed) { // v3: update Status of Referrals for the candidate and the POC (before the log redraws the page)
+        try { await A.ext.onPocEmailed({ request: r, poc: p, to: d.poc.to, adminEmail: A.user.email }); }
+        catch (e) { console.warn('[GetReferred] status update failed', e); toast('Emails sent, but Status of Referrals could not be updated: ' + A.svc.friendlyError(e), 'error'); }
+      }
       try {
         await A.svc.logEmail(r.id, { pocName: p.name, to: d.poc.to, sentBy: A.user.email, mode: 'mailer', candidateNotified: !!d.candidate },
           (r.status || 'new') === 'new' ? { status: 'poc_emailed' } : {});

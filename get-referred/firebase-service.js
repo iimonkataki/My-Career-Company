@@ -29,6 +29,9 @@ if (configured) {
   db = getFirestore(app);
 }
 
+/* v3: shared Firestore handle for portal-ext.js (same Firebase app, so the same sign-in) */
+export function getDb() { return db; }
+
 function need() {
   if (!configured) throw new Error('Firebase is not configured. Paste the project config into get-referred/firebase-config.js.');
 }
@@ -387,10 +390,15 @@ export async function prepareFile(file, contentType) {
  * Saves the request and every file piece in ONE atomic batch, so a request never exists without its files.
  * files: { resume: {meta, chunks}, 'cover-letter'?: {meta, chunks} }
  */
-export async function submitRequest(requestId, data, files) {
+export async function submitRequest(requestId, data, files, extras = []) {
   need();
   const batch = writeBatch(db);
   batch.set(doc(db, COL_REQUESTS, requestId), { ...data, status: 'new', submittedAt: serverTimestamp() });
+  for (const x of extras || []) { // v3: candidate status + confirmation record, saved together with the request
+    const d = { ...x.data };
+    (x.serverTime || []).forEach((k) => { d[k] = serverTimestamp(); });
+    batch.set(doc(db, x.col, x.id), d);
+  }
   for (const [kind, f] of Object.entries(files)) {
     if (!f) continue;
     f.chunks.forEach((piece, index) => {

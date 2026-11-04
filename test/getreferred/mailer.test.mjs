@@ -18,16 +18,29 @@ function test(name, fn) {
 }
 
 // Fake token format for tests: "tok|<email>|<verified>"
-function makeEnv({ apiKey = 'test-key', quota = 1500, fromAlias = '' } = {}) {
-  const env = { sent: [], fetches: [], logs: [] };
+function makeEnv({ apiKey = 'test-key', quota = 1500, fromAlias = '', firestoreDocs = {}, sheetId = 'SHEET123' } = {}) {
+  const env = { sent: [], fetches: [], logs: [], rows: [], props: {}, cache: {}, created: [], shares: [] };
+  if (sheetId) env.props.REFER_EARN_SHEET_ID = sheetId;
+  const sheet = {
+    getLastRow: () => env.rows.length,
+    appendRow: (r) => { env.rows.push(r); },
+    setName() { return this; }, setFrozenRows() { return this; },
+    getRange: () => ({ setFontWeight() { return this; }, setBackground() { return this; }, setFontColor() { return this; } }),
+  };
   const ctx = {
     console: { log: (m) => env.logs.push(m) },
     UrlFetchApp: {
       fetch(url, opts) {
         env.fetches.push({ url, opts });
+        if (url.startsWith('https://firestore.googleapis.com/')) {
+          const p = decodeURIComponent(url.split('/documents/')[1].split('?')[0]);
+          const d = firestoreDocs[p];
+          if (!d) return { getResponseCode: () => 404, getContentText: () => '{}' };
+          return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ name: p, fields: d }) };
+        }
         const tok = JSON.parse(opts.payload).idToken;
-        const [p, email, verified] = String(tok).split('|');
-        if (p !== 'tok') return { getResponseCode: () => 400, getContentText: () => '{"error":{"message":"INVALID_ID_TOKEN"}}' };
+        const [pfx, email, verified] = String(tok).split('|');
+        if (pfx !== 'tok') return { getResponseCode: () => 400, getContentText: () => '{"error":{"message":"INVALID_ID_TOKEN"}}' };
         return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ users: [{ email, emailVerified: verified === 'true' }] }) };
       },
     },
@@ -37,6 +50,18 @@ function makeEnv({ apiKey = 'test-key', quota = 1500, fromAlias = '' } = {}) {
     Utilities: {
       base64Decode: (s) => Array.from(Buffer.from(s, 'base64')),
       newBlob: (bytes, type, name) => ({ bytes, type, name }),
+      formatDate: (d) => new Date(d).toISOString().slice(0, 19).replace('T', ' '),
+      DigestAlgorithm: { SHA_256: 'sha256' },
+      computeDigest: (alg, s) => Array.from(Buffer.from(String(s))),
+      base64EncodeWebSafe: (bytes) => Buffer.from(bytes).toString('base64url'),
+      getUuid: () => 'abcd1234-0000-0000-0000-000000000000',
+    },
+    CacheService: { getScriptCache: () => ({ get: (k) => env.cache[k] || null, put: (k, v) => { env.cache[k] = v; } }) },
+    PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => (k in env.props ? env.props[k] : null), setProperty: (k, v) => { env.props[k] = String(v); } }) },
+    LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() { env.lockReleased = (env.lockReleased || 0) + 1; } }) },
+    SpreadsheetApp: {
+      openById: (id) => { if (id !== env.props.REFER_EARN_SHEET_ID) throw new Error('no sheet'); return { getSheets: () => [sheet] }; },
+      create: (name) => { env.created.push(name); return { getSheets: () => [sheet], getId: () => 'NEWSHEET', getUrl: () => 'https://docs.google.com/spreadsheets/d/NEWSHEET/edit', addEditor: (e) => { if (e.endsWith('@gmail.com')) throw new Error('external sharing off'); env.shares.push(e); } }; },
     },
     ContentService: {
       MimeType: { JSON: 'application/json' },
@@ -188,6 +213,124 @@ test('never crashes on a non-JSON body', () => {
   const env = makeEnv();
   const out = JSON.parse(env.ctx.doPost({ postData: { contents: 'not json' } }).text);
   assert.equal(out.ok, false);
+});
+
+
+/* ===================== v3 actions ===================== */
+const RID = 'AbCdEfGhIjKlMnOpQrSt';
+const confDoc = (minsAgo = 1, extra = {}) => ({
+  email: { stringValue: 'riya.sharma@example.com' }, firstName: { stringValue: 'Riya' },
+  company: { stringValue: 'Accenture' }, jobId: { stringValue: 'R00245871' }, jobTitle: { stringValue: 'Business Analyst' },
+  createdAt: { timestampValue: new Date(Date.now() - minsAgo * 60000).toISOString() }, ...extra,
+});
+
+test('v3 confirmRequest: public, reads the address from Firestore (not the browser), sends one fixed email', () => {
+  const env = makeEnv({ firestoreDocs: { ['referral_confirmations/' + RID]: confDoc() } });
+  const out = env.post({ action: 'confirmRequest', requestId: RID, to: 'attacker@evil.com' });
+  assert.equal(out.ok, true, out.error);
+  assert.equal(env.sent.length, 1);
+  const m = env.sent[0];
+  assert.equal(m.to, 'riya.sharma@example.com', 'recipient comes from Firestore only');
+  assert.equal(m.subject, 'My Career Company has received your referral request – Accenture');
+  assert.ok(m.body.includes('My Career Company has received your details and your request for a referral at Accenture for Business Analyst (Job ID R00245871).'));
+  assert.ok(m.body.includes('MCC-R-ABCDEF') && m.body.includes('getreferred#status'));
+  assert.equal(m.opts.replyTo, 'support@mycareercompany.com');
+  const f = env.fetches.find((x) => x.url.startsWith('https://firestore.googleapis.com/'));
+  assert.ok(f.url.includes('/projects/my-career-company/databases/(default)/documents/referral_confirmations/' + RID + '?key=test-key'));
+  assert.equal(env.fetches.filter((x) => x.url.includes('identitytoolkit')).length, 0, 'no sign-in needed');
+});
+test('v3 confirmRequest: a second call for the same request sends nothing', () => {
+  const env = makeEnv({ firestoreDocs: { ['referral_confirmations/' + RID]: confDoc() } });
+  env.post({ action: 'confirmRequest', requestId: RID });
+  const out = env.post({ action: 'confirmRequest', requestId: RID });
+  assert.equal(out.duplicate, true);
+  assert.equal(env.sent.length, 1);
+});
+test('v3 confirmRequest: refuses unknown, expired or malformed requests', () => {
+  const env = makeEnv({ firestoreDocs: { ['referral_confirmations/' + RID]: confDoc(25) } });
+  assert.match(env.post({ action: 'confirmRequest', requestId: RID }).error, /expired/);
+  assert.match(env.post({ action: 'confirmRequest', requestId: 'NoSuchRequestId12345' }).error, /not found/);
+  assert.match(env.post({ action: 'confirmRequest', requestId: '../../referral_private/pocs' }).error, /Invalid/);
+  assert.equal(env.sent.length, 0);
+});
+test('v3 confirmRequest: per-address and quota limits', () => {
+  const docs = {};
+  for (let i = 0; i < 5; i++) docs['referral_confirmations/' + RID.slice(0, 19) + i] = confDoc();
+  const env = makeEnv({ firestoreDocs: docs });
+  const res = [0, 1, 2, 3].map((i) => env.post({ action: 'confirmRequest', requestId: RID.slice(0, 19) + i }));
+  assert.equal(env.sent.length, 3, 'at most 3 to one address per 6 hours');
+  assert.match(res[3].error, /Too many/);
+  const low = makeEnv({ quota: 100, firestoreDocs: { ['referral_confirmations/' + RID]: confDoc() } });
+  assert.match(low.post({ action: 'confirmRequest', requestId: RID }).error, /reserved/);
+});
+const signup = (over = {}) => ({ action: 'referAndEarnSignup', t: 9000, hp: '', data: {
+  fullName: 'Asha Rao', company: 'Accenture', status: 'Current employee', role: 'Consultant', phone: '+91 98765 43210',
+  workEmail: 'asha.rao@accenture.com', linkedin: 'https://www.linkedin.com/in/asha-rao', googleEmail: 'asha@gmail.com', city: 'Pune', consent: true, ...over } });
+test('v3 referAndEarnSignup: public, appends one row with headers to the sheet', () => {
+  const env = makeEnv();
+  const out = env.post(signup());
+  assert.equal(out.ok, true, out.error);
+  assert.match(out.submissionId, /^RE-[A-Z0-9]{8}$/);
+  assert.equal(env.rows.length, 2, 'header row + data row');
+  assert.equal(env.rows[0][0], 'Timestamp (IST)');
+  const r = JSON.parse(JSON.stringify(env.rows[1])); // rows come from the script sandbox
+  // Phone starts with '+', so it is stored as "'+91…" (Sheets hides the apostrophe and keeps it as text, not a formula)
+  assert.deepEqual(r.slice(2, 12), ['Asha Rao', 'Accenture', 'Current employee', 'Consultant', "'+91 98765 43210", 'asha.rao@accenture.com', 'accenture.com', 'https://www.linkedin.com/in/asha-rao', 'asha@gmail.com', 'Pune']);
+  assert.deepEqual(r.slice(12, 15), ['Yes', 'New', 'No']);
+  assert.ok(env.lockReleased >= 1, 'lock released');
+  assert.equal(env.sent.length, 0, 'no email sent for sign-ups');
+});
+test('v3 referAndEarnSignup: blocks formula injection in any cell', () => {
+  const env = makeEnv();
+  env.post(signup({ fullName: '=HYPERLINK("http://evil","x")', role: '+cmd', city: '@SUM(1)' }));
+  const r = env.rows[1];
+  assert.ok(r[2].startsWith("'=") && r[5].startsWith("'+") && r[11].startsWith("'@"), JSON.stringify(r));
+});
+test('v3 referAndEarnSignup: re-validates on the server (personal email, bad LinkedIn, status, consent)', () => {
+  const env = makeEnv();
+  assert.match(env.post(signup({ workEmail: 'asha@gmail.com' })).error, /official company email/);
+  assert.match(env.post(signup({ linkedin: 'facebook.com/asha' })).error, /LinkedIn/);
+  assert.match(env.post(signup({ status: 'Ex employee' })).error, /status/);
+  assert.match(env.post(signup({ consent: false })).error, /Consent/);
+  assert.equal(env.rows.length, 0);
+});
+test('v3 referAndEarnSignup: honeypot / too-fast submissions are silently dropped', () => {
+  const env = makeEnv();
+  assert.equal(env.post({ ...signup(), hp: 'spam' }).ok, true);
+  assert.equal(env.post({ ...signup(), t: 500 }).ok, true);
+  assert.equal(env.rows.length, 0);
+});
+test('v3 referAndEarnSignup: one work email at most twice per 6 hours; clear error if sheet not set up', () => {
+  const env = makeEnv();
+  env.post(signup()); env.post(signup());
+  assert.match(env.post(signup()).error, /already have your details/);
+  const none = makeEnv({ sheetId: '' });
+  assert.match(none.post(signup()).error, /setupReferAndEarnSheet/);
+});
+test('v3 sendAccessNotice: admin only; fixed template with sign-in steps', () => {
+  const env = makeEnv();
+  assert.match(env.post({ action: 'sendAccessNotice', idToken: 'tok|someone@gmail.com|true', to: 'x@y.com' }).error, /not allowed/);
+  const out = env.post({ action: 'sendAccessNotice', idToken: ADMIN, to: 'Manjul@Accenture.com', name: 'Manjul Kapoor', kind: 'poc' });
+  assert.equal(out.ok, true, out.error);
+  const m = env.sent[0];
+  assert.equal(m.to, 'manjul@accenture.com');
+  assert.equal(m.subject, 'You now have access to Status of Referrals – My Career Company');
+  assert.ok(m.body.startsWith('Hi Manjul,') && m.body.includes('mark each one as referred') && m.body.includes('Use your existing email') && m.body.includes('getreferred#status'));
+});
+test('v3 setupReferAndEarnSheet: creates once, shares with co-founders, survives external-sharing block', () => {
+  const env = makeEnv({ sheetId: '' });
+  const id = env.ctx.setupReferAndEarnSheet();
+  assert.equal(id, 'NEWSHEET');
+  assert.equal(env.props.REFER_EARN_SHEET_ID, 'NEWSHEET');
+  assert.deepEqual(env.shares.sort(), ['anirbanroy@mycareercompany.com', 'ibonkataki@mycareercompany.com', 'iimonkataki@mycareercompany.com']);
+  assert.ok(env.logs.some((l) => l.includes('Could not share with upam.patra@gmail.com')), 'gmail share failure is logged, not fatal');
+  assert.equal(env.ctx.setupReferAndEarnSheet(), 'NEWSHEET', 'second run reuses the sheet');
+  assert.equal(env.created.length, 1);
+});
+test('v3 keeps v2 behaviour: sendReferral still admin-only and unchanged', () => {
+  const env = makeEnv();
+  assert.match(env.post({ ...goodSend(), idToken: 'forged' }).error, /could not be verified/);
+  assert.equal(env.post(goodSend()).sent, 2);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

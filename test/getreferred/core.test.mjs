@@ -212,23 +212,25 @@ test('admin list is identical in config, firestore rules and the Apps Script mai
 });
 
 // ---- email draft ----
-test('POC email: "referral request at <company> from <candidate>", all details, no links to files', () => {
+test('POC email (v3): "You have received a referral request from My Career Company", all details, status link', () => {
   const r = { ...core.buildRequestDoc({ ...goodForm, coverMode: 'text', coverText: 'Dear hiring team, ...' }, company, uploads) };
   const e = core.buildReferralEmail({ request: r, poc: { name: 'S Andrew Gangte' }, company, adminName: 'Ibon Tarun Kataki' });
-  assert.equal(e.subject, 'Referral request at Acme Consulting: Riya Sharma (Job ID R0012345)');
+  assert.equal(e.subject, 'Referral request from My Career Company: Riya Sharma for Acme Consulting (Job ID R0012345)');
   assert.ok(e.text.startsWith('Hi Andrew,'));
-  assert.ok(e.text.includes('You have a new referral request at Acme Consulting from Riya Sharma'));
-  for (const x of ['R0012345', 'riya@example.com', '+91 98765 43210', 'Business Analyst', 'https://acme.example.com/careers', 'Dear hiring team', 'Attached: resume.', 'Ibon Tarun Kataki']) assert.ok(e.text.includes(x), 'missing ' + x);
+  assert.ok(e.text.includes('You have received a referral request from My Career Company for the role below at Acme Consulting.'));
+  for (const x of ['R0012345', 'riya@example.com', '+91 98765 43210', 'Business Analyst', 'https://acme.example.com/careers', 'Dear hiring team', 'Attached: resume.', 'Ibon Tarun Kataki', 'https://www.mycareercompany.com/getreferred#status']) assert.ok(e.text.includes(x), 'missing ' + x);
   const withFile = core.buildReferralEmail({ request: { ...r, coverLetterText: undefined, coverLetterFile: { name: 'c.pdf' } }, poc: { name: 'Asha Rao' }, company });
   assert.ok(withFile.text.includes('Attached: resume and cover letter.'));
   assert.ok(e.html.includes('<a href="https://acme.example.com/careers"'));
+  assert.ok(e.html.includes('<a href="https://www.mycareercompany.com/getreferred#status"'));
 });
-test('candidate email: confirms sharing, no guarantee, does not name the POC', () => {
+test('candidate second email (v3): details shared with the POC, no guarantee, does not name the POC', () => {
   const r = core.buildRequestDoc(goodForm, company, uploads);
   const e = core.buildCandidateEmail({ request: r, company, adminName: 'Ibon Tarun Kataki', ref: 'MCC-R-ABC123' });
-  assert.equal(e.subject, 'Your referral request for Acme Consulting has been shared');
+  assert.equal(e.subject, 'Your details have been shared with the referral POC at Acme Consulting');
   assert.ok(e.text.startsWith('Hi Riya,'));
-  for (const x of ['job ID R0012345 (Business Analyst)', "isn't guaranteed", 'MCC-R-ABC123', 'Ibon Tarun Kataki']) assert.ok(e.text.includes(x), 'missing ' + x);
+  assert.ok(e.text.includes('My Career Company has shared your details with the referral POC for the company you requested: Acme Consulting, job ID R0012345 (Business Analyst).'));
+  for (const x of ["isn't guaranteed", 'MCC-R-ABC123', 'Ibon Tarun Kataki', 'https://www.mycareercompany.com/getreferred#status', 'riya@example.com']) assert.ok(e.text.includes(x), 'missing ' + x);
   assert.ok(!e.text.includes('Andrew') && !e.text.includes('Asha'), 'must not name a POC');
   assert.ok(!/you have been referred/i.test(e.text), 'must not claim the referral is done');
 });

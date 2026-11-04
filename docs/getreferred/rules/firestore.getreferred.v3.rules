@@ -1,0 +1,94 @@
+// ===== Get Referred v3 · Status of Referrals, POC accounts, proof uploads, confirmation emails =====
+// Uses the existing referral_allowed_users/{email} documents for access, with two new fields:
+//   getReferredAccess (missing = true for accounts granted before v3) and referAndEarnAccess (missing = false).
+// Alias documents (isAlias, primaryEmail) let a POC sign in with another Google email.
+
+    function grSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function grEmail() { return request.auth.token.email.lower(); }
+    function grAccPath() { return /databases/$(database)/documents/referral_allowed_users/$(grEmail()); }
+    function grHasAcc() { return grSignedIn() && exists(grAccPath()); }
+    function grAcc() { return get(grAccPath()).data; }
+    function grPrimary() { return grAcc().get('primaryEmail', grEmail()); }
+    function grCanGR() { return grHasAcc() && grAcc().get('getReferredAccess', true) == true; }
+    function grCanRE() { return grHasAcc() && grAcc().get('referAndEarnAccess', false) == true; }
+    function grReqAfter(id) { return getAfter(/databases/$(database)/documents/referral_requests/$(id)).data; }
+    function grAsgPath(id) { return /databases/$(database)/documents/poc_assignments/$(id); }
+
+    // What the candidate sees. Created by the visitor in the SAME batch as the request; admins update it.
+    match /candidate_status/{rid} {
+      allow create: if request.resource.data.keys().hasOnly(['requestId', 'candidateEmail', 'candidateName', 'company',
+                         'jobId', 'jobTitle', 'submittedAt', 'sharedWithMcc', 'mccSharedWithPoc', 'pocReferred'])
+        && request.resource.data.requestId == rid
+        && request.resource.data.sharedWithMcc == true
+        && request.resource.data.mccSharedWithPoc == false
+        && request.resource.data.pocReferred == false
+        && request.resource.data.submittedAt == request.time
+        && request.resource.data.candidateName is string && request.resource.data.candidateName.size() <= 100
+        && request.resource.data.company is string && request.resource.data.company.size() <= 120
+        && request.resource.data.jobId is string && request.resource.data.jobId.size() <= 100
+        && isOptionalString(request.resource.data, 'jobTitle', 150)
+        && grReqAfter(rid).submittedAt == request.time
+        && request.resource.data.candidateEmail == grReqAfter(rid).email.lower();
+      allow create, update, delete: if isReferralAdmin();
+      allow get, list: if isReferralAdmin()
+        || (grCanGR() && resource.data.candidateEmail == grPrimary());
+      // A POC may only flip pocReferred, in the same batch that marks their own assignment referred.
+      allow update: if grCanRE()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pocReferred', 'pocReferredAt'])
+        && request.resource.data.pocReferred == true
+        && request.resource.data.pocReferredAt == request.time
+        && get(grAsgPath(rid + '__' + grPrimary())).data.pocEmail == grPrimary()
+        && getAfter(grAsgPath(rid + '__' + grPrimary())).data.referred == true;
+    }
+
+    // What the POC sees: one document per request per POC, id = {requestId}__{pocEmail}.
+    match /poc_assignments/{aid} {
+      allow create, delete: if isReferralAdmin();
+      allow get, list: if isReferralAdmin()
+        || (grCanRE() && resource.data.pocEmail == grPrimary());
+      allow update: if isReferralAdmin() || (grCanRE()
+        && resource.data.pocEmail == grPrimary()
+        && resource.data.referred != true
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['referred', 'referredAt', 'proofPieces', 'proofName', 'proofType', 'proofSize'])
+        && request.resource.data.referred == true
+        && request.resource.data.referredAt == request.time
+        && request.resource.data.proofPieces is int
+        && request.resource.data.proofPieces >= 0 && request.resource.data.proofPieces <= 3
+        && isOptionalString(request.resource.data, 'proofName', 200)
+        && isOptionalString(request.resource.data, 'proofType', 60));
+    }
+
+    // Optional proof of referral (PDF or image), stored as base64 pieces like resumes. Admins read it.
+    match /poc_proofs/{pid} {
+      allow get, list, delete: if isReferralAdmin();
+      allow create: if grCanRE()
+        && request.resource.data.keys().hasOnly(['assignmentId', 'index', 'data'])
+        && request.resource.data.index is int
+        && request.resource.data.index >= 0 && request.resource.data.index <= 2
+        && pid == request.resource.data.assignmentId + '_' + string(request.resource.data.index)
+        && request.resource.data.data is string
+        && request.resource.data.data.size() > 0 && request.resource.data.data.size() <= 950000
+        && getAfter(grAsgPath(request.resource.data.assignmentId)).data.pocEmail == grPrimary()
+        && getAfter(grAsgPath(request.resource.data.assignmentId)).data.referredAt == request.time
+        && request.resource.data.index < getAfter(grAsgPath(request.resource.data.assignmentId)).data.proofPieces;
+    }
+
+    // Lets the Apps Script mailer read who to send the "we received your request" email to.
+    // Created with the request; publicly readable by id for 30 minutes only, then admins only.
+    match /referral_confirmations/{rid} {
+      allow create: if request.resource.data.keys().hasOnly(['email', 'firstName', 'company', 'jobId', 'jobTitle', 'createdAt'])
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.firstName is string && request.resource.data.firstName.size() <= 60
+        && isOptionalString(request.resource.data, 'jobTitle', 150)
+        && grReqAfter(rid).submittedAt == request.time
+        && request.resource.data.email == grReqAfter(rid).email.lower()
+        && request.resource.data.company == grReqAfter(rid).company
+        && request.resource.data.jobId == grReqAfter(rid).jobId;
+      allow get: if isReferralAdmin()
+        || resource.data.createdAt > request.time - duration.value(30, 'm');
+      allow list, update, delete: if isReferralAdmin();
+    }
+// ===== end Get Referred v3 block =====
