@@ -1,4 +1,4 @@
-/* My Career Company · Get Referred™ · v3 extension styles (uses the variables in style.css) */
+/* My Career Company · Get Referred™ · v4 extension styles (uses the variables in style.css) */
 
 /* ---------- header sign-in button (signed out) ---------- */
 .btn-header-signin {
@@ -184,3 +184,84 @@
 /* small polish */
 .gr-access-tools .repo-search-input { padding-left: 14px; }
 .gr-access-panel .btn-resend:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ===================== v4 ===================== */
+
+/* Get Referred: why + how boxes (reuse the Refer and Earn cards) */
+.gs-section { margin: 28px 0; }
+.gs-steps { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.gs-fineprint { margin: 14px 0 16px; }
+.gs-cta { display: inline-flex; text-decoration: none; }
+
+/* preview panel: company logo beside the name */
+.slip-company-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.slip-company-logo { width: 28px; height: 28px; border-radius: 6px; object-fit: contain; background: #FFF; padding: 2px; flex-shrink: 0; box-shadow: 0 0 0 1px rgba(7, 61, 50, 0.15); }
+.slip-company-row #slip-company { overflow-wrap: anywhere; }
+
+/* status signals: awaiting verification + notes */
+.gr-signal.is-review .gr-signal-num { border-color: var(--color-moderate); color: var(--color-moderate); }
+.gr-signal.is-review .gr-signal-state { background: rgba(230, 162, 60, 0.18); color: #F3D3A1; }
+.gr-signal-note { display: block; font-size: 12px; color: var(--color-text-muted); margin-top: 2px; }
+
+/* candidate: "Have you received the company's email?" */
+.gr-respond { margin-top: 14px; padding: 14px 16px; border-radius: var(--radius-md); border: 1px dashed var(--color-gold-border); background: rgba(212, 175, 124, 0.06); }
+.gr-respond-q { margin: 0 0 6px; color: var(--color-ivory); font-weight: 600; font-size: 14px; }
+.gr-respond .gr-card-actions { margin-top: 10px; }
+.gr-respond-yes.is-picked { outline: 2px solid var(--color-gold-light); outline-offset: 2px; }
+.gr-respond-proof { margin-top: 12px; }
+.gr-respond input[type="file"] { color: var(--color-text-secondary); max-width: 100%; }
+
+/* co-founder dashboard */
+.gr-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 0 0 16px; }
+.gr-kpi {
+  display: grid; gap: 2px; text-align: left; cursor: pointer; padding: 14px 16px; border-radius: var(--radius-md);
+  background: rgba(5, 38, 31, 0.75); border: 1px solid var(--color-border-subtle); color: inherit; font: inherit;
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
+}
+.gr-kpi:hover { border-color: var(--color-gold-primary); transform: translateY(-1px); }
+.gr-kpi-num { font-size: 26px; font-weight: 800; color: var(--color-gold-light); line-height: 1.1; }
+.gr-kpi-label { font-size: 12px; color: var(--color-text-secondary); }
+.gr-kpi.is-alert { border-color: rgba(230, 162, 60, 0.6); }
+.gr-kpi.is-alert .gr-kpi-num { color: #F3C27A; }
+.gr-kpi.is-good .gr-kpi-num { color: #8FE0B6; }
+.gr-dash-tabs { margin: 4px 0 12px; flex-wrap: wrap; }
+.gr-dash-tools { display: grid; grid-template-columns: minmax(0, 1fr) 220px 220px; gap: 10px; margin-bottom: 8px; }
+.gr-dash-tools .repo-search-input { padding-left: 14px; }
+.gr-dash-count { font-size: 12px; color: var(--color-text-muted); margin: 4px 0 8px; }
+.gr-dash-table td { vertical-align: top; }
+.gr-more { display: flex; justify-content: center; margin: 12px 0 4px; }
+.gr-dots { display: inline-flex; gap: 6px; align-items: center; }
+.gr-dots i { width: 12px; height: 12px; border-radius: 50%; display: inline-block; border: 1.5px solid var(--color-text-muted); }
+.gr-dots i.is-yes { background: var(--color-strong); border-color: var(--color-strong); }
+.gr-dots i.is-review { background: var(--color-moderate); border-color: var(--color-moderate); }
+.gr-dots i.is-pending { border-color: var(--color-gold-primary); }
+.gr-chip { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.gr-chip.chip-good { background: rgba(43, 182, 115, 0.18); color: #8FE0B6; }
+.gr-chip.chip-alert { background: rgba(230, 162, 60, 0.2); color: #F3D3A1; }
+.gr-chip.chip-muted { background: rgba(149, 161, 153, 0.18); color: var(--color-text-secondary); }
+.gr-proof-btn { white-space: nowrap; }
+.gr-verify-btn { padding: 8px 14px; font-size: 12.5px; white-space: nowrap; }
+
+/* phones: tab bar scrolls sideways with a finger, with fade hints at the edges */
+@media (max-width: 900px) {
+  .header-nav { scroll-snap-type: x proximity; scroll-behavior: smooth; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+  .header-nav .nav-tab { scroll-snap-align: center; }
+  .header-nav.gr-nav-more-right { -webkit-mask-image: linear-gradient(to right, #000 85%, transparent); mask-image: linear-gradient(to right, #000 85%, transparent); }
+  .header-nav.gr-nav-more-left { -webkit-mask-image: linear-gradient(to left, #000 85%, transparent); mask-image: linear-gradient(to left, #000 85%, transparent); }
+  .header-nav.gr-nav-more-left.gr-nav-more-right { -webkit-mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent); }
+  .gr-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gr-dash-tools { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* v4: keep every tab section inside the screen on phones (the Access tab was growing to ~790px) */
+#main > section, .access-section, .gr-view { min-width: 0; max-width: 100%; box-sizing: border-box; }
+.access-table-container, .access-add-card, .access-header-panel { max-width: 100%; box-sizing: border-box; min-width: 0; }
+@media (max-width: 760px) {
+  .access-stat-card { min-width: 0; flex: 1 1 130px; }
+  .access-table-container .table-responsive { max-width: 100%; overflow-x: auto; touch-action: pan-x pan-y; }
+}
+
+/* v4: six benefits sit as 3 + 3 (2 per row on tablets, 1 on phones) */
+#grWhySection .re-reasons { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 900px) { #grWhySection .re-reasons { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { #grWhySection .re-reasons { grid-template-columns: minmax(0, 1fr); } }

@@ -27,7 +27,10 @@
       "unpack-getreferred.cjs",
       "GetReferred_v3_BUNDLE.txt",
       "install-getreferred-v3.cjs",
-      "getreferred-v3-backup/**"
+      "getreferred-v3-backup/**",
+      "GetReferred_v4_BUNDLE.txt",
+      "install-getreferred-v4.cjs",
+      "getreferred-v4-backup/**"
     ],
     "cleanUrls": true,
     "trailingSlash": false,

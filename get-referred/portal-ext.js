@@ -1,4 +1,4 @@
-/* My Career Company · Get Referred™ · v3 extension
+/* My Career Company · Get Referred™ · v4 extension
  * Adds: public Get Referred + Refer and Earn, Google sign-in only for Status of Referrals,
  * per-section access (Get Referred / Refer and Earn) in the Access tab, POC accounts from the POC database,
  * POC "mark as referred" with optional proof, the candidate confirmation email, and status recording.
@@ -7,7 +7,7 @@
 import { h, add, clear, toast, formatDateTime, formatDay } from './ui.js?v=2.0';
 import { splitIntoChunks, formatBytes, shortRef } from './referral-core.js?v=2.0';
 import { MAILER_URL, SUPPORT_EMAIL } from './firebase-config.js?v=2.0';
-import * as P from './portal-core.js?v=3.0';
+import * as P from './portal-core.js?v=4.0';
 import {
   doc, collection, getDoc, getDocs, setDoc, updateDoc, writeBatch, query, where, limit,
   serverTimestamp, arrayUnion, arrayRemove,
@@ -70,6 +70,7 @@ export function applyTabVisibility() {
   }
   const nav = $('headerNav');
   if (nav) nav.classList.toggle('single-tab', tabs.length < 2);
+  updateNavFade();
 }
 
 /* ===================== sign-in overlay (the existing Google gate, now only for Status of Referrals) ===================== */
@@ -153,7 +154,34 @@ export async function onAuthChanged(user) {
 
 /* ===================== tab rendering ===================== */
 
+function updateNavFade() {
+  const nav = $('headerNav');
+  if (!nav) return;
+  const over = nav.scrollWidth > nav.clientWidth + 2;
+  nav.classList.toggle('gr-nav-more-left', over && nav.scrollLeft > 4);
+  nav.classList.toggle('gr-nav-more-right', over && nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 4);
+}
+
+/** Phones: the tab bar scrolls sideways with a finger; keep the open tab in view. */
+function revealActiveTab(tab) {
+  const nav = $('headerNav');
+  const btn = $('tab-' + tab);
+  if (!nav || !btn) return;
+  if (!nav.dataset.grFade) {
+    nav.dataset.grFade = '1';
+    nav.addEventListener('scroll', updateNavFade, { passive: true });
+    window.addEventListener('resize', updateNavFade);
+  }
+  if (nav.scrollWidth > nav.clientWidth + 2) {
+    const left = btn.offsetLeft - (nav.clientWidth - btn.offsetWidth) / 2;
+    try { nav.scrollTo({ left: Math.max(0, left), behavior: 'smooth' }); } catch { nav.scrollLeft = Math.max(0, left); }
+  }
+  setTimeout(updateNavFade, 350);
+  updateNavFade();
+}
+
 export function onTabShown(tab) {
+  revealActiveTab(tab);
   if (tab === 'status') renderStatus();
   else if (tab === 'refer') renderRefer();
   else if (tab === 'access') mountAccessPanel();
@@ -169,12 +197,12 @@ function panelHead(eyebrow, title, subtitle, actions) {
       actions ? h('div', { class: 'gr-head-actions' }, actions) : null));
 }
 
-const SIGNAL_TEXT = { yes: 'Yes', no: 'No', pending: 'Pending' };
+const SIGNAL_TEXT = { yes: 'Yes', no: 'No', pending: 'Pending', review: 'Awaiting verification' };
 
 function signalList(signals) {
   return h('ol', { class: 'gr-signals' }, signals.map((s, i) => h('li', { class: 'gr-signal is-' + s.state },
     h('span', { class: 'gr-signal-num', 'aria-hidden': 'true' }, s.state === 'yes' ? '✓' : String(i + 1)),
-    h('span', { class: 'gr-signal-label' }, s.label),
+    h('span', { class: 'gr-signal-label' }, s.label, s.note ? h('span', { class: 'gr-signal-note' }, s.note) : null),
     h('span', { class: 'gr-signal-state' }, SIGNAL_TEXT[s.state] + (s.state === 'yes' && s.at ? ` · ${formatDay(s.at)}` : '')))));
 }
 
@@ -184,6 +212,8 @@ function sortByTime(list, field) {
 }
 
 /* ---------- Status of Referrals ---------- */
+
+const PROOF_ACCEPT = '.pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp';
 
 async function renderStatus() {
   const root = $('view-status');
@@ -195,14 +225,12 @@ async function renderStatus() {
       h('button', { type: 'button', class: 'button button-primary', onclick: openSignIn }, 'Sign in with Google')));
     return;
   }
-  const showSought = X.isAdmin || X.access.gr;
-  const showGiven = X.isAdmin || X.access.re;
+  if (X.isAdmin) { renderAdminStatus(root); return; }
+  const showSought = X.access.gr;
+  const showGiven = X.access.re;
   const refresh = h('button', { type: 'button', class: 'btn-outline', onclick: () => renderStatus() }, '🔄 Refresh');
   root.append(panelHead('STATUS OF REFERRALS • LIVE TRACKER', 'Status of Referrals',
-    X.isAdmin
-      ? `Co-founder view: every active referral. Signed in as ${X.user.email}.`
-      : `Signed in as ${X.user.email}. You see the sections your account has access to.`,
-    refresh));
+    `Signed in as ${X.user.email}. You see the sections your account has access to.`, refresh));
   const soughtBox = h('section', { class: 'gr-status-section', 'aria-labelledby': 'grSoughtTitle' });
   const givenBox = h('section', { class: 'gr-status-section', 'aria-labelledby': 'grGivenTitle' });
   if (showSought) root.append(soughtBox);
@@ -215,74 +243,135 @@ async function renderStatus() {
   if (showGiven) renderGiven(givenBox);
 }
 
+/* ----- candidate: Referrals sought ----- */
+
 async function renderSought(box) {
   clear(box).append(
     h('div', { class: 'gr-section-head' },
       h('h3', { class: 'gr-section-title', id: 'grSoughtTitle' }, 'Referrals sought'),
-      h('p', { class: 'gr-section-sub' }, X.isAdmin ? 'Requests submitted by candidates.' : `Referral requests submitted with ${X.access.primaryEmail}.`)),
+      h('p', { class: 'gr-section-sub' }, `Referral requests submitted with ${X.access.primaryEmail}.`)),
     h('p', { class: 'hint' }, 'Loading…'));
   try {
-    const q = X.isAdmin
-      ? query(collection(db(), 'candidate_status'), limit(200))
-      : query(collection(db(), 'candidate_status'), where('candidateEmail', '==', X.access.primaryEmail), limit(100));
-    const snap = await getDocs(q);
+    const snap = await getDocs(query(collection(db(), 'candidate_status'), where('candidateEmail', '==', X.access.primaryEmail), limit(100)));
     const list = sortByTime(snap.docs.map((d) => ({ id: d.id, ...d.data() })), 'submittedAt');
     box.lastChild.remove();
     if (!list.length) {
-      box.append(h('p', { class: 'empty-state' }, X.isAdmin
-        ? 'No referral requests yet.'
-        : `No referral requests found for ${X.access.primaryEmail}. Requests are matched to the email you entered on the Get Referred form.`));
+      box.append(h('p', { class: 'empty-state' }, `No referral requests found for ${X.access.primaryEmail}. Requests are matched to the email you entered on the Get Referred form.`));
       return;
     }
-    box.append(h('div', { class: 'gr-cards' }, list.map((s) => h('article', { class: 'gr-card' },
-      h('div', { class: 'gr-card-head' },
-        h('div', {},
-          h('p', { class: 'gr-card-title' }, s.company || 'Company'),
-          h('p', { class: 'gr-card-meta' }, `Job ID ${s.jobId}${s.jobTitle ? ` · ${s.jobTitle}` : ''}`),
-          X.isAdmin ? h('p', { class: 'gr-card-meta' }, `${s.candidateName || ''} · ${s.candidateEmail || ''}`) : null),
-        h('span', { class: 'gr-card-date' }, `Submitted ${formatDay(s.submittedAt) || ''}`)),
-      signalList(P.candidateSignals(s))))));
+    box.append(h('div', { class: 'gr-cards' }, list.map((s) => {
+      const card = h('article', { class: 'gr-card' },
+        h('div', { class: 'gr-card-head' },
+          h('div', {},
+            h('p', { class: 'gr-card-title' }, s.company || 'Company'),
+            h('p', { class: 'gr-card-meta' }, `Job ID ${s.jobId}${s.jobTitle ? ` · ${s.jobTitle}` : ''}`)),
+          h('span', { class: 'gr-card-date' }, `Submitted ${formatDay(s.submittedAt) || ''}`)),
+        signalList(P.candidateSignals(s)));
+      if (P.candidateCanRespond(s)) card.append(respondPanel(s, box));
+      return card;
+    })));
   } catch (e) {
     box.lastChild.textContent = 'Could not load your requests. ' + X.svc.friendlyError(e);
   }
+}
+
+function respondPanel(s, box) {
+  const company = s.company || 'the company';
+  const err = h('p', { class: 'field-error', role: 'alert' });
+  const file = h('input', { type: 'file', accept: PROOF_ACCEPT, 'aria-label': 'Proof of the company email (optional)' });
+  file.addEventListener('change', () => { err.textContent = P.validateProof(file.files && file.files[0]); });
+  const confirmBtn = h('button', { type: 'button', class: 'btn-primary gr-respond-confirm' }, 'Confirm');
+  const proofBox = h('div', { class: 'gr-respond-proof', hidden: true },
+    h('div', { class: 'form-group' },
+      h('span', { class: 'form-label' }, 'Proof ', h('span', { class: 'optional' }, 'optional')), file,
+      h('p', { class: 'hint' }, `A screenshot or PDF of the email from ${company} (PNG, JPG, WEBP or PDF, up to 2 MB).`)),
+    h('div', { class: 'gr-card-actions' }, confirmBtn));
+  const yes = h('button', { type: 'button', class: 'btn-primary gr-respond-yes' }, 'Yes, I have received it');
+  const no = h('button', { type: 'button', class: 'btn-outline gr-respond-no' }, 'Not yet');
+  const busy = (on) => { [yes, no, confirmBtn].forEach((b) => { b.disabled = on; }); };
+  yes.addEventListener('click', () => { proofBox.hidden = false; yes.classList.add('is-picked'); });
+  no.addEventListener('click', async () => {
+    busy(true);
+    try { await candidateRespond(s, 'not_yet', null); toast('Thanks. Update this when the email arrives.'); renderSought(box); }
+    catch (e) { err.textContent = 'Could not save. ' + X.svc.friendlyError(e); busy(false); }
+  });
+  confirmBtn.addEventListener('click', async () => {
+    const f = file.files && file.files[0];
+    const ferr = P.validateProof(f);
+    if (ferr) { err.textContent = ferr; return; }
+    busy(true);
+    confirmBtn.textContent = 'Saving…';
+    try { await candidateRespond(s, 'yes', f || null); toast('Great news! Your referral is confirmed.'); renderSought(box); }
+    catch (e) { err.textContent = 'Could not save. ' + X.svc.friendlyError(e); busy(false); confirmBtn.textContent = 'Confirm'; }
+  });
+  return h('div', { class: 'gr-respond' },
+    h('p', { class: 'gr-respond-q' }, `Have you received an official email from ${company} saying you have been referred for this position?`),
+    s.pocClaimed ? h('p', { class: 'hint' }, `The POC has told us they have referred you. Check your inbox and spam folder for an email from ${company}.`) : null,
+    s.candidateResponse === 'not_yet' ? h('p', { class: 'hint' }, `You answered "Not yet" on ${formatDay(s.candidateRespondedAt)}. Update this when the email arrives.`) : null,
+    h('div', { class: 'gr-card-actions' }, yes, no),
+    proofBox, err);
+}
+
+async function candidateRespond(s, answer, file) {
+  let pieces = [];
+  const patch = { candidateResponse: answer, candidateRespondedAt: serverTimestamp() };
+  if (answer === 'yes') {
+    if (file) {
+      pieces = splitIntoChunks(await X.svc.fileToBase64(file));
+      if (pieces.length > 3) throw new Error('Proof file is too large.');
+      Object.assign(patch, { candidateProofName: String(file.name).slice(0, 200), candidateProofType: P.resolveProofType(file), candidateProofSize: file.size });
+    }
+    Object.assign(patch, { pocReferred: true, pocReferredAt: serverTimestamp(), candidateProofPieces: pieces.length });
+  }
+  const b = writeBatch(db());
+  b.update(doc(db(), 'candidate_status', s.id), patch);
+  pieces.forEach((data, i) => b.set(doc(db(), 'candidate_proofs', `${s.id}_${i}`), { requestId: s.id, index: i, data }));
+  await b.commit();
+}
+
+/* ----- POC: Referrals given ----- */
+
+async function loadStatusFor(assignments) {
+  const ids = [...new Set(assignments.map((a) => a.requestId))];
+  const out = {};
+  await Promise.all(ids.map(async (id) => {
+    try { const d = await getDoc(doc(db(), 'candidate_status', id)); out[id] = d.exists() ? d.data() : null; }
+    catch { out[id] = null; }
+  }));
+  return out;
 }
 
 async function renderGiven(box) {
   clear(box).append(
     h('div', { class: 'gr-section-head' },
       h('h3', { class: 'gr-section-title', id: 'grGivenTitle' }, 'Referrals given'),
-      h('p', { class: 'gr-section-sub' }, X.isAdmin ? 'Requests sent to referral POCs.' : `Referral requests My Career Company has sent to ${X.access.primaryEmail}.`)),
+      h('p', { class: 'gr-section-sub' }, `Referral requests My Career Company has sent to ${X.access.primaryEmail}.`)),
     h('p', { class: 'hint' }, 'Loading…'));
   try {
-    const q = X.isAdmin
-      ? query(collection(db(), 'poc_assignments'), limit(200))
-      : query(collection(db(), 'poc_assignments'), where('pocEmail', '==', X.access.primaryEmail), limit(100));
-    const snap = await getDocs(q);
+    const snap = await getDocs(query(collection(db(), 'poc_assignments'), where('pocEmail', '==', X.access.primaryEmail), limit(100)));
     const list = sortByTime(snap.docs.map((d) => ({ id: d.id, ...d.data() })), 'assignedAt');
+    const statusById = await loadStatusFor(list);
     box.lastChild.remove();
-    if (!X.isAdmin) box.append(h('p', { class: 'gr-milestone' }, P.milestoneText(list.filter((a) => a.referred).length)));
+    box.append(h('p', { class: 'gr-milestone' }, P.milestoneText(list.filter((a) => P.pocGreen(a, statusById[a.requestId])).length)));
     if (!list.length) {
-      box.append(h('p', { class: 'empty-state' }, X.isAdmin
-        ? 'No requests have been sent to POCs yet.'
-        : 'No referral requests have been sent to you yet. They appear here as soon as we email you one.'));
+      box.append(h('p', { class: 'empty-state' }, 'No referral requests have been sent to you yet. They appear here as soon as we email you one.'));
       return;
     }
-    box.append(h('div', { class: 'gr-cards' }, list.map((a) => givenCard(a, box))));
+    box.append(h('div', { class: 'gr-cards' }, list.map((a) => givenCard(a, statusById[a.requestId], box))));
   } catch (e) {
     box.lastChild.textContent = 'Could not load your referral requests. ' + X.svc.friendlyError(e);
   }
 }
 
-function givenCard(a, box) {
+function givenCard(a, st, box) {
   const card = h('article', { class: 'gr-card' },
     h('div', { class: 'gr-card-head' },
       h('div', {},
         h('p', { class: 'gr-card-title' }, a.candidateName || 'Candidate'),
-        h('p', { class: 'gr-card-meta' }, `${a.company} · Job ID ${a.jobId}${a.jobTitle ? ` · ${a.jobTitle}` : ''}`),
-        X.isAdmin ? h('p', { class: 'gr-card-meta' }, `POC: ${a.pocName || ''} · ${a.pocEmail}`) : null),
+        h('p', { class: 'gr-card-meta' }, `${a.company} · Job ID ${a.jobId}${a.jobTitle ? ` · ${a.jobTitle}` : ''}`)),
       h('span', { class: 'gr-card-date' }, `Received ${formatDay(a.assignedAt) || ''}`)),
-    signalList(P.pocSignals(a)));
-  if (!a.referred && !X.isAdmin) {
+    signalList(P.pocSignals(a, st)));
+  if (!a.referred && !P.pocGreen(a, st)) {
     const actions = h('div', { class: 'gr-card-actions' });
     const btn = h('button', { type: 'button', class: 'btn-primary gr-mark-btn', onclick: () => { btn.hidden = true; actions.append(markForm(a, box)); } }, 'Mark as referred');
     actions.append(btn);
@@ -295,7 +384,7 @@ function givenCard(a, box) {
 function markForm(a, box) {
   const err = h('p', { class: 'field-error', role: 'alert' });
   const confirm = h('input', { type: 'checkbox', id: 'grConfirm_' + a.id });
-  const file = h('input', { type: 'file', accept: '.pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp', 'aria-label': 'Proof of referral (optional)' });
+  const file = h('input', { type: 'file', accept: PROOF_ACCEPT, 'aria-label': 'Proof of referral (optional)' });
   const save = h('button', { type: 'button', class: 'btn-primary' }, 'Confirm referral');
   file.addEventListener('change', () => { err.textContent = P.validateProof(file.files && file.files[0]); });
   const form = h('div', { class: 'gr-mark-form' },
@@ -304,7 +393,7 @@ function markForm(a, box) {
     h('div', { class: 'form-group' },
       h('span', { class: 'form-label' }, 'Proof of referral ', h('span', { class: 'optional' }, 'optional')),
       file,
-      h('p', { class: 'hint' }, 'A screenshot or email of the submitted referral (PDF, PNG, JPG or WEBP, up to 2 MB). Crop out anything your company does not allow you to share.')),
+      h('p', { class: 'hint' }, 'A screenshot or email of the submitted referral (PDF, PNG, JPG or WEBP, up to 2 MB). Crop out anything your company does not allow you to share. My Career Company or the candidate will confirm it.')),
     h('div', { class: 'gr-card-actions' }, save), err);
   save.addEventListener('click', async () => {
     err.textContent = '';
@@ -316,7 +405,7 @@ function markForm(a, box) {
     save.textContent = 'Saving…';
     try {
       await markReferred(a, f || null);
-      toast('Marked as referred. Thank you!');
+      toast('Thank you! We will confirm your referral shortly.');
       renderGiven(box);
     } catch (e) {
       console.error('[GetReferred] mark referred failed', e);
@@ -328,12 +417,12 @@ function markForm(a, box) {
   return form;
 }
 
+/** POC claim: recorded as "awaiting verification" until a co-founder verifies it or the candidate confirms. */
 async function markReferred(a, file) {
   let pieces = [];
   const meta = {};
   if (file) {
-    const b64 = await X.svc.fileToBase64(file);
-    pieces = splitIntoChunks(b64);
+    pieces = splitIntoChunks(await X.svc.fileToBase64(file));
     if (pieces.length > 3) throw new Error('Proof file is too large.');
     meta.proofName = String(file.name).slice(0, 200);
     meta.proofType = P.resolveProofType(file);
@@ -341,8 +430,151 @@ async function markReferred(a, file) {
   }
   const b = writeBatch(db());
   b.update(doc(db(), 'poc_assignments', a.id), { referred: true, referredAt: serverTimestamp(), proofPieces: pieces.length, ...meta });
-  b.update(doc(db(), 'candidate_status', a.requestId), { pocReferred: true, pocReferredAt: serverTimestamp() });
+  b.update(doc(db(), 'candidate_status', a.requestId), { pocClaimed: true, pocClaimedAt: serverTimestamp() });
   pieces.forEach((data, i) => b.set(doc(db(), 'poc_proofs', P.proofPieceId(a.id, i)), { assignmentId: a.id, index: i, data }));
+  await b.commit();
+}
+
+/* ----- co-founders: dashboard ----- */
+
+const SV = { tab: 'sought', q: '', company: '', stage: '', shown: 25 };
+
+async function loadDashboard() {
+  const [sSnap, aSnap] = await Promise.all([
+    getDocs(query(collection(db(), 'candidate_status'), limit(1000))),
+    getDocs(query(collection(db(), 'poc_assignments'), limit(1000))),
+  ]);
+  const statuses = sortByTime(sSnap.docs.map((d) => ({ id: d.id, ...d.data() })), 'submittedAt');
+  const assignments = sortByTime(aSnap.docs.map((d) => ({ id: d.id, ...d.data() })), 'assignedAt');
+  const statusById = Object.fromEntries(statuses.map((x) => [x.id, x]));
+  return { statuses, assignments, statusById };
+}
+
+async function renderAdminStatus(root) {
+  clear(root);
+  const refresh = h('button', { type: 'button', class: 'btn-outline', onclick: () => renderAdminStatus(root) }, '🔄 Refresh');
+  root.append(panelHead('STATUS OF REFERRALS • CO-FOUNDER VIEW', 'Status of Referrals', `Every referral in one place. Signed in as ${X.user.email}.`, refresh));
+  const body = h('div', { class: 'gr-dash' }, h('p', { class: 'hint' }, 'Loading…'));
+  root.append(body);
+  let data;
+  try { data = await loadDashboard(); }
+  catch (e) { clear(body).append(h('p', { class: 'empty-state' }, 'Could not load referrals. ' + X.svc.friendlyError(e))); return; }
+  const counts = P.dashboardCounts(data.statuses, data.assignments, data.statusById);
+  const companies = P.companiesOf(data.statuses, data.assignments);
+  if (SV.company && !companies.includes(SV.company)) SV.company = '';
+
+  const chip = (n, label, cls, onclick) => h('button', { type: 'button', class: 'gr-kpi ' + cls, onclick }, h('span', { class: 'gr-kpi-num' }, String(n)), h('span', { class: 'gr-kpi-label' }, label));
+  const kpis = h('div', { class: 'gr-kpis' },
+    chip(counts.requests, 'Referral requests', '', () => { SV.tab = 'sought'; SV.stage = ''; draw(); }),
+    chip(counts.shared, 'Shared with a POC', '', () => { SV.tab = 'sought'; SV.stage = 'shared'; draw(); }),
+    chip(counts.awaiting, 'Awaiting your verification', counts.awaiting ? 'is-alert' : '', () => { SV.tab = 'given'; SV.stage = 'review'; draw(); }),
+    chip(counts.referred, 'Referred', 'is-good', () => { SV.tab = 'sought'; SV.stage = 'referred'; draw(); }));
+  const search = h('input', { type: 'search', class: 'repo-search-input', id: 'grDashSearch', placeholder: 'Search candidate, POC, company or job ID', 'aria-label': 'Search referrals' });
+  const companySel = h('select', { class: 'repo-select', id: 'grDashCompany', 'aria-label': 'Filter by company' }, h('option', { value: '' }, 'All companies'), companies.map((c) => h('option', { value: c }, c)));
+  const stageSel = h('select', { class: 'repo-select', id: 'grDashStage', 'aria-label': 'Filter by status' });
+  const tabs = h('div', { class: 'repo-category-tabs gr-dash-tabs' });
+  const list = h('div', { class: 'gr-dash-list' });
+  search.value = SV.q; companySel.value = SV.company;
+  search.addEventListener('input', () => { SV.q = search.value; SV.shown = 25; drawList(); });
+  companySel.addEventListener('change', () => { SV.company = companySel.value; SV.shown = 25; drawList(); });
+  stageSel.addEventListener('change', () => { SV.stage = stageSel.value; SV.shown = 25; drawList(); });
+  clear(body).append(kpis, tabs, h('div', { class: 'gr-dash-tools' }, search, companySel, stageSel), list);
+
+  function draw() {
+    clear(tabs).append(
+      h('button', { type: 'button', class: 'repo-cat-tab' + (SV.tab === 'sought' ? ' active' : ''), id: 'grDashTabSought', onclick: () => { SV.tab = 'sought'; SV.stage = ''; SV.shown = 25; draw(); } }, `🙋 Referrals sought (${data.statuses.length})`),
+      h('button', { type: 'button', class: 'repo-cat-tab' + (SV.tab === 'given' ? ' active' : ''), id: 'grDashTabGiven', onclick: () => { SV.tab = 'given'; SV.stage = ''; SV.shown = 25; draw(); } }, `🤝 Referrals given (${data.assignments.length})`));
+    const opts = SV.tab === 'sought'
+      ? [['', 'All statuses'], ['new', P.STAGE_LABELS.new], ['shared', P.STAGE_LABELS.shared], ['review', P.STAGE_LABELS.review], ['referred', P.STAGE_LABELS.referred]]
+      : [['', 'All statuses'], ['pending', P.STAGE_LABELS.pending], ['review', P.STAGE_LABELS.review], ['yes', P.STAGE_LABELS.yes]];
+    const keep = SV.stage;
+    clear(stageSel).append(...opts.map(([v, t]) => h('option', { value: v }, t)));
+    stageSel.value = opts.some(([v]) => v === keep) ? keep : '';
+    SV.stage = stageSel.value;
+    drawList();
+  }
+
+  function more(total) {
+    return total > SV.shown ? h('div', { class: 'gr-more' }, h('button', { type: 'button', class: 'btn-outline', onclick: () => { SV.shown += 25; drawList(); } }, `Show more (${total - SV.shown} more)`)) : null;
+  }
+
+  function drawList() {
+    clear(list);
+    if (SV.tab === 'sought') {
+      const rows = P.filterSought(data.statuses, SV);
+      list.append(h('p', { class: 'gr-dash-count' }, `${rows.length} of ${data.statuses.length} requests`));
+      if (!rows.length) { list.append(h('p', { class: 'empty-state' }, 'No requests match these filters.')); return; }
+      add(list, h('div', { class: 'gr-table-wrap' }, h('table', { class: 'access-table gr-table gr-dash-table' },
+        h('thead', {}, h('tr', {}, ['Candidate', 'Company and job', 'Progress', 'Candidate confirmation'].map((t) => h('th', { scope: 'col' }, t)))),
+        h('tbody', {}, rows.slice(0, SV.shown).map((s) => soughtRow(s))))), more(rows.length));
+    } else {
+      const rows = P.filterGiven(data.assignments, data.statusById, SV);
+      list.append(h('p', { class: 'gr-dash-count' }, `${rows.length} of ${data.assignments.length} POC requests`));
+      if (!rows.length) { list.append(h('p', { class: 'empty-state' }, 'No POC requests match these filters.')); return; }
+      add(list, h('div', { class: 'gr-table-wrap' }, h('table', { class: 'access-table gr-table gr-dash-table' },
+        h('thead', {}, h('tr', {}, ['POC', 'Candidate and job', 'Status', 'POC proof', 'Action'].map((t) => h('th', { scope: 'col' }, t)))),
+        h('tbody', {}, rows.slice(0, SV.shown).map((a) => givenRow(a, data, () => renderAdminStatus(root)))))), more(rows.length));
+    }
+  }
+
+  draw();
+}
+
+function dots(signals) {
+  return h('span', { class: 'gr-dots', title: signals.map((x) => `${x.label} ${SIGNAL_TEXT[x.state]}`).join('\n') },
+    signals.map((x) => h('i', { class: 'is-' + x.state, 'aria-label': `${x.label} ${SIGNAL_TEXT[x.state]}` })));
+}
+
+function stageChip(stage) {
+  const map = { yes: ['Referred ✓', 'chip-good'], review: ['Awaiting verification', 'chip-alert'], pending: ['Waiting for POC', 'chip-muted'] };
+  const [t, c] = map[stage] || ['—', 'chip-muted'];
+  return h('span', { class: 'gr-chip ' + c }, t);
+}
+
+function soughtRow(s) {
+  const sig = P.candidateSignals(s);
+  const stage = P.candidateStage(s);
+  let conf;
+  if (s.candidateResponse === 'yes') {
+    conf = h('div', {}, h('span', { class: 'gr-chip chip-good' }, 'Received company email'),
+      h('div', { class: 'gr-cell-status' }, formatDay(s.candidateRespondedAt)),
+      s.candidateProofPieces ? h('button', { type: 'button', class: 'btn-resend gr-proof-btn', onclick: () => openCandidateProof(s) }, '📎 View proof') : null);
+  } else if (s.candidateResponse === 'not_yet') {
+    conf = h('div', {}, h('span', { class: 'gr-chip chip-muted' }, 'Not yet'), h('div', { class: 'gr-cell-status' }, formatDay(s.candidateRespondedAt)));
+  } else {
+    conf = h('span', { class: 'gr-cell-status' }, s.adminVerified ? 'Verified by co-founder' : '—');
+  }
+  return h('tr', {},
+    h('td', { 'data-label': 'Candidate' }, h('div', { class: 'gr-cell-name' }, s.candidateName || ''), h('div', { class: 'gr-cell-email' }, s.candidateEmail || '')),
+    h('td', { 'data-label': 'Company and job' }, h('div', {}, h('div', {}, s.company || ''), h('div', { class: 'gr-cell-status' }, `Job ID ${s.jobId}${s.jobTitle ? ` · ${s.jobTitle}` : ''} · ${formatDay(s.submittedAt)}`))),
+    h('td', { 'data-label': 'Progress' }, h('div', {}, dots(sig), h('div', { class: 'gr-cell-status' }, P.STAGE_LABELS[stage]))),
+    h('td', { 'data-label': 'Candidate confirmation' }, conf));
+}
+
+function givenRow(a, data, reload) {
+  const st = data.statusById[a.requestId] || null;
+  const stage = P.pocStage(a, st);
+  const verify = stage === 'review' ? h('button', { type: 'button', class: 'btn-primary gr-verify-btn', onclick: async (e) => {
+    const btn = e.currentTarget;
+    if (!window.confirm(`Verify that ${a.pocName || a.pocEmail} referred ${a.candidateName} at ${a.company}? Both status screens turn green.`)) return;
+    btn.disabled = true;
+    try { await verifyAssignment(a); toast('Referral verified'); reload(); }
+    catch (err) { toast('Could not verify: ' + X.svc.friendlyError(err), 'error'); btn.disabled = false; }
+  } }, '✓ Verify') : h('span', { class: 'gr-cell-status' }, stage === 'yes' ? (a.verified ? `Verified ${formatDay(a.verifiedAt)}` : 'Confirmed by candidate') : '—');
+  return h('tr', {},
+    h('td', { 'data-label': 'POC' }, h('div', { class: 'gr-cell-name' }, a.pocName || ''), h('div', { class: 'gr-cell-email' }, a.pocEmail || '')),
+    h('td', { 'data-label': 'Candidate and job' }, h('div', {}, h('div', {}, a.candidateName || ''), h('div', { class: 'gr-cell-status' }, `${a.company} · Job ID ${a.jobId} · sent ${formatDay(a.assignedAt)}`))),
+    h('td', { 'data-label': 'Status' }, h('div', {}, stageChip(stage), a.referred ? h('div', { class: 'gr-cell-status' }, `POC marked ${formatDay(a.referredAt)}`) : null)),
+    h('td', { 'data-label': 'POC proof' }, a.referred && a.proofPieces ? h('button', { type: 'button', class: 'btn-resend gr-proof-btn', onclick: () => openProof(a) }, '📎 View proof') : h('span', { class: 'gr-cell-status' }, a.referred ? 'No proof' : '—')),
+    h('td', { 'data-label': 'Action' }, verify));
+}
+
+/** Co-founder verification of a POC's claim: turns the POC's step and the candidate's step green. */
+async function verifyAssignment(a) {
+  const me = P.lowerEmail(X.user.email);
+  const b = writeBatch(db());
+  b.update(doc(db(), 'poc_assignments', a.id), { verified: true, verifiedAt: serverTimestamp(), verifiedBy: me });
+  b.update(doc(db(), 'candidate_status', a.requestId), { adminVerified: true, adminVerifiedAt: serverTimestamp(), adminVerifiedBy: me, pocReferred: true, pocReferredAt: serverTimestamp() });
   await b.commit();
 }
 
@@ -431,7 +663,7 @@ function referForm() {
   const input = (id, attrs = {}) => h('input', { id, class: 'form-input-text', ...attrs });
   const statusGroup = h('div', { class: 're-radios', role: 'radiogroup', 'aria-labelledby': 'reStatusLabel' },
     P.POC_FORM_STATUSES.map((s, i) => h('label', { class: 're-radio' },
-      h('input', { type: 'radio', name: 'reStatus', value: s, checked: i === 0 }), h('span', {}, s))));
+      h('input', { type: 'radio', name: 'reStatus', value: s }), h('span', {}, s))));
   const err = h('p', { class: 'field-error', id: 'reErr_submit', role: 'alert' });
   const submit = h('button', { type: 'submit', class: 'btn-primary', id: 'reSubmitBtn' }, 'Join the referral network →');
   const form = h('form', { id: 'refer-form', class: 'diagnostic-input-panel re-form', novalidate: true },
@@ -441,7 +673,7 @@ function referForm() {
       h('p', { class: 'panel-subtext' }, 'Tell us where you work. Our team reviews every application and adds approved partners to the My Career Company referral network.')),
     h('div', { class: 'hp', 'aria-hidden': 'true' }, h('label', { for: 'reWebsite' }, 'Website'), h('input', { type: 'text', id: 'reWebsite', tabindex: '-1', autocomplete: 'off' })),
     h('div', { class: 're-grid' },
-      field('reName', 'Full name', input('reName', { type: 'text', maxlength: '80', autocomplete: 'name' })),
+      field('reName', 'Full name', input('reName', { type: 'text', maxlength: '80', autocomplete: 'name', placeholder: 'Enter your full name' })),
       field('reCompany', 'Company you work for', h('input', { id: 'reCompany', class: 'form-input-text', type: 'text', maxlength: '120', list: 'reCompanyList', autocomplete: 'organization', placeholder: 'Start typing, or enter your company' }),
         { hint: 'Pick from our partner list or type a new company.' }),
       h('datalist', { id: 'reCompanyList' }),
@@ -453,10 +685,10 @@ function referForm() {
       field('rePhone', 'Phone number', input('rePhone', { type: 'tel', maxlength: '20', autocomplete: 'tel', inputmode: 'tel', placeholder: '+91 98765 43210' })),
       field('reWorkEmail', 'Official work email', input('reWorkEmail', { type: 'email', maxlength: '254', autocomplete: 'email', inputmode: 'email', placeholder: 'name@company.com' }),
         { hint: 'Your company email, so we can verify where you work. Referral requests are sent here. Personal emails are not accepted.' }),
-      field('reLinkedin', 'LinkedIn profile link', input('reLinkedin', { type: 'url', maxlength: '300', placeholder: 'linkedin.com/in/your-name' })),
-      field('reGoogle', 'Google sign-in email', input('reGoogle', { type: 'email', maxlength: '254', placeholder: 'yourname@gmail.com' }),
+      field('reLinkedin', 'LinkedIn profile link', input('reLinkedin', { type: 'url', maxlength: '300', placeholder: 'For example linkedin.com/in/your-name' })),
+      field('reGoogle', 'Google sign-in email', input('reGoogle', { type: 'email', maxlength: '254', placeholder: 'For example yourname@gmail.com' }),
         { optional: true, hint: 'Only if you will sign in with a different Google account than your work email.' }),
-      field('reCity', 'City / office location', input('reCity', { type: 'text', maxlength: '80' }), { optional: true })),
+      field('reCity', 'City / office location', input('reCity', { type: 'text', maxlength: '80', placeholder: 'For example Mumbai' }), { optional: true })),
     h('label', { class: 'consent' }, h('input', { type: 'checkbox', id: 'reConsent' }),
       h('span', {}, 'I agree that My Career Company may store these details, verify my employment, add me to its referral partner database and email me referral requests for my company. I can ask for my data to be corrected or deleted at any time by writing to ',
         h('a', { href: 'mailto:' + SUPPORT_EMAIL }, SUPPORT_EMAIL), '.')),
@@ -562,58 +794,84 @@ export async function onPocEmailed({ request: r, poc, to, adminEmail }) {
   const aid = P.assignmentId(r.id, to);
   const aRef = doc(db(), 'poc_assignments', aid);
   const sRef = doc(db(), 'candidate_status', r.id);
-  const [aSnap, sSnap] = await Promise.all([getDoc(aRef), getDoc(sRef)]);
+  const [aSnap, sSnap, others] = await Promise.all([getDoc(aRef), getDoc(sRef),
+    getDocs(query(collection(db(), 'poc_assignments'), where('requestId', '==', r.id), limit(50)))]);
+  const pocsAssigned = others.docs.filter((d) => d.id !== aid).length + 1;
   const b = writeBatch(db());
   if (aSnap.exists()) b.update(aRef, { assignedAt: serverTimestamp(), assignedBy: P.lowerEmail(adminEmail) });
   else b.set(aRef, { ...P.assignmentFields(r, poc, to, adminEmail), assignedAt: serverTimestamp() });
-  if (sSnap.exists()) b.update(sRef, { mccSharedWithPoc: true, mccSharedAt: serverTimestamp() });
-  else b.set(sRef, { ...P.candidateStatusFields(r.id, r), submittedAt: r.submittedAt || serverTimestamp(), mccSharedWithPoc: true, mccSharedAt: serverTimestamp() });
+  if (sSnap.exists()) b.update(sRef, { mccSharedWithPoc: true, mccSharedAt: serverTimestamp(), pocsAssigned });
+  else b.set(sRef, { ...P.candidateStatusFields(r.id, r), submittedAt: r.submittedAt || serverTimestamp(), mccSharedWithPoc: true, mccSharedAt: serverTimestamp(), pocsAssigned });
   await b.commit();
 }
 
 /** Live status panel shown inside a request in the Referral Repository. */
 export function adminStatusPanel(r) {
   const box = h('section', { class: 'detail-section gr-admin-status' }, h('h4', {}, 'Live referral status'), h('p', { class: 'hint' }, 'Loading…'));
-  (async () => {
+  const load = async () => {
     try {
       const [sSnap, aSnap] = await Promise.all([
         getDoc(doc(db(), 'candidate_status', r.id)),
         getDocs(query(collection(db(), 'poc_assignments'), where('requestId', '==', r.id), limit(20))),
       ]);
+      const st = sSnap.exists() ? { id: sSnap.id, ...sSnap.data() } : null;
       clear(box).append(h('h4', {}, 'Live referral status'));
-      if (sSnap.exists()) box.append(signalList(P.candidateSignals(sSnap.data())));
+      if (st) box.append(signalList(P.candidateSignals(st)));
       else box.append(h('p', { class: 'hint' }, 'No status record yet. It is created when this request is emailed to a POC.'));
+      if (st && st.candidateResponse) {
+        const line = h('p', { class: 'gr-admin-poc' }, st.candidateResponse === 'yes'
+          ? `Candidate confirmed the company's referral email on ${formatDay(st.candidateRespondedAt)}.`
+          : `Candidate answered "Not yet" on ${formatDay(st.candidateRespondedAt)}.`);
+        if (st.candidateProofPieces) line.append(' ', h('button', { type: 'button', class: 'button button-ghost button-small', onclick: () => openCandidateProof(st) }, 'View candidate proof'));
+        box.append(line);
+      }
       aSnap.docs.forEach((d) => {
         const a = { id: d.id, ...d.data() };
-        const line = h('p', { class: 'gr-admin-poc' },
-          `${a.pocName || a.pocEmail}: ${a.referred ? `referred on ${formatDateTime(a.referredAt)}` : `request received ${formatDay(a.assignedAt)}, referral pending`}`);
-        if (a.referred && a.proofPieces) {
-          line.append(' ', h('button', { type: 'button', class: 'button button-ghost button-small', onclick: () => openProof(a) }, 'View proof'));
+        const stage = P.pocStage(a, st);
+        const text = stage === 'yes' ? `referred (${a.verified ? `verified ${formatDay(a.verifiedAt)}` : 'confirmed by candidate'})`
+          : stage === 'review' ? `marked referred on ${formatDay(a.referredAt)}, awaiting verification`
+            : `request received ${formatDay(a.assignedAt)}, referral pending`;
+        const line = h('p', { class: 'gr-admin-poc' }, `${a.pocName || a.pocEmail}: ${text}`);
+        if (a.referred && a.proofPieces) line.append(' ', h('button', { type: 'button', class: 'button button-ghost button-small', onclick: () => openProof(a) }, 'View proof'));
+        if (stage === 'review') {
+          line.append(' ', h('button', {
+            type: 'button', class: 'button button-primary button-small', onclick: async (e) => {
+              const btn = e.currentTarget;
+              if (!window.confirm(`Verify that ${a.pocName || a.pocEmail} referred ${a.candidateName}?`)) return;
+              btn.disabled = true;
+              try { await verifyAssignment(a); toast('Referral verified'); load(); }
+              catch (err) { toast('Could not verify: ' + X.svc.friendlyError(err), 'error'); btn.disabled = false; }
+            },
+          }, 'Verify'));
         }
         box.append(line);
       });
     } catch (e) {
       clear(box).append(h('h4', {}, 'Live referral status'), h('p', { class: 'hint' }, 'Could not load status. ' + X.svc.friendlyError(e)));
     }
-  })();
+  };
+  load();
   return box;
 }
 
-async function openProof(a) {
-  const tab = a.proofType === 'application/pdf' || String(a.proofType).startsWith('image/') ? window.open('', '_blank') : null;
+async function openPieces(col, prefix, count, type, name) {
+  const tab = type === 'application/pdf' || String(type).startsWith('image/') ? window.open('', '_blank') : null;
   try {
-    const parts = await Promise.all(Array.from({ length: a.proofPieces }, (_, i) => getDoc(doc(db(), 'poc_proofs', P.proofPieceId(a.id, i)))));
+    const parts = await Promise.all(Array.from({ length: count }, (_, i) => getDoc(doc(db(), col, `${prefix}_${i}`))));
     if (parts.some((p) => !p.exists())) throw new Error('Part of the proof file is missing.');
-    const blob = X.svc.base64ToBlob(parts.map((p) => p.data().data).join(''), a.proofType || 'application/octet-stream');
+    const blob = X.svc.base64ToBlob(parts.map((p) => p.data().data).join(''), type || 'application/octet-stream');
     const url = URL.createObjectURL(blob);
     if (tab) tab.location.href = url;
-    else { const l = h('a', { href: url, download: a.proofName || 'proof' }); document.body.append(l); l.click(); l.remove(); }
+    else { const l = h('a', { href: url, download: name || 'proof' }); document.body.append(l); l.click(); l.remove(); }
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   } catch (e) {
     if (tab) tab.close();
     toast('Could not open proof: ' + X.svc.friendlyError(e), 'error');
   }
 }
+
+function openProof(a) { return openPieces('poc_proofs', a.id, a.proofPieces, a.proofType, a.proofName); }
+function openCandidateProof(s) { return openPieces('candidate_proofs', s.id, s.candidateProofPieces, s.candidateProofType, s.candidateProofName); }
 
 /* ---------- Access tab: per-section access, POC accounts ---------- */
 
@@ -623,7 +881,7 @@ function toggle(checked, label, onchange, disabled = false) {
   return h('label', { class: 'gr-switch' + (disabled ? ' is-disabled' : '') }, input, h('span', { class: 'gr-switch-track', 'aria-hidden': 'true' }));
 }
 
-const AX = { pocRows: [], noEmail: [], others: [], docsByEmail: {}, view: 'poc', q: '', filter: 'all' };
+const AX = { pocRows: [], noEmail: [], seekers: [], others: [], docsByEmail: {}, view: 'poc', q: '', filter: 'all' };
 
 async function mountAccessPanel() {
   if (!X.isAdmin) return;
@@ -641,13 +899,16 @@ async function mountAccessPanel() {
 }
 
 async function loadAccessData() {
-  const [pocData, accSnap] = await Promise.all([X.svc.loadPocs(), getDocs(collection(db(), 'referral_allowed_users'))]);
+  const [pocData, accSnap, reqSnap] = await Promise.all([X.svc.loadPocs(), getDocs(collection(db(), 'referral_allowed_users')),
+    getDocs(query(collection(db(), 'referral_requests'), limit(2000)))]);
   const docs = accSnap.docs.map((d) => ({ id: d.id, ...d.data(), email: P.lowerEmail(d.data().email || d.id) }));
   AX.docsByEmail = Object.fromEntries(docs.map((d) => [d.email, d]));
   const built = P.buildPocAccounts(pocData.pocs || [], AX.docsByEmail);
   AX.pocRows = built.rows;
   AX.noEmail = built.noEmail;
-  AX.others = P.buildOtherAccounts(docs, (e) => X.svc.isAdminEmail(e));
+  const isAdm = (e) => X.svc.isAdminEmail(e);
+  AX.seekers = P.buildSeekerAccounts(reqSnap.docs.map((d) => d.data()), AX.docsByEmail, isAdm);
+  AX.others = P.buildOtherAccounts(docs, isAdm, new Set(AX.seekers.map((r) => r.email)));
 }
 
 function renderAccessPanel() {
@@ -673,7 +934,8 @@ function renderAccessPanel() {
       h('button', { type: 'button', class: 'btn-outline', onclick: async () => { await loadAccessData(); renderAccessPanel(); toast('Access list refreshed'); } }, '🔄 Refresh')),
     h('div', { class: 'repo-category-tabs gr-access-tabs' },
       tabBtn('poc', `🏢 POC accounts (${AX.pocRows.length} · ${pocOn} on)`),
-      tabBtn('other', `👤 Candidates & other accounts (${AX.others.length})`)),
+      tabBtn('seeker', `🙋 Referral seekers (${AX.seekers.length} · ${AX.seekers.filter((r) => r.gr || r.re).length} on)`),
+      tabBtn('other', `👤 Other accounts (${AX.others.length})`)),
     h('div', { class: 'gr-access-tools' }, search, filter),
     body);
 
@@ -698,11 +960,17 @@ function renderAccessPanel() {
           h('ul', {}, AX.noEmail.map((p) => h('li', {}, `${p.name} · ${p.company}`))),
           h('p', { class: 'hint' }, 'Add their "Email ID of Referral POC" in the Google Sheet, then re-upload it in Referral Repository → Companies & POCs.')));
       }
+    } else if (AX.view === 'seeker') {
+      const rows = AX.seekers.filter(match);
+      body.append(h('p', { class: 'hint' }, 'Everyone who has submitted the Get Referred form, newest first. The same details are in the Get Referred Google Sheet. Switch on Get Referred so they can track their requests.'));
+      body.append(h('div', { class: 'gr-table-wrap' }, h('table', { class: 'access-table gr-table' },
+        h('thead', {}, h('tr', {}, ['Referral seeker', 'Requested companies', 'Get Referred', 'Refer and Earn', 'Email'].map((t) => h('th', { scope: 'col' }, t)))),
+        h('tbody', {}, rows.length ? rows.map(seekerRow) : h('tr', {}, h('td', { colspan: '5', class: 'empty-state' }, 'No referral requests yet.'))))));
     } else {
       const rows = AX.others.filter(match);
       body.append(h('div', { class: 'gr-table-wrap' }, h('table', { class: 'access-table gr-table' },
         h('thead', {}, h('tr', {}, ['Account', 'Get Referred', 'Refer and Earn', 'Email'].map((t) => h('th', { scope: 'col' }, t)))),
-        h('tbody', {}, rows.length ? rows.map(otherRow) : h('tr', {}, h('td', { colspan: '4', class: 'empty-state' }, 'No accounts yet. Use "Grant Access to New User" above to add one.'))))));
+        h('tbody', {}, rows.length ? rows.map(otherRow) : h('tr', {}, h('td', { colspan: '4', class: 'empty-state' }, 'No other accounts. Accounts added with "Grant Access to New User" appear here unless they have submitted a referral request.'))))));
     }
   }
   drawRows();
@@ -793,6 +1061,31 @@ function pocRow(row) {
     h('td', { 'data-label': 'Get Referred' }, toggle(row.gr, `Get Referred access for ${row.name}`, (i) => save(i.checked, row.re, i))),
     h('td', { 'data-label': 'Refer and Earn' }, toggle(row.re, `Refer and Earn access for ${row.name}`, (i) => save(row.gr, i.checked, i))),
     h('td', { 'data-label': 'Sign-in emails' }, h('div', { class: 'gr-alias-list' }, aliasChips), h('div', { class: 'gr-alias-row' }, aliasInput, aliasAdd)),
+    h('td', { 'data-label': 'Email' }, noticeButton(row.email, row.name, () => (row.gr && row.re ? 'both' : row.re ? 'poc' : 'candidate'), row.gr || row.re)));
+}
+
+function seekerRow(row) {
+  const save = async (gr, re, input) => {
+    input.disabled = true;
+    try {
+      const d = { ...P.seekerAccessDoc(row, gr, re, X.user.email), updatedAt: serverTimestamp() };
+      if (!row.hasDoc) d.grantedAt = new Date().toISOString();
+      await setDoc(doc(db(), 'referral_allowed_users', row.email), d, { merge: true });
+      row.gr = !!gr; row.re = !!re; row.hasDoc = true;
+      toast(`${row.name || row.email}: access updated`);
+      renderAccessPanel();
+    } catch (e) {
+      toast('Could not update access: ' + X.svc.friendlyError(e), 'error');
+      input.checked = !input.checked;
+      input.disabled = false;
+    }
+  };
+  return h('tr', {},
+    h('td', { 'data-label': 'Referral seeker' }, h('div', {}, h('div', { class: 'gr-cell-name' }, row.name || row.email.split('@')[0]), h('div', { class: 'gr-cell-email' }, row.email),
+      h('div', { class: 'gr-cell-status' }, `${row.phone ? row.phone + ' · ' : ''}${row.requests} request${row.requests === 1 ? '' : 's'}, last ${formatDay(row.lastAt ? new Date(row.lastAt) : null)}`))),
+    h('td', { 'data-label': 'Requested companies' }, row.company),
+    h('td', { 'data-label': 'Get Referred' }, toggle(row.gr, `Get Referred access for ${row.email}`, (i) => save(i.checked, row.re, i))),
+    h('td', { 'data-label': 'Refer and Earn' }, toggle(row.re, `Refer and Earn access for ${row.email}`, (i) => save(row.gr, i.checked, i))),
     h('td', { 'data-label': 'Email' }, noticeButton(row.email, row.name, () => (row.gr && row.re ? 'both' : row.re ? 'poc' : 'candidate'), row.gr || row.re)));
 }
 

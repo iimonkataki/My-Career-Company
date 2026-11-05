@@ -1,5 +1,8 @@
 /**
- * My Career Company · Referral Mailer (Google Apps Script web app) · v3.0
+ * My Career Company · Referral Mailer (Google Apps Script web app) · v4.0
+ *
+ * v4 adds: every Get Referred submission is also written to the "Get Referred - Referral Requests" Google Sheet
+ * (run setupGetReferredSheet ONCE), and the confirmation email says we are working on the request.
  *
  * v3 adds (all free, no Firebase Blaze plan):
  *   - confirmRequest       (public)  "We have received your request" email right after a candidate submits
@@ -26,7 +29,7 @@
  * ADMIN_EMAILS. The token is checked with Google's Identity Toolkit API before anything is sent.
  */
 
-var VERSION = 'referral-mailer-3.0.0';
+var VERSION = 'referral-mailer-4.0.0';
 
 // Same value as apiKey in get-referred/firebase-config.js (public by design).
 var FIREBASE_API_KEY = 'PASTE_FIREBASE_WEB_API_KEY';
@@ -65,6 +68,10 @@ var FREE_EMAIL_DOMAINS = ['gmail.com', 'googlemail.com', 'yahoo.com', 'yahoo.co.
   'outlook.com', 'outlook.in', 'hotmail.com', 'hotmail.co.in', 'live.com', 'live.in', 'msn.com', 'icloud.com', 'me.com',
   'mac.com', 'aol.com', 'proton.me', 'protonmail.com', 'zoho.com', 'zohomail.in', 'gmx.com', 'mail.com', 'yandex.com', 'tutanota.com'];
 var POC_STATUSES = ['Current employee', 'Serving notice', 'About to join'];
+// ---- v4: Get Referred requests sheet ----
+var GR_SHEET_NAME = 'MCC Get Referred - Referral Requests';
+var GR_SHEET_HEADERS = ['Timestamp (IST)', 'Reference', 'Full name', 'Email', 'Phone', 'Company', 'Job ID', 'Job title',
+  'Note of recommendation', 'Resume file', 'Cover letter', 'Request ID', 'Status access (switch on in Access tab)', 'Notes'];
 var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 function doGet() {
@@ -231,6 +238,30 @@ function fsString_(fields, key) {
   return f && f.stringValue !== undefined ? String(f.stringValue) : '';
 }
 
+function fsBool_(fields, key) {
+  var f = fields && fields[key];
+  return !!(f && f.booleanValue === true);
+}
+
+/** v4: one row per Get Referred submission in the Referral Requests sheet. Never blocks the email. */
+function appendRequestRow_(id, f, email) {
+  var sheetId = PropertiesService.getScriptProperties().getProperty('GET_REFERRED_SHEET_ID');
+  if (!sheetId) return 'not_set_up';
+  var cache = CacheService.getScriptCache();
+  if (cache.get('sheet_' + id)) return 'duplicate';
+  var sheet = SpreadsheetApp.openById(sheetId).getSheets()[0];
+  if (sheet.getLastRow() === 0) sheet.appendRow(GR_SHEET_HEADERS);
+  sheet.appendRow([
+    Utilities.formatDate(new Date(), 'Asia/Kolkata', 'yyyy-MM-dd HH:mm:ss'), 'MCC-R-' + id.slice(0, 6).toUpperCase(),
+    cell_(fsString_(f, 'fullName') || fsString_(f, 'firstName')), cell_(email), cell_(fsString_(f, 'phone')),
+    cell_(fsString_(f, 'company')), cell_(fsString_(f, 'jobId')), cell_(fsString_(f, 'jobTitle')),
+    cell_(fsString_(f, 'note').slice(0, 1500)), cell_(fsString_(f, 'resumeName')), fsBool_(f, 'hasCoverLetter') ? 'Yes' : 'No',
+    id, 'Off', '',
+  ]);
+  cache.put('sheet_' + id, '1', 21600);
+  return 'ok';
+}
+
 function fsTime_(fields, key) {
   var f = fields && fields[key];
   var t = f && f.timestampValue ? Date.parse(f.timestampValue) : NaN;
@@ -257,8 +288,11 @@ function confirmRequest_(req) {
 
   var lock = LockService.getScriptLock();
   lock.waitLock(20000);
+  var sheetResult = 'error';
   try {
     if (cache.get('conf_' + id)) return { ok: true, sent: 0, duplicate: true };
+    try { sheetResult = appendRequestRow_(id, f, email); }
+    catch (sheetErr) { console.log(VERSION + ' sheet append failed: ' + sheetErr); }
     var perKey = 'conf_to_' + Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, email)).slice(0, 40);
     var perCount = Number(cache.get(perKey) || 0);
     if (perCount >= CONFIRM_PER_RECIPIENT_6H) throw new Error('Too many confirmation emails to this address. Try again later.');
@@ -279,7 +313,7 @@ function confirmRequest_(req) {
   } finally {
     lock.releaseLock();
   }
-  return { ok: true, sent: 1 };
+  return { ok: true, sent: 1, sheet: sheetResult };
 }
 
 function buildConfirmationEmail_(d) {
@@ -290,10 +324,10 @@ function buildConfirmationEmail_(d) {
   var lines = [
     'Hi ' + name + ',',
     '',
-    'My Career Company has received your details and your request for a referral at ' + company + ' for ' + job + '.',
+    'Thank you for your referral request. My Career Company has received your details for ' + job + ' at ' + company + ', and our team is working on it.',
     '',
     'What happens next',
-    'Our team reviews your request and shares your profile with our referral POC at ' + company + '. You will get a second email from us as soon as your details have been shared.',
+    'We will connect you with our referral POC at ' + company + ' soon. You will get a second email from us as soon as your details have been shared with the POC.',
     '',
     'Track your request',
     'Sign in with Google at ' + PORTAL_URL + '#status using ' + d.email + ' once our team has enabled Status of Referrals for your account.',
@@ -423,6 +457,36 @@ function sendAccessNotice_(req, admin) {
   GmailApp.sendEmail(to, subject, lines.join('\n'), opts);
   console.log(VERSION + ' access notice to=' + to + ' kind=' + kind + ' by=' + admin);
   return { ok: true, sent: 1, quotaLeft: MailApp.getRemainingDailyQuota() };
+}
+
+/** Creates (once) a Google Sheet with the given headers, shares it with the co-founders, stores its id. */
+function setupSheet_(propKey, name, headers, tabName) {
+  var props = PropertiesService.getScriptProperties();
+  var existing = props.getProperty(propKey);
+  if (existing) {
+    console.log('Sheet already set up: https://docs.google.com/spreadsheets/d/' + existing + '/edit');
+    return existing;
+  }
+  var ss = SpreadsheetApp.create(name);
+  var sheet = ss.getSheets()[0];
+  sheet.setName(tabName);
+  sheet.appendRow(headers);
+  sheet.setFrozenRows(1);
+  sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#073D32').setFontColor('#F8F6EF');
+  var me = Session.getEffectiveUser().getEmail().toLowerCase();
+  ADMIN_EMAILS.forEach(function (email) {
+    if (email === me) return;
+    try { ss.addEditor(email); console.log('Shared with ' + email); }
+    catch (err) { console.log('Could not share with ' + email + ': ' + err + '. Share it manually from the Sheet\'s Share button.'); }
+  });
+  props.setProperty(propKey, ss.getId());
+  console.log('Created: ' + ss.getUrl());
+  return ss.getId();
+}
+
+/** v4: run ONCE from the editor (choose setupGetReferredSheet, click Run). Creates the Get Referred requests sheet. */
+function setupGetReferredSheet() {
+  return setupSheet_('GET_REFERRED_SHEET_ID', GR_SHEET_NAME, GR_SHEET_HEADERS, 'Referral requests');
 }
 
 /**

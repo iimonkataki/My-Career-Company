@@ -18,15 +18,18 @@ function test(name, fn) {
 }
 
 // Fake token format for tests: "tok|<email>|<verified>"
-function makeEnv({ apiKey = 'test-key', quota = 1500, fromAlias = '', firestoreDocs = {}, sheetId = 'SHEET123' } = {}) {
-  const env = { sent: [], fetches: [], logs: [], rows: [], props: {}, cache: {}, created: [], shares: [] };
+function makeEnv({ apiKey = 'test-key', quota = 1500, fromAlias = '', firestoreDocs = {}, sheetId = 'SHEET123', grSheetId = '' } = {}) {
+  const env = { sent: [], fetches: [], logs: [], rows: [], grRows: [], props: {}, cache: {}, created: [], shares: [] };
   if (sheetId) env.props.REFER_EARN_SHEET_ID = sheetId;
-  const sheet = {
-    getLastRow: () => env.rows.length,
-    appendRow: (r) => { env.rows.push(r); },
+  if (grSheetId) env.props.GET_REFERRED_SHEET_ID = grSheetId;
+  const mkSheet = (arr) => ({
+    getLastRow: () => arr.length,
+    appendRow: (r) => { arr.push(r); },
     setName() { return this; }, setFrozenRows() { return this; },
     getRange: () => ({ setFontWeight() { return this; }, setBackground() { return this; }, setFontColor() { return this; } }),
-  };
+  });
+  const sheet = mkSheet(env.rows);
+  const grSheet = mkSheet(env.grRows);
   const ctx = {
     console: { log: (m) => env.logs.push(m) },
     UrlFetchApp: {
@@ -60,7 +63,11 @@ function makeEnv({ apiKey = 'test-key', quota = 1500, fromAlias = '', firestoreD
     PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => (k in env.props ? env.props[k] : null), setProperty: (k, v) => { env.props[k] = String(v); } }) },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() { env.lockReleased = (env.lockReleased || 0) + 1; } }) },
     SpreadsheetApp: {
-      openById: (id) => { if (id !== env.props.REFER_EARN_SHEET_ID) throw new Error('no sheet'); return { getSheets: () => [sheet] }; },
+      openById: (id) => {
+        if (id === env.props.REFER_EARN_SHEET_ID) return { getSheets: () => [sheet] };
+        if (id === env.props.GET_REFERRED_SHEET_ID) return { getSheets: () => [grSheet] };
+        throw new Error('no sheet');
+      },
       create: (name) => { env.created.push(name); return { getSheets: () => [sheet], getId: () => 'NEWSHEET', getUrl: () => 'https://docs.google.com/spreadsheets/d/NEWSHEET/edit', addEditor: (e) => { if (e.endsWith('@gmail.com')) throw new Error('external sharing off'); env.shares.push(e); } }; },
     },
     ContentService: {
@@ -232,7 +239,8 @@ test('v3 confirmRequest: public, reads the address from Firestore (not the brows
   const m = env.sent[0];
   assert.equal(m.to, 'riya.sharma@example.com', 'recipient comes from Firestore only');
   assert.equal(m.subject, 'My Career Company has received your referral request – Accenture');
-  assert.ok(m.body.includes('My Career Company has received your details and your request for a referral at Accenture for Business Analyst (Job ID R00245871).'));
+  assert.ok(m.body.includes('My Career Company has received your details for Business Analyst (Job ID R00245871) at Accenture, and our team is working on it.'));
+  assert.ok(m.body.includes('We will connect you with our referral POC at Accenture soon.'));
   assert.ok(m.body.includes('MCC-R-ABCDEF') && m.body.includes('getreferred#status'));
   assert.equal(m.opts.replyTo, 'support@mycareercompany.com');
   const f = env.fetches.find((x) => x.url.startsWith('https://firestore.googleapis.com/'));
@@ -325,6 +333,40 @@ test('v3 setupReferAndEarnSheet: creates once, shares with co-founders, survives
   assert.deepEqual(env.shares.sort(), ['anirbanroy@mycareercompany.com', 'ibonkataki@mycareercompany.com', 'iimonkataki@mycareercompany.com']);
   assert.ok(env.logs.some((l) => l.includes('Could not share with upam.patra@gmail.com')), 'gmail share failure is logged, not fatal');
   assert.equal(env.ctx.setupReferAndEarnSheet(), 'NEWSHEET', 'second run reuses the sheet');
+  assert.equal(env.created.length, 1);
+});
+test('v4 confirmRequest also writes the request to the Get Referred sheet (once)', () => {
+  const doc = confDoc(1, { fullName: { stringValue: 'Riya Sharma' }, phone: { stringValue: '+91 98765 43210' },
+    note: { stringValue: '=Riya is a strong fit.' }, resumeName: { stringValue: 'Riya_CV.pdf' }, hasCoverLetter: { booleanValue: true } });
+  const env = makeEnv({ grSheetId: 'GRSHEET', firestoreDocs: { ['referral_confirmations/' + RID]: doc } });
+  const out = env.post({ action: 'confirmRequest', requestId: RID });
+  assert.equal(out.ok, true, out.error);
+  assert.equal(out.sheet, 'ok');
+  assert.equal(env.grRows.length, 2, 'header + row');
+  assert.equal(env.grRows[0][0], 'Timestamp (IST)');
+  const r = JSON.parse(JSON.stringify(env.grRows[1]));
+  assert.deepEqual(r.slice(1, 13), ['MCC-R-ABCDEF', 'Riya Sharma', 'riya.sharma@example.com', "'+91 98765 43210", 'Accenture', 'R00245871', 'Business Analyst',
+    "'=Riya is a strong fit.", 'Riya_CV.pdf', 'Yes', RID, 'Off']);
+  env.post({ action: 'confirmRequest', requestId: RID });
+  assert.equal(env.grRows.length, 2, 'no duplicate row');
+  assert.equal(env.sent.length, 1);
+});
+test('v4 sheet problems never block the confirmation email; rate limits never block the sheet', () => {
+  const none = makeEnv({ firestoreDocs: { ['referral_confirmations/' + RID]: confDoc() } });
+  const out = none.post({ action: 'confirmRequest', requestId: RID });
+  assert.equal(out.ok, true); assert.equal(out.sheet, 'not_set_up'); assert.equal(none.sent.length, 1);
+  const low = makeEnv({ quota: 100, grSheetId: 'GRSHEET', firestoreDocs: { ['referral_confirmations/' + RID]: confDoc() } });
+  assert.match(low.post({ action: 'confirmRequest', requestId: RID }).error, /reserved/);
+  assert.equal(low.grRows.length, 2, 'row saved even when email is held back');
+});
+test('v4 setupGetReferredSheet creates the requests sheet once and shares it', () => {
+  const env = makeEnv({ sheetId: 'SHEET123' });
+  assert.equal(env.ctx.setupGetReferredSheet(), 'NEWSHEET');
+  assert.equal(env.props.GET_REFERRED_SHEET_ID, 'NEWSHEET');
+  assert.equal(env.props.REFER_EARN_SHEET_ID, 'SHEET123', 'Refer and Earn sheet untouched');
+  assert.deepEqual(env.created, ['MCC Get Referred - Referral Requests']);
+  assert.equal(env.shares.length, 3);
+  env.ctx.setupGetReferredSheet();
   assert.equal(env.created.length, 1);
 });
 test('v3 keeps v2 behaviour: sendReferral still admin-only and unchanged', () => {

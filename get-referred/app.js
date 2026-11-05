@@ -1,12 +1,12 @@
 /* My Career Company · Get Referred™ portal · app shell + user flow (v2.1) */
 import * as svc from './firebase-service.js?v=2.4';
-import { REFERRAL_DEFAULT_COMPANIES, renderTripleMarquee } from '/js/company-logos.js?v=2.5';
+import { REFERRAL_DEFAULT_COMPANIES, renderTripleMarquee, resolveCompanyLogo, makeMonogramDataUri } from '/js/company-logos.js?v=4.1';
 import {
   validateRequest, buildRequestDoc, resolveFileType, validateFile, formatBytes, looksFirstPerson,
   shortRef, cleanText, NOTE_MAX, CORE_VERSION, MAX_RESUME_BYTES, MAX_COVER_BYTES,
 } from './referral-core.js?v=2.0';
 import { toast } from './ui.js?v=2.0';
-import * as ext from './portal-ext.js?v=3.0'; // v3
+import * as ext from './portal-ext.js?v=4.0'; // v4
 
 const $ = (id) => document.getElementById(id);
 const MIN_FILL_MS = 4000; // bots submit instantly; people take longer than this
@@ -202,13 +202,7 @@ function showAuthorizedState(user) {
     }
   }
 
-  // Pre-fill candidate name and email in Step 4 if currently empty
-  if (user.displayName && $('full-name') && !$('full-name').value.trim()) {
-    $('full-name').value = user.displayName;
-  }
-  if (user.email && $('email') && !$('email').value.trim()) {
-    $('email').value = user.email;
-  }
+  // v4: forms start blank (hint text only); the candidate types their own name and email.
   renderSlip();
 }
 
@@ -775,6 +769,18 @@ function setSlip(id, value, emptyText) {
 
 function renderSlip() {
   setSlip('slip-company', state.company && state.company.name, 'Not chosen yet');
+  const slipLogo = $('slip-company-logo'); // v4: company logo beside the name
+  if (slipLogo) {
+    if (state.company) {
+      slipLogo.onerror = () => { slipLogo.onerror = null; slipLogo.src = makeMonogramDataUri(state.company.name); };
+      slipLogo.src = resolveCompanyLogo(state.company.name, state.company.portalUrl || '') || makeMonogramDataUri(state.company.name);
+      slipLogo.alt = state.company.name + ' logo';
+      slipLogo.hidden = false;
+    } else {
+      slipLogo.hidden = true;
+      slipLogo.removeAttribute('src');
+    }
+  }
   const jobId = cleanText($('job-id').value);
   const title = cleanText($('job-title').value);
   setSlip('slip-job', jobId ? (title ? `${jobId} · ${title}` : jobId) : '', '—');
