@@ -1,5 +1,5 @@
 /* My Career Company · Get Referred™ portal · app shell + user flow (v2.1) */
-import * as svc from './firebase-service.js?v=2.4';
+import * as svc from './firebase-service.js?v=2.5';
 import { REFERRAL_DEFAULT_COMPANIES, renderTripleMarquee, resolveCompanyLogo, makeMonogramDataUri } from '/js/company-logos.js?v=4.2';
 import {
   validateRequest, buildRequestDoc, resolveFileType, validateFile, formatBytes, looksFirstPerson,

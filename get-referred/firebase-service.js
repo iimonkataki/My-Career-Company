@@ -42,7 +42,7 @@ export const PRIMARY_COFOUNDERS = [
   { email: 'ibonkataki@mycareercompany.com', name: 'Ibon Kataki', role: 'Co-Founder & Admin', institution: 'My Career Company', isFounder: true, status: 'active' },
   { email: 'iimonkataki@mycareercompany.com', name: 'Iimon Kataki', role: 'Co-Founder & Admin', institution: 'My Career Company', isFounder: true, status: 'active' },
   { email: 'anirbanroy@mycareercompany.com', name: 'Anirban Roy', role: 'Co-Founder & Admin', institution: 'My Career Company', isFounder: true, status: 'active' },
-  { email: 'upam.patra@gmail.com', name: 'Upamanyu Patra', role: 'Co-Founder & Admin', institution: 'My Career Company', isFounder: true, status: 'active' },
+  { email: 'upam.patra@gmail.com', name: 'Upam Patra', role: 'Co-Founder & Admin', institution: 'My Career Company', isFounder: true, status: 'active' },
 ];
 
 export function isAdminEmail(email) {
