@@ -486,7 +486,7 @@ async function renderAdminStatus(root) {
       h('button', { type: 'button', class: 'repo-cat-tab' + (SV.tab === 'given' ? ' active' : ''), id: 'grDashTabGiven', onclick: () => { SV.tab = 'given'; SV.stage = ''; SV.shown = 25; draw(); } }, `🤝 Referrals given (${data.assignments.length})`));
     const opts = SV.tab === 'sought'
       ? [['', 'All statuses'], ['new', P.STAGE_LABELS.new], ['shared', P.STAGE_LABELS.shared], ['review', P.STAGE_LABELS.review], ['referred', P.STAGE_LABELS.referred]]
-      : [['', 'All statuses'], ['pending', P.STAGE_LABELS.pending], ['review', P.STAGE_LABELS.review], ['yes', P.STAGE_LABELS.yes]];
+      : [['', 'All statuses'], ['pending', P.STAGE_LABELS.shared], ['review', P.STAGE_LABELS.review], ['yes', P.STAGE_LABELS.yes]];
     const keep = SV.stage;
     clear(stageSel).append(...opts.map(([v, t]) => h('option', { value: v }, t)));
     stageSel.value = opts.some(([v]) => v === keep) ? keep : '';
@@ -512,7 +512,7 @@ async function renderAdminStatus(root) {
       list.append(h('p', { class: 'gr-dash-count' }, `${rows.length} of ${data.assignments.length} POC requests`));
       if (!rows.length) { list.append(h('p', { class: 'empty-state' }, 'No POC requests match these filters.')); return; }
       add(list, h('div', { class: 'gr-table-wrap' }, h('table', { class: 'access-table gr-table gr-dash-table' },
-        h('thead', {}, h('tr', {}, ['POC', 'Candidate and job', 'Status', 'POC proof', 'Action'].map((t) => h('th', { scope: 'col' }, t)))),
+        h('thead', {}, h('tr', {}, ['POC', 'Candidate and job', 'Progress', 'POC proof', 'Action'].map((t) => h('th', { scope: 'col' }, t)))),
         h('tbody', {}, rows.slice(0, SV.shown).map((a) => givenRow(a, data, () => renderAdminStatus(root)))))), more(rows.length));
     }
   }
@@ -564,7 +564,11 @@ function givenRow(a, data, reload) {
   return h('tr', {},
     h('td', { 'data-label': 'POC' }, h('div', { class: 'gr-cell-name' }, a.pocName || ''), h('div', { class: 'gr-cell-email' }, a.pocEmail || '')),
     h('td', { 'data-label': 'Candidate and job' }, h('div', {}, h('div', {}, a.candidateName || ''), h('div', { class: 'gr-cell-status' }, `${a.company} · Job ID ${a.jobId} · sent ${formatDay(a.assignedAt)}`))),
-    h('td', { 'data-label': 'Status' }, h('div', {}, stageChip(stage), a.referred ? h('div', { class: 'gr-cell-status' }, `POC marked ${formatDay(a.referredAt)}`) : null)),
+    h('td', { 'data-label': 'Progress' }, h('div', {}, dots([
+      { key: 'sharedWithMcc', label: 'Have you shared your data with My Career Company?', state: 'yes' },
+      { key: 'mccSharedWithPoc', label: 'Has My Career Company shared your details with the POC?', state: 'yes' },
+      { key: 'pocReferred', label: 'Has the POC put in the referral in the company portal?', state: stage },
+    ]), h('div', { class: 'gr-cell-status' }, stage === 'yes' ? P.STAGE_LABELS.referred : stage === 'review' ? P.STAGE_LABELS.review : P.STAGE_LABELS.shared), a.referred && stage === 'review' ? h('div', { class: 'gr-cell-status' }, `POC marked ${formatDay(a.referredAt)}`) : null)),
     h('td', { 'data-label': 'POC proof' }, a.referred && a.proofPieces ? h('button', { type: 'button', class: 'btn-resend gr-proof-btn', onclick: () => openProof(a) }, '📎 View proof') : h('span', { class: 'gr-cell-status' }, a.referred ? 'No proof' : '—')),
     h('td', { 'data-label': 'Action' }, verify));
 }

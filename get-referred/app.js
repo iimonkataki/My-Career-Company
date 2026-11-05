@@ -6,7 +6,7 @@ import {
   shortRef, cleanText, NOTE_MAX, CORE_VERSION, MAX_RESUME_BYTES, MAX_COVER_BYTES,
 } from './referral-core.js?v=2.0';
 import { toast } from './ui.js?v=2.0';
-import * as ext from './portal-ext.js?v=4.0'; // v4
+import * as ext from './portal-ext.js?v=4.2'; // v4
 
 const $ = (id) => document.getElementById(id);
 const MIN_FILL_MS = 4000; // bots submit instantly; people take longer than this
