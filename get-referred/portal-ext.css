@@ -168,21 +168,27 @@
   .header-container:has(#tab-access:not([hidden])) .nav-icon { font-size: 13px; line-height: 1; }
 }
 @media (min-width: 901px) and (max-width: 1279px) {
-  .header-container:has(#tab-access:not([hidden])) { flex-wrap: wrap; row-gap: 8px; }
-  .header-container:has(#tab-access:not([hidden])) .header-brand-group { order: 1; }
-  .header-container:has(#tab-access:not([hidden])) .header-user-widget { order: 2; margin-left: auto; }
-  .header-container:has(#tab-access:not([hidden])) .header-nav { order: 3; width: 100%; justify-content: center; }
+  .header-container:has(#tab-access:not([hidden])) { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; row-gap: 8px; }
+  .header-container:has(#tab-access:not([hidden])) .header-brand-group { grid-column: 1; grid-row: 1; min-width: 0; }
+  .header-container:has(#tab-access:not([hidden])) .header-user-widget { grid-column: 2; grid-row: 1; justify-self: end; }
+  .header-container:has(#tab-access:not([hidden])) .header-nav { grid-column: 1 / -1; grid-row: 2; width: fit-content; max-width: 100%; min-width: 0; justify-self: center; }
 }
 
 /* ---------- phones: 3 tabs (signed in) or 5 (co-founders) must fit or scroll inside the tab bar ---------- */
 @media (max-width: 900px) {
-  .header-nav { max-width: 100%; box-sizing: border-box; overflow-x: auto; touch-action: pan-x; scrollbar-width: none; justify-content: flex-start; }
+  .header-container { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+  .header-brand-group { grid-column: 1; grid-row: 1; min-width: 0; }
+  .header-user-widget { grid-column: 2; grid-row: 1; justify-self: end; }
+  .header-nav { grid-column: 1 / -1; grid-row: 2; width: fit-content; max-width: 100%; min-width: 0; justify-self: center; box-sizing: border-box; overflow-x: auto; touch-action: pan-x; scrollbar-width: none; justify-content: flex-start; }
   .header-nav::-webkit-scrollbar { display: none; }
   .header-nav .nav-tab { flex-shrink: 0; }
 }
 @media (max-width: 560px) {
-  .header-nav .nav-icon { display: none; }
-  .header-nav .nav-tab { padding: 6px 7px; font-size: 11.5px; }
+  .header-nav:has(#tab-status:not([hidden])) .nav-icon,
+  .header-nav:has(#tab-access:not([hidden])) .nav-icon { display: none; }
+  .header-nav .nav-tab { padding: 6px 11px; gap: 5px; font-size: 11.5px; }
+  .header-nav:has(#tab-status:not([hidden])) .nav-tab,
+  .header-nav:has(#tab-access:not([hidden])) .nav-tab { padding: 6px 7px; }
   .header-nav { gap: 0; padding: 3px; }
 }
 
